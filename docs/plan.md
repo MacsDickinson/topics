@@ -26,7 +26,7 @@ A local macOS app that is your daily driver for two things:
 - What markdown alone cannot do: stable task IDs, claim provenance, corrections that stick. These need structure. They do **not** need a graph.
 - We borrow one idea from temporal knowledge graphs: every fact keeps its source, and a correction supersedes a fact instead of deleting it.
 
-Open choice (Q1 below): where structured records live.
+**Decided:** markdown is the source of truth for tasks and claims too. One small `.md` file per task and per claim revision, in an app-owned folder inside the notes root (`topics/`). SQLite is a disposable index under Application Support. Delete it and the app rebuilds it.
 
 ## Core concepts
 
@@ -51,15 +51,15 @@ Meeting files are never rewritten. Corrections apply on read and in generated pa
 - **The app hosts an MCP server.** It is the one tool surface for in-app chat, your Claude scheduled jobs and Codex.
 - **Every LLM change is a proposal.** The model calls `propose_changes`. You approve, edit or reject a diff card. Nothing writes without approval.
 - **"Sign in with ChatGPT":** the official programme (launched 29 Sep 2026) lists only Plus and Pro plans. Your Codex login is ChatGPT Business (lhvbank.com). The working route: the app runs `codex app-server` and Codex owns the sign-in. You get a "Sign in with ChatGPT" button, and no tokens touch app code. Reusing Codex tokens directly is rejected.
-- **Claude** (`claude -p`, LHV Enterprise org) is the second backend.
+- **Claude** (`claude -p`, LHV Enterprise org). **Decided: both backends ship together; you pick per chat.**
 - **Ollama** is for small local jobs only: tag new meetings, pull out candidate tasks.
 - Sensitive topics (HR, health, family) can be flagged local-only. The MCP server never sends them to cloud models.
 
 ## Tech stack
 
 - **Rust core** (cargo workspace): `topics-core` (domain), `topics-store` (markdown + SQLite + watcher), `topics-llm` (backends), `topics-mcp` (MCP server, `rmcp`), `topics-bdd` (cucumber-rs).
-- **UI shell** — open choice (Q2 below).
-- **Toolchain:** Rust is not installed on this Mac. Neither is full Xcode (only Command Line Tools). Phase 0 installs `rustup`.
+- **UI shell — decided: Tauri 2** with a web front end in the system WebView. Rust owns all logic. UI tests: Playwright against the front end with mocked IPC, plus WebdriverIO embedded-provider smoke tests against the real macOS app.
+- **Toolchain:** Rust is not installed on this Mac. Phase 0 installs `rustup` and Node. Full Xcode is not needed.
 
 ## BDD process (each feature)
 
@@ -77,11 +77,11 @@ Each phase is one feature with its own sign-off.
 
 | # | Feature | You get |
 |---|---|---|
-| 0 | Foundations: toolchain, workspace, BDD harness, git on `~/notes`, read-only index of people, projects, meetings and logs. Full-text search. CLI. | Searchable index. Nothing writes to notes. |
+| 0 | Foundations: toolchain, workspace, BDD harness, choose or create a notes folder, read-only index of people, projects, meetings and logs. Full-text search. CLI. | Searchable index. Nothing writes to notes. |
 | 1 | Backlog + daily log + first UI. Import the 26 Oct actions page as tasks (you confirm matches). Comments, status, migration. | **First daily driver.** Can replace "Monday actions prep". |
 | 2 | Topics + claims + corrections. Topic view with sources. Correction rules applied on import. Verify tasks replace "Unverified". | See and fix current understanding. |
 | 3 | MCP server. Claude jobs read the backlog, then send proposals into the inbox. | Scheduled jobs feed the app instead of rewriting files. |
-| 4 | Chat: Codex app-server backend, Sign in with ChatGPT, diff-card approvals. Claude backend after. | Correct facts by chat. |
+| 4 | Chat: Codex app-server (Sign in with ChatGPT) and Claude backends, picker per chat, diff-card approvals. | Correct facts by chat. |
 | 5 | Generated views: actions page, people pages, one generator for `CLAUDE.md` + `AGENTS.md`. Retire Monday actions prep. | No more drift. |
 | 6 | Import inbox: new meetings auto-tagged locally, corrections applied, claims and tasks proposed for the daily review. | Smaller, daily corrections. |
 
@@ -93,11 +93,12 @@ Each phase is one feature with its own sign-off.
 - Over-structuring killed the February system. Capture must stay one line.
 - Employer data policy decides which provider may see the notes.
 
-## Open questions (asked separately)
+## Notes folder and safety (decided)
 
-1. Where task and claim records live.
-2. UI shell.
-3. Default chat provider and employer policy.
-4. May the app put `~/notes` under git?
+- **No git in the notes folder.** The app works on top of any notes folder. On a fresh install it can create one with the default layout.
+- The notes root is a setting. The app never assumes `~/notes`.
+- Before any write, the app saves a snapshot of the file's old bytes in Application Support. You can undo any app write from a history view.
+- Writes are atomic (temp file then rename) and check the file hash first. On conflict the app keeps both versions for you to review.
+- Your employer policy on providers is still yours to confirm before you use chat on work notes.
 
 Smaller items for later phases: the daily ritual time (morning or evening), Jira sync direction, and whether waiting-on tasks share the main backlog.
