@@ -1,0 +1,17 @@
+[package]
+name = "topics-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+topics-store.workspace = true
+serde_json.workspace = true
+directories = "6"
+
+[[bin]]
+name = "topics"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempfile = "3"

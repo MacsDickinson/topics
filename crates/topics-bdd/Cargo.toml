@@ -1,0 +1,11 @@
+[package]
+name = "topics-bdd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+topics-store.workspace = true
+cucumber = "0.23"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tempfile = "3"
