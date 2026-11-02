@@ -1,0 +1,891 @@
+   Compiling memchr v2.8.3
+    Checking serde_core v1.0.229
+    Checking zerofrom v0.1.8
+    Checking stable_deref_trait v1.2.1
+    Checking smallvec v1.16.4
+    Checking writeable v0.6.4
+    Checking litemap v0.8.3
+    Checking thiserror v2.0.21
+    Checking yoke v0.8.4
+   Compiling icu_collections v2.4.0
+   Compiling cssparser v0.37.0
+   Compiling rustix v1.1.6
+    Checking log v0.4.35
+    Checking zerovec v0.11.9
+    Checking zerotrie v0.2.5
+    Checking aho-corasick v1.1.5
+   Compiling serde_json v1.0.154
+   Compiling icu_properties v2.4.0
+   Compiling icu_normalizer v2.4.0
+    Checking regex-automata v0.4.18
+   Compiling selectors v0.38.0
+    Checking tinystr v0.8.5
+    Checking potential_utf v0.1.6
+    Checking icu_locale_core v2.4.0
+   Compiling swift-rs v1.0.9
+    Checking bitflags v2.13.2
+    Checking serde v1.0.229
+    Checking icu_provider v2.4.0
+   Compiling idna_adapter v1.2.2
+    Checking objc2-core-foundation v0.3.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling jsonptr v0.7.1
+   Compiling quick-xml v0.42.0
+   Compiling dom_query v0.28.0
+    Checking objc2-foundation v0.3.2
+   Compiling schemars v0.8.22
+   Compiling plist v1.10.3
+   Compiling regex v1.13.1
+   Compiling cargo_metadata v0.19.2
+   Compiling urlpattern v0.6.0
+   Compiling json-patch v4.2.0
+   Compiling serde_with v3.24.0
+    Checking form_urlencoded v1.2.2
+    Checking rusqlite v0.38.0
+    Checking topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-core)
+   Compiling embed-resource v3.0.12
+   Compiling icu_locale_fallback_data v2.4.0
+    Checking dpi v0.1.2
+   Compiling tauri-winres v0.3.7
+    Checking uuid v1.29.0
+   Compiling cargo_toml v1.0.1
+    Checking topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling icu_segmenter_data v2.4.0
+   Compiling crossbeam-epoch v0.9.21
+    Checking erased-serde v0.4.11
+    Checking cfb v0.14.0
+    Checking toml_datetime v1.1.2+spec-1.1.0
+    Checking serde_spanned v1.1.2
+   Compiling sealed v0.6.0
+    Checking utf8parse v0.2.2
+   Compiling crossbeam-deque v0.8.8
+    Checking futures-core v0.3.34
+    Checking futures-sink v0.3.34
+    Checking tempfile v3.27.0
+    Checking futures-channel v0.3.34
+    Checking infer v0.22.0
+    Checking foreign-types v0.5.0
+   Compiling synthez-core v0.4.0
+    Checking anstyle-parse v1.0.0
+    Checking toml v1.1.8+spec-1.1.0
+   Compiling tauri-utils v2.10.2
+    Checking serde-untagged v0.1.9
+    Checking icu_locale_fallback v2.4.0
+    Checking core-graphics-types v0.2.0
+   Compiling nom v8.0.0
+    Checking bstr v1.13.1
+   Compiling futures-macro v0.3.34
+    Checking is_terminal_polyfill v1.70.2
+    Checking anstyle-query v1.1.5
+    Checking anstyle v1.0.14
+    Checking objc2-quartz-core v0.3.2
+    Checking colorchoice v1.0.5
+    Checking slab v0.4.12
+    Checking futures-task v0.3.34
+   Compiling either v1.19.0
+   Compiling peg-runtime v0.6.3
+    Checking objc2-app-kit v0.3.2
+    Checking futures-io v0.3.34
+   Compiling bytecount v0.6.9
+    Checking unicode-width v0.2.3
+   Compiling peg-macros v0.6.3
+    Checking futures-util v0.3.34
+    Checking anstream v1.0.0
+    Checking tokio v1.54.1
+   Compiling synthez-codegen v0.4.0
+    Checking globset v0.4.21
+    Checking icu_segmenter v2.4.0
+    Checking core-graphics v0.25.0
+   Compiling nom_locate v5.0.0
+    Checking terminal_size v0.4.4
+    Checking dispatch2 v0.3.1
+   Compiling gherkin v0.16.0
+   Compiling typed-builder-macro v0.23.2
+    Checking strsim v0.11.1
+    Checking smawk v0.3.3
+    Checking clap_lex v1.1.1
+   Compiling ref-cast v1.0.27
+    Checking clap_builder v4.6.7
+    Checking peg v0.6.3
+    Checking futures-executor v0.3.34
+    Checking textwrap v0.16.4
+   Compiling cucumber-expressions v0.5.0
+    Checking png v0.18.1
+    Checking typed-builder v0.23.2
+    Checking ignore v0.4.34
+   Compiling synthez v0.4.0
+   Compiling itertools v0.14.0
+    Checking keyboard-types v0.8.3
+   Compiling clap_derive v4.6.7
+    Checking derive_more v2.1.1
+   Compiling pin-project-internal v1.1.13
+   Compiling ref-cast-impl v1.0.27
+   Compiling inflections v1.1.1
+    Checking serialize-to-javascript v0.1.2
+    Checking objc2-web-kit v0.3.2
+    Checking tao v0.37.2
+    Checking muda v0.20.0
+    Checking window-vibrancy v0.8.1
+    Checking tauri-runtime v2.12.2
+    Checking wry v0.57.1
+   Compiling cucumber-codegen v0.23.0
+    Checking pin-project v1.1.13
+    Checking globwalk v0.9.1
+   Compiling tauri-build v2.7.4
+   Compiling tauri-codegen v2.7.4
+    Checking clap v4.6.7
+    Checking tauri-runtime-wry v2.12.3
+    Checking futures v0.3.34
+    Checking console v0.16.6
+   Compiling smart-default v0.7.1
+    Checking linked-hash-map v0.5.6
+    Checking inventory v0.3.25
+    Checking humantime v2.4.0
+    Checking topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Checking cucumber v0.23.0
+   Compiling tauri v2.12.5
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+   Compiling tauri-macros v2.7.4
+    Checking topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.93s
+   Compiling strsim v0.11.1
+   Compiling getrandom v0.4.3
+   Compiling typenum v1.20.1
+   Compiling cpufeatures v0.2.17
+   Compiling errno v0.3.14
+   Compiling foldhash v0.2.0
+   Compiling libsqlite3-sys v0.36.0
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-core)
+   Compiling uuid v1.29.0
+   Compiling rustix v1.1.6
+   Compiling darling_core v0.24.1
+   Compiling hashbrown v0.16.1
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling fallible-iterator v0.3.0
+   Compiling directories v6.0.0
+   Compiling fastrand v2.5.0
+   Compiling cfb v0.14.0
+   Compiling schemars v0.8.22
+   Compiling icu_locale_fallback_data v2.4.0
+   Compiling nom v8.0.0
+   Compiling generic-array v0.14.7
+   Compiling hashlink v0.11.1
+   Compiling bytecount v0.6.9
+   Compiling rusqlite v0.38.0
+   Compiling utf8parse v0.2.2
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling infer v0.22.0
+   Compiling futures-core v0.3.34
+   Compiling sha2 v0.10.9
+   Compiling tempfile v3.27.0
+   Compiling either v1.19.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling futures-sink v0.3.34
+   Compiling anstyle-parse v1.0.0
+   Compiling icu_locale_fallback v2.4.0
+   Compiling futures-channel v0.3.34
+   Compiling crossbeam-epoch v0.9.21
+   Compiling icu_segmenter_data v2.4.0
+   Compiling bstr v1.13.1
+   Compiling colorchoice v1.0.5
+   Compiling unicode-width v0.2.3
+   Compiling slab v0.4.12
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling futures-task v0.3.34
+   Compiling anstyle-query v1.1.5
+   Compiling futures-io v0.3.34
+   Compiling anstyle v1.0.14
+   Compiling peg-runtime v0.6.3
+   Compiling globset v0.4.21
+   Compiling futures-util v0.3.34
+   Compiling crossbeam-deque v0.8.8
+   Compiling anstream v1.0.0
+   Compiling icu_segmenter v2.4.0
+   Compiling peg-macros v0.6.3
+   Compiling terminal_size v0.4.4
+   Compiling darling_macro v0.24.1
+   Compiling gherkin v0.16.0
+   Compiling darling v0.24.1
+   Compiling nom_locate v5.0.0
+   Compiling smawk v0.3.3
+   Compiling clap_lex v1.1.1
+   Compiling textwrap v0.16.4
+   Compiling clap_builder v4.6.7
+   Compiling serde_with_macros v3.24.0
+   Compiling typed-builder v0.23.2
+   Compiling cucumber-expressions v0.5.0
+   Compiling peg v0.6.3
+   Compiling ignore v0.4.34
+   Compiling itertools v0.14.0
+   Compiling clap_derive v4.6.7
+   Compiling derive_more v2.1.1
+   Compiling pin-project v1.1.13
+   Compiling ref-cast v1.0.27
+   Compiling futures-executor v0.3.34
+   Compiling serde_with v3.24.0
+   Compiling futures v0.3.34
+   Compiling globwalk v0.9.1
+   Compiling cucumber-codegen v0.23.0
+   Compiling console v0.16.6
+   Compiling clap v4.6.7
+   Compiling inventory v0.3.25
+   Compiling linked-hash-map v0.5.6
+   Compiling humantime v2.4.0
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+   Compiling cucumber v0.23.0
+   Compiling tauri-utils v2.10.2
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri-build v2.7.4
+   Compiling tauri-codegen v2.7.4
+   Compiling tauri v2.12.5
+   Compiling tauri-macros v2.7.4
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 16.19s
+     Running unittests src/main.rs (target/debug/deps/topics_bdd-bd58361ca5480173)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/topics-292041f08c202ba3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/commands.rs (target/debug/deps/commands-ebebb77341cc156a)
+
+running 3 tests
+test invalid_overrides_fail_without_creating_any_app_data ... ok
+test os_default_matches_application_identifier_in_synthetic_home ... ok
+test commands_share_isolated_config_and_report_failures ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running unittests src/lib.rs (target/debug/deps/topics_core-1706256647167720)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/topics_desktop-9468097790e50aba)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/topics_store-39f2451cf0899f4e)
+
+running 5 tests
+test app_data::tests::invalid_override_never_falls_back ... ok
+test parse::tests::malformed_and_unicode_dates_do_not_panic_or_become_dates ... ok
+test parse::tests::meeting_metadata_comes_from_filename ... ok
+test app_data::tests::override_is_exact_and_does_not_discover_default ... ok
+test app_data::tests::default_uses_tauri_identifier_and_reports_missing_base ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/safety.rs (target/debug/deps/safety-9c48f1f0ba7b965a)
+
+running 5 tests
+test malformed_config_is_an_explicit_error ... ok
+test root_boundaries_and_nonempty_init_leave_sources_untouched ... ok
+test symlinks_never_expand_scan_beyond_root ... ok
+test startup_hash_scan_detects_equal_mtime_edit_and_invalid_utf8_stays_plain ... ok
+test retained_watcher_follows_root_switch ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+   Doc-tests topics_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests topics_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling proc-macro2 v1.0.107
+   Compiling memchr v2.8.3
+   Compiling serde_core v1.0.229
+   Compiling bitflags v2.13.2
+   Compiling serde_json v1.0.154
+   Compiling serde v1.0.229
+   Compiling smallvec v1.16.4
+   Compiling once_cell v1.21.4
+   Compiling rustix v1.1.6
+   Compiling rusqlite v0.38.0
+   Compiling globwalk v0.9.1
+   Compiling aho-corasick v1.1.5
+   Compiling nom v8.0.0
+   Compiling regex-automata v0.4.18
+   Compiling terminal_size v0.4.4
+   Compiling tempfile v3.27.0
+   Compiling clap_builder v4.6.7
+   Compiling quote v1.0.47
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling peg-macros v0.6.3
+   Compiling peg v0.6.3
+   Compiling regex v1.13.1
+   Compiling nom_locate v5.0.0
+   Compiling synstructure v0.14.0
+   Compiling derive_more-impl v2.1.1
+   Compiling sealed v0.6.0
+   Compiling typed-builder-macro v0.23.2
+   Compiling pin-project-internal v1.1.13
+   Compiling smart-default v0.7.1
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling synthez-core v0.4.0
+   Compiling thiserror-impl v2.0.21
+   Compiling futures-macro v0.3.34
+   Compiling clap_derive v4.6.7
+   Compiling zerofrom v0.1.8
+   Compiling typed-builder v0.23.2
+   Compiling yoke v0.8.4
+   Compiling futures-util v0.3.34
+   Compiling synthez-codegen v0.4.0
+   Compiling ref-cast-impl v1.0.27
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling thiserror v2.0.21
+   Compiling synthez v0.4.0
+   Compiling clap v4.6.7
+   Compiling ref-cast v1.0.27
+   Compiling pin-project v1.1.13
+   Compiling tokio-macros v2.7.2
+   Compiling derive_more v2.1.1
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling tokio v1.54.1
+   Compiling icu_collections v2.4.0
+   Compiling icu_locale_core v2.4.0
+   Compiling futures-executor v0.3.34
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-core)
+   Compiling futures v0.3.34
+   Compiling gherkin v0.16.0
+   Compiling cucumber-expressions v0.5.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling icu_provider v2.4.0
+   Compiling icu_locale_fallback v2.4.0
+   Compiling icu_segmenter v2.4.0
+   Compiling cucumber-codegen v0.23.0
+   Compiling textwrap v0.16.4
+   Compiling cucumber v0.23.0
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.78s
+     Running `target/debug/topics-bdd --tags 'not @ui'`
+Feature: Index a notes folder read-only and search it
+  Scenario: Index classifies documents by folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then document "memory/people/alex-example.md" has kind "person"
+   ✔  And document "memory/projects/ledger-migration.md" has kind "project"
+   ✔  And document "Meetings/2026.10/2026-10-28-16-05-alex-121.md" has kind "meeting" dated "2026-10-28"
+   ✔  And document "Log/2026.10/2026-10-26.md" has kind "log" dated "2026-10-26"
+  Scenario: People are parsed from profiles with aliases
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then there is a person "Alex Example" known as "Alex" with pronouns "they/them"
+   ✔  And "Alex Example" has the alias "AJ"
+   ✔  And "Alex Example" has role "Engineering Manager" in team "Payments"
+  Scenario: Full-text search finds matches across document kinds
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  And I search for "ledger"
+   ✔  Then the results include "memory/projects/ledger-migration.md"
+   ✔  And the results include "Meetings/2026.10/2026-10-28-16-05-alex-121.md"
+   ✔  And the results include "Log/2026.10/2026-10-26.md"
+   ✔  And each result shows a snippet with "ledger" highlighted
+  Scenario: Indexing never modifies the notes folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then every file in the notes root has the same bytes and modified time as before
+  Scenario: A file that cannot be parsed does not stop the index
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  Given the file "memory/people/broken.md" contains invalid UTF-8
+   ✔  When the index is built
+   ✔  Then the index contains 6 documents
+   ✔  And there is 1 warning naming "memory/people/broken.md"
+Feature: Choose or create a notes folder
+  Scenario: Use an existing notes folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I set the notes root to "work-notes"
+   ✔  Then the notes root setting is "work-notes"
+   ✔  And the index contains 3 documents
+   ✔  And no file in "work-notes" has changed
+  Scenario: Create a fresh notes folder
+   ✔  Given the folder "new-notes" does not exist
+   ✔  When I initialise a notes root at "new-notes"
+   ✔  Then "new-notes" contains the folders "memory/people", "memory/projects", "Meetings", "Log" and "topics"
+   ✔  And the notes root setting is "new-notes"
+  Scenario: Refuse to initialise over an existing non-empty folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I initialise a notes root at "work-notes"
+   ✔  Then I am told the folder is not empty and to use it instead
+   ✔  And no file in "work-notes" has changed
+  Scenario: Switch to a different notes folder
+   ✔  Given the notes root is "work-notes" with 3 markdown files
+   ✔  And a folder "home-notes" containing 2 markdown files
+   ✔  When I set the notes root to "home-notes"
+   ✔  Then the index contains 2 documents
+   ✔  And no document from "work-notes" appears in search results
+Feature: Keep the index in step with the files
+  Scenario: Rebuild after the database is deleted
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  When the index database is deleted
+   ✔  And the app starts
+   ✔  Then the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger-migration.md"
+  Scenario: An external edit is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds searching for "Northwind" returns "memory/projects/ledger-migration.md"
+  Scenario: A new file is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program creates "Meetings/2026-11-02-10-00-standup.md" containing "Northwind call"
+   ✔  Then within 2 seconds the index contains 4 documents
+  Scenario: A renamed file keeps a single index entry
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program renames "memory/projects/ledger-migration.md" to "memory/projects/ledger.md"
+   ✔  Then within 2 seconds the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger.md"
+   ✔  And no result points to "memory/projects/ledger-migration.md"
+  Scenario: A deleted file leaves the index
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program deletes "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds the index contains 2 documents
+  Scenario: Changes made while the app was closed are caught on start
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is stopped
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  And the app starts
+   ✔  Then searching for "Northwind" returns "memory/projects/ledger-migration.md"
+[Summary]
+3 features
+15 scenarios (15 passed)
+78 steps (78 passed)
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@topics/desktop@0.1.0',
+npm warn EBADENGINE   required: { node: '24.22.2' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/diff-sequences@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/expect-utils@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/get-type@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/pattern@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/schemas@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/types@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'expect@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-diff@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-matcher-utils@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-message-util@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-mock@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-regex-util@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-util@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'pretty-format@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@8.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 590 packages, and audited 591 packages in 7s
+
+119 packages are looking for funding
+  run `npm fund` for details
+
+30 vulnerabilities (16 moderate, 14 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.35 kB │ gzip:  0.25 kB
+dist/assets/index-6wqP0hHp.css    0.86 kB │ gzip:  0.50 kB
+dist/assets/index-0-i2JeTW.js   224.59 kB │ gzip: 70.11 kB
+✓ built in 499ms
+
+> @topics/desktop@0.1.0 test
+> playwright test
+
+[WebServer] (node:37130) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:37133) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37132) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/search.spec.ts:45:35 › Search shows results from the core (605ms)
+  ✓  3 tests/search.spec.ts:45:35 › Empty results say so (356ms)
+  ✓  2 tests/async.spec.ts:14:1 › late responses cannot replace newer results or cleared input (1.5s)
+  ✓  4 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (909ms)
+
+  4 passed (3.3s)
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+   Compiling syn v3.0.9
+   Compiling bitflags v2.13.2
+   Compiling memchr v2.8.3
+   Compiling rusqlite v0.38.0
+   Compiling serde_json v1.0.154
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling thiserror v2.0.21
+   Compiling serde v1.0.229
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-core)
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.19s
+     Running `target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-YLoUNY/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-6wqP0hHp.css            0.86 kB │ gzip:  0.50 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-BaG_aF9j.js           224.85 kB │ gzip: 70.27 kB
+✓ built in 1.10s
+   Compiling memchr v2.8.3
+   Compiling serde_core v1.0.229
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling zerofrom v0.1.8
+   Compiling objc2-exception-helper v0.1.1
+   Compiling thiserror v2.0.21
+   Compiling parking_lot_core v0.9.12
+   Compiling yoke v0.8.4
+   Compiling stable_deref_trait v1.2.1
+   Compiling parking_lot v0.12.5
+   Compiling uuid v1.29.0
+   Compiling aho-corasick v1.1.5
+   Compiling serde_json v1.0.154
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling quick-xml v0.42.0
+   Compiling string_cache v0.9.0
+   Compiling objc2 v0.6.5
+   Compiling web_atoms v0.2.6
+   Compiling tinystr v0.8.5
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling regex-automata v0.4.18
+   Compiling cssparser v0.37.0
+   Compiling swift-rs v1.0.9
+   Compiling markup5ever v0.39.0
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling html5ever v0.39.0
+   Compiling bitflags v2.13.2
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling serde v1.0.229
+   Compiling objc2-core-foundation v0.3.2
+   Compiling selectors v0.38.0
+   Compiling block2 v0.6.2
+   Compiling jsonptr v0.7.1
+   Compiling cfb v0.14.0
+   Compiling cargo_metadata v0.19.2
+   Compiling regex v1.13.1
+   Compiling dom_query v0.28.0
+   Compiling infer v0.22.0
+   Compiling idna_adapter v1.2.2
+   Compiling json-patch v4.2.0
+   Compiling idna v1.1.0
+   Compiling plist v1.10.3
+   Compiling serde_with v3.24.0
+   Compiling url v2.5.8
+   Compiling schemars v0.8.22
+   Compiling urlpattern v0.6.0
+   Compiling objc2-foundation v0.3.2
+   Compiling form_urlencoded v1.2.2
+   Compiling embed-resource v3.0.12
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-core-text v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling tauri-utils v2.10.2
+   Compiling log v0.4.35
+   Compiling tauri-winres v0.3.7
+   Compiling cargo_toml v1.0.1
+   Compiling dpi v0.1.2
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling futures-core v0.3.34
+   Compiling tokio v1.54.1
+   Compiling objc2-security v0.3.2
+   Compiling erased-serde v0.4.11
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling serde_spanned v1.1.2
+   Compiling objc2-javascript-core v0.3.2
+   Compiling foreign-types v0.5.0
+   Compiling serde-untagged v0.1.9
+   Compiling toml v1.1.8+spec-1.1.0
+   Compiling wry v0.57.1
+   Compiling core-graphics-types v0.2.0
+   Compiling http-body v1.1.0
+   Compiling core-graphics v0.25.0
+   Compiling tracing-core v0.1.36
+   Compiling dispatch2 v0.3.1
+   Compiling tower-service v0.3.3
+   Compiling httparse v1.10.1
+   Compiling tracing v0.1.44
+   Compiling png v0.18.1
+   Compiling keyboard-types v0.8.3
+   Compiling futures-task v0.3.34
+   Compiling sync_wrapper v1.0.2
+   Compiling tower-layer v0.3.3
+   Compiling httpdate v1.0.3
+   Compiling slab v0.4.12
+   Compiling atomic-waker v1.1.2
+   Compiling futures-util v0.3.34
+   Compiling serialize-to-javascript v0.1.2
+   Compiling libsqlite3-sys v0.36.0
+   Compiling hyper v1.12.0
+   Compiling http-body-util v0.1.5
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling rustix v1.1.6
+   Compiling tower v0.5.3
+   Compiling axum-core v0.5.6
+   Compiling hyper-util v0.1.21
+   Compiling serde_path_to_error v0.1.20
+   Compiling matchit v0.8.4
+   Compiling tempfile v3.27.0
+   Compiling tauri-build v2.7.4
+   Compiling tauri-plugin v2.7.2
+   Compiling tauri-codegen v2.7.4
+   Compiling axum v0.8.9
+   Compiling thiserror v1.0.69
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-core)
+   Compiling base64 v0.22.1
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling tauri v2.12.5
+   Compiling tauri-macros v2.7.4
+   Compiling tauri-plugin-wdio-webdriver v1.5.1
+   Compiling tauri-plugin-wdio v1.5.1
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling window-vibrancy v0.8.1
+   Compiling muda v0.20.0
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 58.25s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-p0-shell/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-02T02:13:32.304Z
+
+[0-0] RUNNING in undefined - file:///tests/native/search.ts
+[0-0] PASSED in undefined - file:///tests/native/search.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: e531f31f-2376-452e-9d11-e6a9f30d93bc
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/search.ts
+[webkit 605.1.15 macos #0-0] Phase 0 real macOS app, real Rust store
+[webkit 605.1.15 macos #0-0]    ✓ searches synthetic notes through IPC and shows No matches
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (607ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
+

@@ -1,0 +1,4 @@
+    Checking directories v6.0.0
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Checking topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.42s
