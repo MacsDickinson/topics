@@ -82,8 +82,16 @@ this Cucumber/globwalk version, so that is not valid negative-test evidence.
 Passed `cargo fmt -p topics-bdd --check` and
 `cargo clippy -p topics-bdd --all-targets -- -D warnings`.
 
-This first commit uses baseline `notes_root() -> Option<&Path>`. The coordinator
-will supply the committed core fix for adaptation to the dynamic
-`topics_store::Result<Option<PathBuf>>` accessor. Final combined checks and
-independent Claude review belong to integration; the 33-mutant campaign was not
-rerun, and no desktop validation was attempted here.
+The first implementation commit `1f73e46` uses baseline
+`notes_root() -> Option<&Path>`. The coordinator then supplied immutable core
+checkpoint `3b5c70a`; it was merged locally for verification, retaining the
+explicit harness when resolving the old dispatcher accessor conflict. The
+follow-up adapts only the root-setting assertion to the dynamic
+`topics_store::Result<Option<PathBuf>>` accessor. Against that checkpoint,
+15 scenarios/78 steps, both snapshot tests, formatting and strict Clippy pass
+again; the scratch undefined step still fails closed with exit 101.
+
+Integration should cherry-pick `1f73e46` plus the accessor/report follow-up,
+not the local verification merge. Final combined checks and independent Claude
+review belong to integration; the 33-mutant campaign was not rerun, and no
+desktop validation was attempted here.

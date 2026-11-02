@@ -66,7 +66,7 @@ fn initialise_root(w: &mut Notes, name: String) {
 #[then(regex = r#"^the notes root setting is "([^"]+)"$"#)]
 fn root_setting(w: &mut Notes, name: String) {
     assert_eq!(
-        w.service.notes_root().unwrap(),
+        w.service.notes_root().unwrap().unwrap(),
         fs::canonicalize(w.temp.path().join(name)).unwrap()
     );
 }
