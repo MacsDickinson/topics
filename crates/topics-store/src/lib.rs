@@ -1,5 +1,7 @@
 //! Read-only notes reader and replaceable SQLite index. No cloud access.
+mod app_data;
 mod parse;
+pub use app_data::application_data_dir;
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

@@ -1,15 +1,7 @@
-use std::path::PathBuf;
-use topics_store::TopicsService;
+use topics_store::{TopicsService, application_data_dir};
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let app_data = match std::env::var_os("TOPICS_APP_DATA") {
-        Some(path) => PathBuf::from(path),
-        None => directories::ProjectDirs::from("", "", "Topics")
-            .ok_or("Cannot find Application Support; set TOPICS_APP_DATA")?
-            .data_local_dir()
-            .to_path_buf(),
-    };
-    let mut service = TopicsService::open(app_data)?;
+    let mut service = TopicsService::open(application_data_dir()?)?;
     let mut args = std::env::args().skip(1);
     let command = args
         .next()

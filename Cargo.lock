@@ -4463,7 +4463,6 @@ dependencies = [
 name = "topics-cli"
 version = "0.1.0"
 dependencies = [
- "directories",
  "serde_json",
  "tempfile",
  "topics-store",
@@ -4491,6 +4490,7 @@ dependencies = [
 name = "topics-store"
 version = "0.1.0"
 dependencies = [
+ "directories",
  "rusqlite",
  "serde",
  "serde_json",

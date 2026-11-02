@@ -5,8 +5,10 @@ fn commands_share_isolated_config_and_report_failures() {
     let app = temp.path().join("app");
     let notes = temp.path().join("notes");
     let run = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_topics"))
-            .env("TOPICS_APP_DATA", &app)
+        isolated_command(temp.path())
+            .env("TOPICS_APP_DATA_DIR", &app)
+            // Keep the pre-fix regression safe: the obsolete resolver writes only here.
+            .env("TOPICS_APP_DATA", temp.path().join("obsolete"))
             .args(args)
             .output()
             .unwrap()
@@ -14,6 +16,14 @@ fn commands_share_isolated_config_and_report_failures() {
     assert!(!run(&["index"]).status.success());
     assert!(!run(&["use", "missing"]).status.success());
     assert!(run(&["init", notes.to_str().unwrap()]).status.success());
+    assert!(app.join("config.json").is_file(), "override config missing");
+    assert!(
+        app.join("index.sqlite3").is_file(),
+        "override index missing"
+    );
+    assert!(!temp.path().join("obsolete").exists());
+    assert!(!temp.path().join("Library").exists());
+    assert!(!temp.path().join("xdg").exists());
     fs::write(
         notes.join("project.md"),
         "# Synthetic ledger\nLedger migration",
@@ -29,4 +39,52 @@ fn commands_share_isolated_config_and_report_failures() {
     assert!(!run(&["init", notes.to_str().unwrap()]).status.success());
     assert!(!run(&["search"]).status.success());
     assert!(!run(&["index", "extra"]).status.success());
+}
+
+fn isolated_command(home: &std::path::Path) -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_topics"));
+    command
+        .env_clear()
+        .current_dir(home)
+        .env("HOME", home)
+        .env("USERPROFILE", home)
+        .env("APPDATA", home.join("roaming"))
+        .env("LOCALAPPDATA", home.join("local"))
+        .env("XDG_DATA_HOME", home.join("xdg"));
+    command
+}
+
+#[test]
+fn invalid_overrides_fail_without_creating_any_app_data() {
+    for value in ["", "relative-app-data"] {
+        let temp = tempfile::tempdir().unwrap();
+        let output = isolated_command(temp.path())
+            .env("TOPICS_APP_DATA_DIR", value)
+            .arg("people")
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("TOPICS_APP_DATA_DIR"));
+        assert_eq!(fs::read_dir(temp.path()).unwrap().count(), 0);
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[test]
+fn os_default_matches_application_identifier_in_synthetic_home() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = isolated_command(temp.path())
+        .arg("people")
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{:?}", output);
+    #[cfg(target_os = "macos")]
+    let base = temp.path().join("Library/Application Support");
+    #[cfg(target_os = "linux")]
+    let base = temp.path().join("xdg");
+    assert!(
+        base.join("com.macsdickinson.topics/index.sqlite3")
+            .is_file()
+    );
+    assert!(!base.join("Topics").exists());
 }

@@ -14,7 +14,7 @@ Try the CLI with a new synthetic temporary folder (never point tests at personal
 
 ```sh
 sandbox=$(mktemp -d)
-export TOPICS_APP_DATA="$sandbox/app-data"
+export TOPICS_APP_DATA_DIR="$sandbox/app-data"
 cargo run -p topics-cli --bin topics -- init "$sandbox/synthetic-notes"
 printf '# Synthetic ledger\nLedger migration example\n' > "$sandbox/synthetic-notes/memory/projects/ledger.md"
 cargo run -p topics-cli --bin topics -- index
@@ -24,6 +24,6 @@ cargo run -p topics-cli --bin topics -- people
 
 Use `topics use <path>` to select an existing folder. `init` only accepts an empty or new folder and creates `memory/people`, `memory/projects`, `Meetings`, `Log` and `topics`; it refuses a non-empty folder. All commands emit JSON on success and exit nonzero on failure. No Git repository is required inside notes.
 
-Without `TOPICS_APP_DATA`, the CLI uses the OS application data location (`~/Library/Application Support/Topics` on macOS). The setting lives in `config.json`, and the disposable index in `index.sqlite3`. Tests always pass an isolated temporary app-data directory. No notes location is assumed.
+Without `TOPICS_APP_DATA_DIR`, the CLI uses the OS application data location (`~/Library/Application Support/com.macsdickinson.topics` on macOS). The setting lives in `config.json`, and the disposable index in `index.sqlite3`. CLI and desktop share `topics_store::application_data_dir() -> Result<PathBuf>`. Windows defaults to roaming application data plus `com.macsdickinson.topics`; Linux uses `$XDG_DATA_HOME/com.macsdickinson.topics` (or `~/.local/share/com.macsdickinson.topics`). Overrides must be non-empty absolute paths; invalid overrides fail without falling back. Tests use isolated temporary overrides or a synthetic home. No notes location is assumed.
 
 [Core BDD evidence](docs/phase-0-core-evidence.md) records the red and green runs. [Persistence assessment](docs/persistence-assessment.md) explains the limited SQLite decision and future graph boundaries.
