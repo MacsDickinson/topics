@@ -1,8 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{path::PathBuf, sync::{Arc, Mutex}};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 use tauri::Manager;
-use topics_store::{SearchResult, TopicsService, WatchHandle};
+use topics_store::{SearchResult, TopicsService, WatchHandle, application_data_dir};
 
 struct StoreSession {
     service: TopicsService,
@@ -17,22 +20,38 @@ struct SearchState {
 }
 
 #[tauri::command]
-async fn search_notes(query: String, state: tauri::State<'_, SearchState>) -> Result<Vec<SearchResult>, String> {
+async fn search_notes(
+    query: String,
+    state: tauri::State<'_, SearchState>,
+) -> Result<Vec<SearchResult>, String> {
     let state = state.inner().clone();
     // Opening, scanning and SQLite queries never block the webview event loop.
     tauri::async_runtime::spawn_blocking(move || {
-        let mut session = state.session.lock().map_err(|_| "Search service unavailable".to_string())?;
+        let mut session = state
+            .session
+            .lock()
+            .map_err(|_| "Search service unavailable".to_string())?;
         if session.is_none() {
-            let service = TopicsService::open(&state.app_data).map_err(|error| error.to_string())?;
+            let service =
+                TopicsService::open(&state.app_data).map_err(|error| error.to_string())?;
             if service.notes_root().is_none() {
                 return Err("No notes folder configured. Use topics use <path> first.".to_string());
             }
-            service.index().map_err(|error| error.to_string())?;
             let watcher = service.watch().map_err(|error| error.to_string())?;
-            *session = Some(StoreSession { service, _watcher: watcher });
+            *session = Some(StoreSession {
+                service,
+                _watcher: watcher,
+            });
         }
-        session.as_ref().expect("store initialized").service.search(&query).map_err(|error| error.to_string())
-    }).await.map_err(|error| error.to_string())?
+        session
+            .as_ref()
+            .expect("store initialized")
+            .service
+            .search(&query)
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 fn main() {
@@ -43,11 +62,11 @@ fn main() {
         .plugin(tauri_plugin_wdio_webdriver::init());
     builder
         .setup(|app| {
-            let app_data = match std::env::var_os("TOPICS_APP_DATA_DIR") {
-                Some(path) => PathBuf::from(path),
-                None => app.path().app_data_dir()?,
-            };
-            app.manage(SearchState { app_data, session: Arc::new(Mutex::new(None)) });
+            let app_data = application_data_dir()?;
+            app.manage(SearchState {
+                app_data,
+                session: Arc::new(Mutex::new(None)),
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![search_notes])

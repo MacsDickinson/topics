@@ -8,6 +8,16 @@ if (import.meta.env.VITE_NATIVE_TEST === '1') await import('@wdio/tauri-plugin')
 type SearchResult = { title: string; path: string; snippet: string };
 type SearchState = { status: 'idle' | 'loading' | 'ready' | 'error'; results: SearchResult[]; error?: string };
 
+function Snippet({ text }: { text: string }) {
+  // Interpret only FTS's exact highlight markers; all content remains React text.
+  let highlighted = false;
+  return text.split(/(<mark>|<\/mark>)/).map((part, index) => {
+    if (part === '<mark>') { highlighted = true; return null; }
+    if (part === '</mark>') { highlighted = false; return null; }
+    return highlighted ? <mark key={index}>{part}</mark> : part;
+  });
+}
+
 function App() {
   const input = useRef<HTMLInputElement>(null);
   const request = useRef(0);
@@ -54,7 +64,7 @@ function App() {
       <p role="status">{state.status === 'idle' ? 'Type to search your notes.' : state.status === 'loading' ? 'Searching…' : state.status === 'ready' ? (state.results.length ? `${state.results.length} ${state.results.length === 1 ? 'result' : 'results'}` : 'No matches') : ''}</p>
       {state.status === 'error' && <p role="alert">Search failed: {state.error}</p>}
       <ul>{state.results.map(result => <li key={result.path}>
-        <h2>{result.title}</h2><p className="path">{result.path}</p><p>{result.snippet}</p>
+        <h2>{result.title}</h2><p className="path">{result.path}</p><p><Snippet text={result.snippet} /></p>
       </li>)}</ul>
     </section>
   </main>;

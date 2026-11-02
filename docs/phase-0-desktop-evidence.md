@@ -1,6 +1,6 @@
 # Phase 0 desktop evidence
 
-Scope: `apps/desktop`, with no changes to approved features, root Cargo workspace or core crates. All browser fixtures are synthetic; native fixtures use a fresh temporary directory, isolated config/index, and the real store. No repository notes symlink is accessed.
+Scope: `apps/desktop`, `scripts/check-desktop.sh`, `.github/workflows/desktop.yml` and this report, with no changes to approved features, root Cargo workspace or core crates. All browser fixtures are synthetic; native fixtures use a fresh temporary directory, isolated config/index, and the real store. No repository notes symlink is accessed.
 
 ## BDD red then green
 
@@ -20,12 +20,14 @@ Current official [Tauri WebDriver documentation](https://tauri.app/develop/tests
 
 ## UI to core
 
-React calls `invoke('search_notes', { query })`. Tauri clones managed state and runs the blocking work on `spawn_blocking`; the first search opens the configured `TopicsService`, runs the startup hash scan/index, starts and retains `WatchHandle`, then searches. Later queries use the same real store. Rust returns serializable `{ title, path, snippet }` values or rejects with an error. UI debounces requests, clears previous results immediately, ignores obsolete promises, renders errors separately from empty matches, and treats snippets as plain text.
+React calls `invoke('search_notes', { query })`. Tauri clones managed state and runs the blocking work on `spawn_blocking`; the first search opens the configured `TopicsService`, runs the startup hash scan/index, starts and retains `WatchHandle`, then searches. Later queries use the same real store. Rust returns serializable `{ title, path, snippet }` values or rejects with an error. UI debounces requests, clears previous results immediately, ignores obsolete promises, renders errors separately from empty matches, and interprets only exact FTS `<mark>` markers as React highlight elements while keeping all note content as escaped text.
 
 The notes root comes from the existing core app config. `TOPICS_APP_DATA_DIR` isolates native-test config and index. No production fixtures or fallback results exist. A missing configuration is a visible search error with CLI setup guidance.
 
 ## Integration boundary / residual checks
 
-Core owns root Cargo files and must add `apps/desktop/src-tauri` to workspace members. Native integration must confirm shared Application Support location with the CLI and compile the exact store API. Root check can call `cd apps/desktop && npm ci && npm run build && npm test`; a macOS app session additionally runs `npm run test:native` and must treat failure as failure, not skip it.
+The shared `topics_store::application_data_dir()` helper resolves the CLI and desktop to the same config location (by default `~/Library/Application Support/com.macsdickinson.topics`), honoring `TOPICS_APP_DATA_DIR`. Core owns root Cargo files and must add `apps/desktop/src-tauri` to workspace members. Native integration must confirm shared Application Support location with the CLI and compile the exact store API. Root full check delegates to `bash scripts/check-desktop.sh`, which installs pinned dependencies/browser, checks the local Node runtime, builds the frontend, runs all Playwright checks and requires the real native smoke. `.github/workflows/desktop.yml` runs that same script on macOS and retains synthetic evidence; missing native capability fails rather than skips.
 
 Initial npm audit reports 30 development-tool dependency advisories (16 moderate, 14 high), primarily in the current WebdriverIO toolchain; no blanket major-version downgrade or force fix was applied. These packages are build/test tooling and are absent from the production frontend dependency graph.
+
+Browser-only screenshots (mocked IPC, visually inspected): [ledger](../apps/desktop/evidence/browser-ledger.png) and [no matches](../apps/desktop/evidence/browser-no-matches.png). These are distinct from the pending native evidence.

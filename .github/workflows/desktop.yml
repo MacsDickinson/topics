@@ -1,0 +1,25 @@
+name: Desktop Phase 0
+on:
+  push:
+  pull_request:
+jobs:
+  desktop:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.2'
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Browser BDD and real macOS smoke
+        run: bash scripts/check-desktop.sh
+      - name: Preserve synthetic UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-evidence
+          path: |
+            apps/desktop/evidence/
+            apps/desktop/test-results/

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdirSync } from 'node:fs';
 
 const steps: Record<string, (page: Page) => Promise<unknown>> = {
   'the desktop app is open on a synthetic notes root': async page => {
@@ -44,4 +44,6 @@ for (const raw of source.split('\n')) {
 if (scenarios.length !== 2 || scenarios.some(s => !s.steps.length)) throw new Error('Expected both approved desktop scenarios');
 for (const scenario of scenarios) test(scenario.title, async ({ page }) => {
   for (const step of scenario.steps) await test.step(step, () => steps[step](page));
+  mkdirSync('evidence', { recursive: true });
+  await page.screenshot({ path: `evidence/browser-${scenario.title === 'Empty results say so' ? 'no-matches' : 'ledger'}.png` });
 });
