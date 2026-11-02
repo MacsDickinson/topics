@@ -6,9 +6,9 @@ if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--core-only" ) ]]; then
   exit 2
 fi
 cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-cargo run -p topics-bdd -- --tags 'not @ui'
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo test --locked --workspace
+cargo run --locked -p topics-bdd -- --tags 'not @ui'
 if [[ "${1:-}" != "--core-only" ]]; then
   bash scripts/check-desktop.sh
 fi

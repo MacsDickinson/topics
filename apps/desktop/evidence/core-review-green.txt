@@ -1,0 +1,77 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.02s
+     Running unittests src/main.rs (target/debug/deps/topics-b6040c15448d2730)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/commands.rs (target/debug/deps/commands-dd8ef42960a5c877)
+
+running 7 tests
+test obsolete_override_is_an_explicit_error_in_a_synthetic_home ... ok
+test unconfigured_reads_are_actionable_cli_errors ... ok
+test invalid_overrides_fail_without_creating_any_app_data ... ok
+test os_default_matches_application_identifier_in_synthetic_home ... ok
+test commands_share_isolated_config_and_report_failures ... ok
+test missing_root_can_be_replaced_or_initialised_through_real_cli ... ok
+test cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.60s
+
+     Running unittests src/lib.rs (target/debug/deps/topics_store-f203e088c77b44fe)
+
+running 8 tests
+test app_data::tests::empty_home_never_calls_os_fallback_without_override ... ok
+test app_data::tests::invalid_override_never_falls_back ... ok
+test app_data::tests::default_uses_tauri_identifier_and_reports_missing_base ... ok
+test app_data::tests::obsolete_environment_never_falls_back_even_with_new_override ... ok
+test parse::tests::malformed_and_unicode_dates_do_not_panic_or_become_dates ... ok
+test app_data::tests::override_is_exact_and_does_not_discover_default ... ok
+test parse::tests::meeting_metadata_comes_from_filename ... ok
+test watcher_tests::idle_poll_does_not_rescan_bodies_but_metadata_change_does ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/coherence.rs (target/debug/deps/coherence-1ffcf0abd67bd995)
+
+running 2 tests
+test reads_recover_a_config_index_mismatch_after_interrupted_switch ... ok
+test independent_instances_and_old_watcher_never_restore_previous_root ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+
+     Running tests/review_regressions.rs (target/debug/deps/review_regressions-8900694bf29ee172)
+
+running 10 tests
+test no_root_reads_report_choose_root_instead_of_no_matches ... ok
+test title_only_match_has_a_highlighted_excerpt ... ok
+test unix_backslashes_and_real_subdirectories_are_distinct_paths ... ok
+test config_publication_failure_keeps_selected_root_and_raw_index_unchanged ... ok
+test edited_deleted_profiles_and_multiple_glossary_aliases_are_replaced ... ok
+test punctuation_terms_and_nul_do_not_remove_real_search_hits ... ok
+test unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails ... ok
+test corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured ... ok
+test watcher_reports_root_loss_recovers_and_stops_on_drop ... ok
+test concurrent_unlinks_warn_instead_of_aborting_scans ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.85s
+
+     Running tests/safety.rs (target/debug/deps/safety-7b43317c61c4dfc1)
+
+running 5 tests
+test root_boundaries_and_nonempty_init_leave_sources_untouched ... ok
+test malformed_config_is_an_explicit_error ... ok
+test symlinks_never_expand_scan_beyond_root ... ok
+test retained_watcher_follows_root_switch ... ok
+test startup_hash_scan_detects_equal_mtime_edit_and_invalid_utf8_stays_plain ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests topics_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

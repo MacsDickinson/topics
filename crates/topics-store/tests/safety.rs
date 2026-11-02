@@ -110,7 +110,9 @@ fn symlinks_never_expand_scan_beyond_root() {
 fn malformed_config_is_an_explicit_error() {
     let temp = tempfile::tempdir().unwrap();
     fs::write(temp.path().join("config.json"), "not json").unwrap();
-    assert!(TopicsService::open(temp.path()).is_err());
+    let service = TopicsService::open(temp.path()).unwrap();
+    assert!(service.search("ledger").is_err());
+    assert!(service.notes_root().is_err());
 }
 #[test]
 fn retained_watcher_follows_root_switch() {

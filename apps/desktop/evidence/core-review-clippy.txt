@@ -1,0 +1,19 @@
+    Checking block2 v0.6.2
+    Checking objc2-core-foundation v0.3.2
+    Checking topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Checking dispatch2 v0.3.1
+    Checking topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+    Checking topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Checking objc2-foundation v0.3.2
+    Checking objc2-quartz-core v0.3.2
+    Checking objc2-app-kit v0.3.2
+    Checking objc2-web-kit v0.3.2
+    Checking tao v0.37.2
+    Checking window-vibrancy v0.8.1
+    Checking muda v0.20.0
+    Checking wry v0.57.1
+    Checking tauri-runtime v2.12.2
+    Checking tauri-runtime-wry v2.12.3
+    Checking tauri v2.12.5
+    Checking topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.99s

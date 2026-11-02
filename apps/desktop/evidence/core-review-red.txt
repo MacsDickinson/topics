@@ -1,0 +1,78 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.35s
+     Running tests/review_regressions.rs (target/debug/deps/review_regressions-8900694bf29ee172)
+
+running 8 tests
+test corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured ... FAILED
+test unix_backslashes_and_real_subdirectories_are_distinct_paths ... FAILED
+test punctuation_terms_and_nul_do_not_remove_real_search_hits ... FAILED
+test title_only_match_has_a_highlighted_excerpt ... FAILED
+test unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails ... FAILED
+test config_publication_failure_keeps_selected_root_and_raw_index_unchanged ... FAILED
+test no_root_reads_report_choose_root_instead_of_no_matches ... FAILED
+test concurrent_unlinks_warn_instead_of_aborting_scans ... FAILED
+
+failures:
+
+---- corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured stdout ----
+
+thread 'corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured' (1519200) panicked at crates/topics-store/tests/review_regressions.rs:128:47:
+called `Result::unwrap()` on an `Err` value: Sql(SqliteFailure(Error { code: NotADatabase, extended_code: 26 }, Some("file is not a database")))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- unix_backslashes_and_real_subdirectories_are_distinct_paths stdout ----
+
+thread 'unix_backslashes_and_real_subdirectories_are_distinct_paths' (1519204) panicked at crates/topics-store/tests/review_regressions.rs:69:46:
+called `Result::unwrap()` on an `Err` value: Sql(SqliteFailure(Error { code: ConstraintViolation, extended_code: 1555 }, Some("UNIQUE constraint failed: documents.path")))
+
+---- punctuation_terms_and_nul_do_not_remove_real_search_hits stdout ----
+
+thread 'punctuation_terms_and_nul_do_not_remove_real_search_hits' (1519202) panicked at crates/topics-store/tests/review_regressions.rs:33:9:
+assertion `left == right` failed: "ledger &"
+  left: 0
+ right: 1
+
+---- title_only_match_has_a_highlighted_excerpt stdout ----
+
+thread 'title_only_match_has_a_highlighted_excerpt' (1519203) panicked at crates/topics-store/tests/review_regressions.rs:50:5:
+# Notes
+Nothing relevant
+
+---- unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails stdout ----
+
+thread 'unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails' (1519205) panicked at crates/topics-store/tests/review_regressions.rs:166:5:
+assertion `left == right` failed
+  left: 0
+ right: 1
+
+---- config_publication_failure_keeps_selected_root_and_raw_index_unchanged stdout ----
+
+thread 'config_publication_failure_keeps_selected_root_and_raw_index_unchanged' (1519199) panicked at crates/topics-store/tests/review_regressions.rs:97:5:
+assertion `left == right` failed
+  left: "new.md"
+ right: "old.md"
+
+---- no_root_reads_report_choose_root_instead_of_no_matches stdout ----
+
+thread 'no_root_reads_report_choose_root_instead_of_no_matches' (1519201) panicked at crates/topics-store/tests/review_regressions.rs:114:18:
+called `Result::unwrap_err()` on an `Ok` value: ()
+
+---- concurrent_unlinks_warn_instead_of_aborting_scans stdout ----
+
+thread 'concurrent_unlinks_warn_instead_of_aborting_scans' (1519198) panicked at crates/topics-store/tests/review_regressions.rs:215:5:
+Some(Io(Os { code: 2, kind: NotFound, message: "No such file or directory" }))
+
+
+failures:
+    concurrent_unlinks_warn_instead_of_aborting_scans
+    config_publication_failure_keeps_selected_root_and_raw_index_unchanged
+    corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured
+    no_root_reads_report_choose_root_instead_of_no_matches
+    punctuation_terms_and_nul_do_not_remove_real_search_hits
+    title_only_match_has_a_highlighted_excerpt
+    unix_backslashes_and_real_subdirectories_are_distinct_paths
+    unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails
+
+test result: FAILED. 0 passed; 8 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+error: test failed, to rerun pass `-p topics-store --test review_regressions`

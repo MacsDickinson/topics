@@ -1,0 +1,33 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.51s
+     Running unittests src/lib.rs (target/debug/deps/topics_store-f203e088c77b44fe)
+
+running 5 tests
+test app_data::tests::empty_home_never_calls_os_fallback_without_override ... FAILED
+test app_data::tests::invalid_override_never_falls_back ... ok
+test app_data::tests::default_uses_tauri_identifier_and_reports_missing_base ... ok
+test app_data::tests::obsolete_environment_never_falls_back_even_with_new_override ... FAILED
+test app_data::tests::override_is_exact_and_does_not_discover_default ... ok
+
+failures:
+
+---- app_data::tests::empty_home_never_calls_os_fallback_without_override stdout ----
+
+thread 'app_data::tests::empty_home_never_calls_os_fallback_without_override' (1526283) panicked at crates/topics-store/src/app_data.rs:88:65:
+OS fallback must not run
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- app_data::tests::obsolete_environment_never_falls_back_even_with_new_override stdout ----
+
+thread 'app_data::tests::obsolete_environment_never_falls_back_even_with_new_override' (1526285) panicked at crates/topics-store/src/app_data.rs:97:9:
+assertion failed: resolve_environment(Some(temp.path().join("safe").into_os_string()),
+        Some("obsolete".into()), None, || panic!("fallback")).is_err()
+
+
+failures:
+    app_data::tests::empty_home_never_calls_os_fallback_without_override
+    app_data::tests::obsolete_environment_never_falls_back_even_with_new_override
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p topics-store --lib`

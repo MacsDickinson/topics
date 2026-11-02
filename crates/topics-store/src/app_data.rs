@@ -10,9 +10,34 @@ const APPLICATION_ID: &str = "com.macsdickinson.topics";
 /// On macOS the default is `~/Library/Application Support/com.macsdickinson.topics`.
 /// Windows uses roaming application data; other platforms use the XDG data directory.
 pub fn application_data_dir() -> Result<PathBuf> {
-    resolve(std::env::var_os("TOPICS_APP_DATA_DIR"), || {
-        directories::BaseDirs::new().map(|dirs| dirs.data_dir().to_path_buf())
-    })
+    resolve_environment(
+        std::env::var_os("TOPICS_APP_DATA_DIR"),
+        std::env::var_os("TOPICS_APP_DATA"),
+        std::env::var_os("HOME"),
+        || directories::BaseDirs::new().map(|dirs| dirs.data_dir().to_path_buf()),
+    )
+}
+
+fn resolve_environment(
+    override_dir: Option<OsString>,
+    obsolete: Option<OsString>,
+    explicit_home: Option<OsString>,
+    default_base: impl FnOnce() -> Option<PathBuf>,
+) -> Result<PathBuf> {
+    if obsolete.is_some() {
+        return Err(StoreError::Invalid(
+            "TOPICS_APP_DATA is obsolete; use TOPICS_APP_DATA_DIR".into(),
+        ));
+    }
+    #[cfg(unix)]
+    if override_dir.is_none() && explicit_home.as_ref().is_some_and(|home| home.is_empty()) {
+        return Err(StoreError::Invalid(
+            "HOME must not be empty; set TOPICS_APP_DATA_DIR explicitly".into(),
+        ));
+    }
+    #[cfg(not(unix))]
+    let _ = explicit_home;
+    resolve(override_dir, default_base)
 }
 
 fn resolve(
@@ -67,5 +92,29 @@ mod tests {
             temp.path().join("com.macsdickinson.topics")
         );
         assert!(resolve(None, || None).is_err());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn empty_home_never_calls_os_fallback_without_override() {
+        // Pure injected inputs: never invoke OS discovery with an empty HOME.
+        assert!(
+            resolve_environment(None, None, Some("".into()), || panic!(
+                "OS fallback must not run"
+            ))
+            .is_err()
+        );
+    }
+    #[test]
+    fn obsolete_environment_never_falls_back_even_with_new_override() {
+        let temp = tempfile::tempdir().unwrap();
+        assert!(
+            resolve_environment(
+                Some(temp.path().join("safe").into_os_string()),
+                Some("obsolete".into()),
+                None,
+                || panic!("fallback")
+            )
+            .is_err()
+        );
     }
 }

@@ -34,7 +34,7 @@ function run(command, args, cwd = desktop) {
   if (result.status !== 0) throw new Error(`${command} exited ${result.status}`);
 }
 try {
-  run('cargo', ['run', '-p', 'topics-cli', '--', 'use', notes], repo);
+  run('cargo', ['run', '--locked', '-p', 'topics-cli', '--', 'use', notes], repo);
   run('npm', ['run', 'tauri', '--', 'build', '--debug', '--no-bundle', '--features', 'native-test', '--config', 'src-tauri/tauri.native-test.conf.json']);
   if (!startupOnly) run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts']);
   if (JSON.stringify(snapshot(newNotes)) !== newBefore) throw new Error('Native smoke modified synthetic new-root notes');

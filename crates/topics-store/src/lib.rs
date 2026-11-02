@@ -1,10 +1,10 @@
 //! Read-only notes reader and replaceable SQLite index. No cloud access.
 mod app_data;
 mod parse;
+mod scan;
 pub use app_data::application_data_dir;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -13,7 +13,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
     thread,
-    time::{Duration, UNIX_EPOCH},
+    time::Duration,
 };
 use thiserror::Error;
 pub use topics_core::{Document, IndexReport, Person, SearchResult};
@@ -27,6 +27,8 @@ pub enum StoreError {
     Sql(#[from] rusqlite::Error),
     #[error("Configuration error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("Invalid derived index row: {0}")]
+    IndexData(String),
     #[error("{0}")]
     Invalid(String),
 }
@@ -41,6 +43,7 @@ impl Serialize for StoreError {
             Self::Sql(_) => "index",
             Self::Json(_) => "configuration",
             Self::Invalid(_) => "invalid_input",
+            Self::IndexData(_) => "index",
         };
         let mut value = serializer.serialize_struct("StoreError", 2)?;
         value.serialize_field("code", code)?;
@@ -55,17 +58,15 @@ struct Config {
 
 pub struct TopicsService {
     app_data: PathBuf,
+    startup_scan: AtomicBool,
 }
 impl TopicsService {
     pub fn open(app_data_dir: impl AsRef<Path>) -> Result<Self> {
         fs::create_dir_all(app_data_dir.as_ref())?;
         let service = Self {
             app_data: fs::canonicalize(app_data_dir)?,
+            startup_scan: AtomicBool::new(true),
         };
-        let _guard = service.lock()?;
-        if let Some(root) = service.configured_root()? {
-            service.index_root(&root)?;
-        }
         Ok(service)
     }
     // Each descriptor owns an OS lock shared across threads, instances and
@@ -98,7 +99,8 @@ impl TopicsService {
         self.configured_root()
     }
     fn validate_root(&self, root: &Path) -> Result<PathBuf> {
-        let root = fs::canonicalize(root)?;
+        let root = fs::canonicalize(root)
+            .map_err(|error| StoreError::Invalid(format!("Notes root unavailable: {error}")))?;
         if !root.is_dir() {
             return Err(StoreError::Invalid("Notes root must be a directory".into()));
         }
@@ -107,21 +109,26 @@ impl TopicsService {
                 "Notes root and application data must be separate directories".into(),
             ));
         }
+        fs::read_dir(&root)
+            .map_err(|error| StoreError::Invalid(format!("Notes root unavailable: {error}")))?;
         Ok(root)
     }
     pub fn use_notes_root(&mut self, path: impl AsRef<Path>) -> Result<IndexReport> {
         let _guard = self.lock()?;
         let root = self.validate_root(path.as_ref())?;
-        // Readers and other scanners cannot observe the intermediate new index
-        // with old config. The index's root identity repairs that pair after a crash.
-        let report = self.index_root(&root)?;
         let bytes = serde_json::to_vec_pretty(&Config {
-            notes_root: Some(root),
+            notes_root: Some(root.clone()),
         })?;
-        let temporary = self.app_data.join("config.json.tmp");
-        fs::write(&temporary, bytes)?;
-        fs::rename(temporary, self.app_data.join("config.json"))?;
-        Ok(report)
+        self.recover_index(|| {
+            self.index_root(&root, || {
+                // The matching index transaction is still uncommitted here. Any
+                // publication error rolls it back, preserving the selected old root.
+                let temporary = self.app_data.join("config.json.tmp");
+                fs::write(&temporary, &bytes)?;
+                fs::rename(temporary, self.app_data.join("config.json"))?;
+                Ok(())
+            })
+        })
     }
     pub fn init_notes_root(&mut self, path: impl AsRef<Path>) -> Result<IndexReport> {
         let path = path.as_ref();
@@ -185,10 +192,46 @@ impl TopicsService {
     }
     pub fn index(&self) -> Result<IndexReport> {
         let _guard = self.lock()?;
-        let root = self
-            .configured_root()?
-            .ok_or_else(|| StoreError::Invalid("Choose a notes root first".into()))?;
-        self.index_root(&root)
+        self.recover_index(|| {
+            let root = self.selected_root()?;
+            self.index_root(&root, || Ok(()))
+        })
+    }
+    fn selected_root(&self) -> Result<PathBuf> {
+        self.configured_root()?
+            .ok_or_else(|| StoreError::Invalid("Choose a notes root first".into()))
+    }
+    fn recover_index<T>(&self, operation: impl Fn() -> Result<T>) -> Result<T> {
+        let first = operation();
+        let corrupt = match &first {
+            Err(StoreError::Sql(error)) => error.sqlite_error_code().is_some_and(|code| {
+                matches!(
+                    code,
+                    rusqlite::ErrorCode::DatabaseCorrupt | rusqlite::ErrorCode::NotADatabase
+                )
+            }),
+            Err(StoreError::IndexData(_)) => true,
+            _ => false,
+        };
+        if !corrupt {
+            return first;
+        }
+        // Caller holds the shared OS guard; no Topics process has an index
+        // transaction open here. Remove only the disposable index and journals.
+        for file in [
+            "index.sqlite3",
+            "index.sqlite3-wal",
+            "index.sqlite3-shm",
+            "index.sqlite3-journal",
+        ] {
+            match fs::remove_file(self.app_data.join(file)) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        self.startup_scan.store(true, Ordering::Release);
+        operation()
     }
     fn indexed_root(&self) -> Result<Option<PathBuf>> {
         Ok(self
@@ -199,80 +242,25 @@ impl TopicsService {
             .optional()?
             .map(PathBuf::from))
     }
-    // A crash between the SQLite commit and config rename leaves two valid
+    // A crash between config rename and SQLite commit can leave two valid
     // files identifying different roots. Rebuild the disposable index before
     // serving any rows. Legacy indexes without identity rebuild on first use.
     fn ensure_current_index(&self) -> Result<()> {
-        let configured = self.configured_root()?;
-        let indexed = self.indexed_root()?;
-        if configured.is_none() || configured != indexed {
-            if let Some(root) = configured {
-                self.index_root(&root)?;
-            } else {
-                let mut c = self.connection()?;
-                let tx = c.transaction()?;
-                tx.execute_batch("DELETE FROM documents; DELETE FROM people; DELETE FROM search; DELETE FROM index_state;")?;
-                tx.commit()?;
-            }
+        let root = self.selected_root()?;
+        if self.startup_scan.load(Ordering::Acquire)
+            || self.indexed_root()?.as_deref() != Some(root.as_path())
+        {
+            self.index_root(&root, || Ok(()))?;
         }
         Ok(())
     }
-    fn index_root(&self, root: &Path) -> Result<IndexReport> {
+    fn index_root(
+        &self,
+        root: &Path,
+        publish_config: impl FnOnce() -> Result<()>,
+    ) -> Result<IndexReport> {
         self.validate_root(root)?;
-        let mut records = Vec::new();
-        let mut warnings = Vec::new();
-        for entry in walkdir::WalkDir::new(root).follow_links(false) {
-            let entry = match entry {
-                Ok(e) => e,
-                Err(e) => {
-                    warnings.push(e.to_string());
-                    continue;
-                }
-            };
-            if !entry.file_type().is_file() || entry.path().extension().is_none_or(|x| x != "md") {
-                continue;
-            }
-            let path = entry
-                .path()
-                .strip_prefix(root)
-                .map_err(|e| StoreError::Invalid(e.to_string()))?
-                .to_string_lossy()
-                .replace('\\', "/");
-            let bytes = match fs::read(entry.path()) {
-                Ok(b) => b,
-                Err(e) => {
-                    warnings.push(format!("{path}: {e}"));
-                    continue;
-                }
-            };
-            let body = match String::from_utf8(bytes.clone()) {
-                Ok(s) => s,
-                Err(_) => {
-                    warnings.push(format!(
-                        "{path}: invalid UTF-8; indexed as a plain document"
-                    ));
-                    String::from_utf8_lossy(&bytes).into_owned()
-                }
-            };
-            let modified = fs::metadata(entry.path())?
-                .modified()?
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos()
-                .to_string();
-            let mut document = parse::document(
-                &path,
-                &body,
-                format!("{:x}", Sha256::digest(&bytes)),
-                modified,
-            );
-            if std::str::from_utf8(&bytes).is_err() {
-                document.kind = "other".into();
-                document.date = None;
-            }
-            records.push((document, body));
-        }
-        records.sort_by(|a, b| a.0.path.cmp(&b.0.path));
+        let (records, warnings) = scan::scan(root)?;
         // Still hash every source: mtime alone cannot detect all offline edits.
         // Avoid rewriting SQLite on every idle polling tick.
         let report = IndexReport {
@@ -283,6 +271,8 @@ impl TopicsService {
             && self.read_rows::<Document>("SELECT data FROM documents ORDER BY path")?
                 == records.iter().map(|(d, _)| d.clone()).collect::<Vec<_>>()
         {
+            publish_config()?;
+            self.startup_scan.store(false, Ordering::Release);
             return Ok(report);
         }
         let aliases = parse::aliases(
@@ -317,38 +307,54 @@ impl TopicsService {
             "INSERT OR REPLACE INTO index_state(id,root) VALUES (1,?1)",
             [root.to_string_lossy().as_ref()],
         )?;
+        publish_config()?;
         tx.commit()?;
+        self.startup_scan.store(false, Ordering::Release);
         Ok(report)
     }
     pub fn documents(&self) -> Result<Vec<Document>> {
         let _guard = self.lock()?;
-        self.ensure_current_index()?;
-        self.read_rows("SELECT data FROM documents ORDER BY path")
+        self.recover_index(|| {
+            self.ensure_current_index()?;
+            self.read_rows("SELECT data FROM documents ORDER BY path")
+        })
     }
     pub fn people(&self) -> Result<Vec<Person>> {
         let _guard = self.lock()?;
-        self.ensure_current_index()?;
-        self.read_rows("SELECT data FROM people ORDER BY path")
+        self.recover_index(|| {
+            self.ensure_current_index()?;
+            self.read_rows("SELECT data FROM people ORDER BY path")
+        })
     }
     fn read_rows<T: serde::de::DeserializeOwned>(&self, sql: &str) -> Result<Vec<T>> {
         let c = self.connection()?;
         let mut stmt = c.prepare(sql)?;
         let rows = stmt.query_map([], |r| r.get::<_, String>(0))?;
-        rows.map(|r| Ok(serde_json::from_str(&r?)?)).collect()
+        rows.map(|r| {
+            serde_json::from_str(&r?).map_err(|error| StoreError::IndexData(error.to_string()))
+        })
+        .collect()
     }
     pub fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
         let _guard = self.lock()?;
-        self.ensure_current_index()?;
+        self.recover_index(|| {
+            self.ensure_current_index()?;
+            self.search_rows(query)
+        })
+    }
+    fn search_rows(&self, query: &str) -> Result<Vec<SearchResult>> {
         // Treat user input as literal terms, not SQL or unrestricted FTS syntax.
+        let query = query.replace('\0', " ");
         let terms: Vec<String> = query
             .split_whitespace()
+            .filter(|term| term.chars().any(char::is_alphanumeric))
             .map(|t| format!("\"{}\"", t.replace('"', "\"\"")))
             .collect();
         if terms.is_empty() {
             return Ok(vec![]);
         }
         let c = self.connection()?;
-        let mut stmt = c.prepare("SELECT title,path,snippet(search,2,'<mark>','</mark>','…',24) FROM search WHERE search MATCH ?1 ORDER BY rank,path")?;
+        let mut stmt = c.prepare("SELECT title,path,snippet(search,-1,'<mark>','</mark>','…',24) FROM search WHERE search MATCH ?1 ORDER BY rank,path")?;
         let rows = stmt.query_map([terms.join(" AND ")], |r| {
             Ok(SearchResult {
                 title: r.get(0)?,
@@ -358,20 +364,46 @@ impl TopicsService {
         })?;
         Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
     }
+    // No content reads/hashes at idle: only a metadata snapshot, including Unix
+    // ctime/inode, is compared. Startup and explicit index always hash all bytes.
+    fn poll_changes(&self, previous: &mut Option<Vec<String>>) -> Result<bool> {
+        let _guard = self.lock()?;
+        self.recover_index(|| {
+            let root = self.selected_root()?;
+            let snapshot = scan::snapshot(&root)?;
+            if previous.as_ref() != Some(&snapshot)
+                || self.indexed_root()?.as_deref() != Some(root.as_path())
+            {
+                self.index_root(&root, || Ok(()))?;
+                Ok(Some(snapshot))
+            } else {
+                Ok(None)
+            }
+        })
+        .map(|snapshot| {
+            let changed = snapshot.is_some();
+            if let Some(snapshot) = snapshot {
+                *previous = Some(snapshot);
+            }
+            changed
+        })
+    }
     pub fn watch(&self) -> Result<WatchHandle> {
         if self.notes_root()?.is_none() {
             return Err(StoreError::Invalid("Choose a notes root first".into()));
         }
         let worker = Self {
             app_data: self.app_data.clone(),
+            startup_scan: AtomicBool::new(true),
         };
         let stop = Arc::new(AtomicBool::new(false));
         let stop_worker = stop.clone();
         let last_error = Arc::new(Mutex::new(None));
         let errors = last_error.clone();
         let handle = thread::spawn(move || {
+            let mut previous = None;
             while !stop_worker.load(Ordering::Acquire) {
-                let result = worker.index();
+                let result = worker.poll_changes(&mut previous);
                 if let Ok(mut error) = errors.lock() {
                     *error = result.err().map(|e| e.to_string());
                 }
@@ -403,5 +435,40 @@ impl Drop for WatchHandle {
             handle.thread().unpark();
             let _ = handle.join();
         }
+    }
+}
+
+#[cfg(test)]
+mod watcher_tests {
+    use super::*;
+
+    #[test]
+    fn idle_poll_does_not_rescan_bodies_but_metadata_change_does() {
+        let temp = tempfile::tempdir().unwrap();
+        let notes = temp.path().join("notes");
+        fs::create_dir(&notes).unwrap();
+        let note = notes.join("note.md");
+        fs::write(&note, "OldRoot").unwrap();
+        let mut service = TopicsService::open(temp.path().join("app")).unwrap();
+        service.use_notes_root(&notes).unwrap();
+        let mut previous = None;
+        assert!(service.poll_changes(&mut previous).unwrap());
+        for _ in 0..4 {
+            assert!(!service.poll_changes(&mut previous).unwrap());
+        }
+        let mtime = fs::metadata(&note).unwrap().modified().unwrap();
+        fs::write(&note, "NewRoot").unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&note)
+            .unwrap()
+            .set_modified(mtime)
+            .unwrap();
+        #[cfg(unix)]
+        assert!(service.poll_changes(&mut previous).unwrap());
+        #[cfg(not(unix))]
+        service.index().unwrap();
+        assert_eq!(service.search("NewRoot").unwrap().len(), 1);
+        assert!(service.search("OldRoot").unwrap().is_empty());
     }
 }

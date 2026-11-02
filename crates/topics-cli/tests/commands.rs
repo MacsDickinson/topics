@@ -7,8 +7,6 @@ fn commands_share_isolated_config_and_report_failures() {
     let run = |args: &[&str]| {
         isolated_command(temp.path())
             .env("TOPICS_APP_DATA_DIR", &app)
-            // Keep the pre-fix regression safe: the obsolete resolver writes only here.
-            .env("TOPICS_APP_DATA", temp.path().join("obsolete"))
             .args(args)
             .output()
             .unwrap()
@@ -73,8 +71,10 @@ fn invalid_overrides_fail_without_creating_any_app_data() {
 #[test]
 fn os_default_matches_application_identifier_in_synthetic_home() {
     let temp = tempfile::tempdir().unwrap();
+    let notes = temp.path().join("notes");
+    fs::create_dir(&notes).unwrap();
     let output = isolated_command(temp.path())
-        .arg("people")
+        .args(["use", notes.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success(), "{:?}", output);
@@ -123,4 +123,73 @@ fn cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher() {
         assert_eq!(rows[0]["path"], "new.md");
     }
     assert!(watcher.last_error().is_none());
+}
+
+#[test]
+fn missing_root_can_be_replaced_or_initialised_through_real_cli() {
+    for initialise in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let app = temp.path().join("app");
+        let notes = temp.path().join("old");
+        let replacement = temp.path().join("replacement");
+        fs::create_dir(&notes).unwrap();
+        fs::write(notes.join("old.md"), "OldRoot").unwrap();
+        let run = |args: &[&str]| {
+            isolated_command(temp.path())
+                .env("TOPICS_APP_DATA_DIR", &app)
+                .args(args)
+                .output()
+                .unwrap()
+        };
+        assert!(run(&["use", notes.to_str().unwrap()]).status.success());
+        fs::rename(notes, temp.path().join("gone")).unwrap();
+        assert!(!run(&["search", "OldRoot"]).status.success());
+        if !initialise {
+            fs::create_dir(&replacement).unwrap();
+            fs::write(replacement.join("new.md"), "NewRoot").unwrap();
+        }
+        let output = run(&[
+            if initialise { "init" } else { "use" },
+            replacement.to_str().unwrap(),
+        ]);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(run(&["search", "OldRoot"]).status.success());
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&run(&["search", "OldRoot"]).stdout)
+                .unwrap(),
+            serde_json::json!([])
+        );
+    }
+}
+
+#[test]
+fn obsolete_override_is_an_explicit_error_in_a_synthetic_home() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = isolated_command(temp.path())
+        .env("TOPICS_APP_DATA", temp.path().join("obsolete"))
+        .env("TOPICS_APP_DATA_DIR", temp.path().join("safe-override"))
+        .arg("people")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("TOPICS_APP_DATA is obsolete"));
+    assert_eq!(fs::read_dir(temp.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn unconfigured_reads_are_actionable_cli_errors() {
+    let temp = tempfile::tempdir().unwrap();
+    for args in [&["search", "ledger"][..], &["people"][..]] {
+        let output = isolated_command(temp.path())
+            .env("TOPICS_APP_DATA_DIR", temp.path().join("app"))
+            .args(args)
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("Choose a notes root first"));
+    }
 }
