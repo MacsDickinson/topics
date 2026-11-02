@@ -1,0 +1,4 @@
+Baseline: f31bf55a2bc002bc8b623d53b869b16318893dad
+PASS: git diff --exit-code f31bf55 over production core/store/CLI/frontend/Tauri, manifests/locks, approved features/plans/research, README, scripts and workflows.
+PASS: BDD main.rs/steps.rs identical after removing only full-line // and /// comments.
+PASS: preserved final Opus report byte-identical to supplied original.

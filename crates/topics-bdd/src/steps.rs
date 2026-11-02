@@ -191,7 +191,8 @@ fn eventual_document_count(w: &mut Notes, count: usize) {
     });
 }
 
-// Search observes the index; it does not repair it.
+// Search can repair startup/root/index mismatches. These ordinary same-root
+// source-edit assertions rely on the retained watcher, without manual indexing.
 #[when(regex = r#"^I search for "([^"]+)"$"#)]
 fn search(w: &mut Notes, query: String) {
     w.results = w.service.search(&query).unwrap();

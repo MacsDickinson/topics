@@ -89,7 +89,8 @@ impl Notes {
     }
 }
 
-/// Poll observations only: search/documents never trigger an index rebuild here.
+/// Poll through service reads without manually indexing. Reads may repair a
+/// startup/root/index mismatch; ordinary same-root edits require the watcher.
 fn eventually(description: &str, mut observed: impl FnMut() -> bool) {
     let deadline = Instant::now() + Duration::from_secs(2);
     loop {

@@ -1,0 +1,15 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
+     Running tests/commands.rs (target/debug/deps/commands-dd8ef42960a5c877)
+
+running 8 tests
+test obsolete_override_is_an_explicit_error_in_a_synthetic_home ... ok
+test unconfigured_reads_are_actionable_cli_errors ... ok
+test invalid_overrides_fail_without_creating_any_app_data ... ok
+test os_default_matches_application_identifier_in_synthetic_home ... ok
+test commands_share_isolated_config_and_report_failures ... ok
+test missing_root_can_be_replaced_or_initialised_through_real_cli ... ok
+test cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher ... ok
+test cli_use_and_search_wait_for_external_store_lock_then_complete ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s
+

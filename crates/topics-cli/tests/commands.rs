@@ -193,3 +193,115 @@ fn unconfigured_reads_are_actionable_cli_errors() {
         assert!(String::from_utf8_lossy(&output.stderr).contains("Choose a notes root first"));
     }
 }
+
+/// Own every spawned process, including assertion/timeout paths. A failed probe
+/// must never leave a CLI blocked on the external lock after this test ends.
+struct LockProbeChild(Option<std::process::Child>);
+impl LockProbeChild {
+    fn remains_blocked(&mut self) {
+        use std::time::{Duration, Instant};
+        let deadline = Instant::now() + Duration::from_millis(750);
+        loop {
+            assert!(
+                self.0.as_mut().unwrap().try_wait().unwrap().is_none(),
+                "CLI completed while another process still held store.lock"
+            );
+            if Instant::now() >= deadline {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+    fn completes_after_release(&mut self) -> std::process::Output {
+        use std::time::{Duration, Instant};
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if self.0.as_mut().unwrap().try_wait().unwrap().is_some() {
+                return self.0.take().unwrap().wait_with_output().unwrap();
+            }
+            assert!(
+                Instant::now() < deadline,
+                "CLI did not complete after lock release"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+}
+impl Drop for LockProbeChild {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.0.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+#[test]
+fn cli_use_and_search_wait_for_external_store_lock_then_complete() {
+    use std::process::Stdio;
+    let temp = tempfile::tempdir().unwrap();
+    let app = temp.path().join("app");
+    let old = temp.path().join("old");
+    let new = temp.path().join("new");
+    fs::create_dir(&old).unwrap();
+    fs::create_dir(&new).unwrap();
+    fs::write(old.join("old.md"), "# Old ledger").unwrap();
+    fs::write(new.join("new.md"), "# New ledger").unwrap();
+    let mut setup = isolated_command(temp.path());
+    let output = setup
+        .env("TOPICS_APP_DATA_DIR", &app)
+        .args(["use", old.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    for args in [
+        &["use", new.to_str().unwrap()][..],
+        &["search", "ledger"][..],
+    ] {
+        // This parent's descriptor is independent of the real CLI process's
+        // descriptor. Successful blocking acquisition is the readiness barrier:
+        // the lock is held before Command::spawn launches the CLI (no race with
+        // a timed lock-holder startup). Never replace/remove the lock inode.
+        let external = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(app.join("store.lock"))
+            .unwrap();
+        external.lock().unwrap();
+        let child = isolated_command(temp.path())
+            .env("TOPICS_APP_DATA_DIR", &app)
+            .args(args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut probe = LockProbeChild(Some(child));
+        probe.remains_blocked();
+        drop(external); // Explicit release signal, before waiting for completion.
+        let result = probe.completes_after_release();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let json: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        if args[0] == "use" {
+            assert_eq!(json["document_count"], 1);
+            let config: serde_json::Value =
+                serde_json::from_slice(&fs::read(app.join("config.json")).unwrap()).unwrap();
+            assert_eq!(
+                config["notes_root"],
+                fs::canonicalize(&new).unwrap().to_str().unwrap()
+            );
+        } else {
+            assert_eq!(json.as_array().unwrap().len(), 1);
+            assert_eq!(json[0]["path"], "new.md");
+            assert_eq!(json[0]["title"], "New ledger");
+        }
+    }
+}
