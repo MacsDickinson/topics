@@ -5,9 +5,13 @@ if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--core-only" ) ]]; then
   echo 'Usage: scripts/check.sh [--core-only]' >&2
   exit 2
 fi
+scope=(--locked --workspace)
+if [[ "${1:-}" == "--core-only" ]]; then
+  scope+=(--exclude topics-desktop)
+fi
 cargo fmt --all --check
-cargo clippy --locked --workspace --all-targets -- -D warnings
-cargo test --locked --workspace
+cargo clippy "${scope[@]}" --all-targets -- -D warnings
+cargo test "${scope[@]}"
 cargo run --locked -p topics-bdd -- --tags 'not @ui'
 if [[ "${1:-}" != "--core-only" ]]; then
   bash scripts/check-desktop.sh

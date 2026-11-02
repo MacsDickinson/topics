@@ -18,7 +18,7 @@ The lock spans complete source scans, SQLite publication, config replacement and
 
 There is one lock order: the desktop's session mutex (when applicable), then the store OS lock, then SQLite. Watchers do not take the desktop mutex, and their 200ms polling sleep occurs after the OS guard is dropped. Internal index/read helpers require an already-held store guard and do not recursively acquire it.
 
-SQLite stores the indexed root identity in the **same transaction** as document, people and FTS rows. Config is replaced atomically under the same OS guard. If a process stops between index commit and config rename, the next read compares identities and rebuilds the disposable index from the selected root before returning anything. Legacy indexes without identity rebuild as well. Invalid config yields an error; no configured root yields empty derived rows. Source notes are never rewritten by the service.
+SQLite stores the indexed root identity in the **same transaction** as document, people and FTS rows. Following the extended core review, config is replaced atomically under the same OS guard while that transaction is still uncommitted, so publication failure rolls SQL changes back. If a process stops between config rename and SQL commit, the next read compares identities and rebuilds the disposable index from the selected root before returning anything. Legacy indexes without identity rebuild as well. Invalid config and unconfigured reads yield actionable errors; they do not appear as No matches. Source notes are never rewritten by the service.
 
 This deliberately serializes scans and searches for Phase 0 correctness: a long scan can delay another query or root switch. It does not change approved search or folder-selection outcomes. Unsupported locking returns an error rather than proceeding without synchronization.
 
@@ -50,3 +50,5 @@ The original [native result](../apps/desktop/evidence/native-ledger.png) and [No
 ## Review and limits
 
 Changes are confined to shared store synchronization, its synthetic regressions, CLI integration tests, the mechanical BDD API adjustment, desktop error handling and native harness/evidence. No optional literal-mark cosmetic changes, new UI settings or later-phase features were added. Independent review of this fix and hosted CI remain coordinator follow-ups; this task verifies local macOS execution. The previously documented development-tool advisories remain unchanged. No push or merge to main occurred.
+
+The extended accepted core-review fixes and independent BDD integration are recorded in [final review-fix evidence](phase-0-review-fixes.md), which supersedes the checkpoint totals here.

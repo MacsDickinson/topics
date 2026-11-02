@@ -1,0 +1,563 @@
+    Checking topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.62s
+   Compiling objc2-exception-helper v0.1.1
+   Compiling rusqlite v0.38.0
+   Compiling objc2 v0.6.5
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling objc2-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling wry v0.57.1
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling window-vibrancy v0.8.1
+   Compiling muda v0.20.0
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.60s
+     Running unittests src/main.rs (target/debug/deps/topics_bdd-bd58361ca5480173)
+
+running 2 tests
+test snapshot::tests::extra_empty_directory_changes_snapshot ... ok
+test snapshot::tests::symlinks_are_recorded_without_following_them ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/topics-292041f08c202ba3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/commands.rs (target/debug/deps/commands-ebebb77341cc156a)
+
+running 7 tests
+test obsolete_override_is_an_explicit_error_in_a_synthetic_home ... ok
+test invalid_overrides_fail_without_creating_any_app_data ... ok
+test unconfigured_reads_are_actionable_cli_errors ... ok
+test os_default_matches_application_identifier_in_synthetic_home ... ok
+test commands_share_isolated_config_and_report_failures ... ok
+test missing_root_can_be_replaced_or_initialised_through_real_cli ... ok
+test cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.86s
+
+     Running unittests src/lib.rs (target/debug/deps/topics_core-1706256647167720)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/topics_desktop-9468097790e50aba)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/topics_store-39f2451cf0899f4e)
+
+running 8 tests
+test app_data::tests::invalid_override_never_falls_back ... ok
+test app_data::tests::empty_home_never_calls_os_fallback_without_override ... ok
+test app_data::tests::obsolete_environment_never_falls_back_even_with_new_override ... ok
+test app_data::tests::default_uses_tauri_identifier_and_reports_missing_base ... ok
+test parse::tests::malformed_and_unicode_dates_do_not_panic_or_become_dates ... ok
+test app_data::tests::override_is_exact_and_does_not_discover_default ... ok
+test parse::tests::meeting_metadata_comes_from_filename ... ok
+test watcher_tests::idle_poll_does_not_rescan_bodies_but_metadata_change_does ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/coherence.rs (target/debug/deps/coherence-14e795e0b961ffd7)
+
+running 2 tests
+test reads_recover_a_config_index_mismatch_after_interrupted_switch ... ok
+test independent_instances_and_old_watcher_never_restore_previous_root ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
+
+     Running tests/review_regressions.rs (target/debug/deps/review_regressions-f57ae4cf885b4fb2)
+
+running 10 tests
+test no_root_reads_report_choose_root_instead_of_no_matches ... ok
+test title_only_match_has_a_highlighted_excerpt ... ok
+test unix_backslashes_and_real_subdirectories_are_distinct_paths ... ok
+test config_publication_failure_keeps_selected_root_and_raw_index_unchanged ... ok
+test edited_deleted_profiles_and_multiple_glossary_aliases_are_replaced ... ok
+test unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails ... ok
+test punctuation_terms_and_nul_do_not_remove_real_search_hits ... ok
+test corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured ... ok
+test watcher_reports_root_loss_recovers_and_stops_on_drop ... ok
+test concurrent_unlinks_warn_instead_of_aborting_scans ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.88s
+
+     Running tests/safety.rs (target/debug/deps/safety-9c48f1f0ba7b965a)
+
+running 5 tests
+test malformed_config_is_an_explicit_error ... ok
+test root_boundaries_and_nonempty_init_leave_sources_untouched ... ok
+test symlinks_never_expand_scan_beyond_root ... ok
+test retained_watcher_follows_root_switch ... ok
+test startup_hash_scan_detects_equal_mtime_edit_and_invalid_utf8_stays_plain ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+   Doc-tests topics_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests topics_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-bdd)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.98s
+     Running `target/debug/topics-bdd --tags 'not @ui'`
+Feature: Index a notes folder read-only and search it
+  Scenario: Index classifies documents by folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then document "memory/people/alex-example.md" has kind "person"
+   ✔  And document "memory/projects/ledger-migration.md" has kind "project"
+   ✔  And document "Meetings/2026.10/2026-10-28-16-05-alex-121.md" has kind "meeting" dated "2026-10-28"
+   ✔  And document "Log/2026.10/2026-10-26.md" has kind "log" dated "2026-10-26"
+  Scenario: People are parsed from profiles with aliases
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then there is a person "Alex Example" known as "Alex" with pronouns "they/them"
+   ✔  And "Alex Example" has the alias "AJ"
+   ✔  And "Alex Example" has role "Engineering Manager" in team "Payments"
+  Scenario: Full-text search finds matches across document kinds
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  And I search for "ledger"
+   ✔  Then the results include "memory/projects/ledger-migration.md"
+   ✔  And the results include "Meetings/2026.10/2026-10-28-16-05-alex-121.md"
+   ✔  And the results include "Log/2026.10/2026-10-26.md"
+   ✔  And each result shows a snippet with "ledger" highlighted
+  Scenario: Indexing never modifies the notes folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then every file in the notes root has the same bytes and modified time as before
+  Scenario: A file that cannot be parsed does not stop the index
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  Given the file "memory/people/broken.md" contains invalid UTF-8
+   ✔  When the index is built
+   ✔  Then the index contains 6 documents
+   ✔  And there is 1 warning naming "memory/people/broken.md"
+Feature: Choose or create a notes folder
+  Scenario: Use an existing notes folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I set the notes root to "work-notes"
+   ✔  Then the notes root setting is "work-notes"
+   ✔  And the index contains 3 documents
+   ✔  And no file in "work-notes" has changed
+  Scenario: Create a fresh notes folder
+   ✔  Given the folder "new-notes" does not exist
+   ✔  When I initialise a notes root at "new-notes"
+   ✔  Then "new-notes" contains the folders "memory/people", "memory/projects", "Meetings", "Log" and "topics"
+   ✔  And the notes root setting is "new-notes"
+  Scenario: Refuse to initialise over an existing non-empty folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I initialise a notes root at "work-notes"
+   ✔  Then I am told the folder is not empty and to use it instead
+   ✔  And no file in "work-notes" has changed
+  Scenario: Switch to a different notes folder
+   ✔  Given the notes root is "work-notes" with 3 markdown files
+   ✔  And a folder "home-notes" containing 2 markdown files
+   ✔  When I set the notes root to "home-notes"
+   ✔  Then the index contains 2 documents
+   ✔  And no document from "work-notes" appears in search results
+Feature: Keep the index in step with the files
+  Scenario: Rebuild after the database is deleted
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  When the index database is deleted
+   ✔  And the app starts
+   ✔  Then the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger-migration.md"
+  Scenario: An external edit is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds searching for "Northwind" returns "memory/projects/ledger-migration.md"
+  Scenario: A new file is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program creates "Meetings/2026-11-02-10-00-standup.md" containing "Northwind call"
+   ✔  Then within 2 seconds the index contains 4 documents
+  Scenario: A renamed file keeps a single index entry
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program renames "memory/projects/ledger-migration.md" to "memory/projects/ledger.md"
+   ✔  Then within 2 seconds the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger.md"
+   ✔  And no result points to "memory/projects/ledger-migration.md"
+  Scenario: A deleted file leaves the index
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program deletes "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds the index contains 2 documents
+  Scenario: Changes made while the app was closed are caught on start
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is stopped
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  And the app starts
+   ✔  Then searching for "Northwind" returns "memory/projects/ledger-migration.md"
+[Summary]
+3 features
+15 scenarios (15 passed)
+78 steps (78 passed)
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@topics/desktop@0.1.0',
+npm warn EBADENGINE   required: { node: '24.22.2' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/diff-sequences@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/expect-utils@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/get-type@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/pattern@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/schemas@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/types@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'expect@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-diff@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-matcher-utils@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-message-util@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-mock@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-regex-util@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-util@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'pretty-format@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.6.0', npm: '11.4.2' }
+npm warn EBADENGINE }
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@8.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 590 packages, and audited 591 packages in 7s
+
+119 packages are looking for funding
+  run `npm fund` for details
+
+30 vulnerabilities (16 moderate, 14 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.35 kB │ gzip:  0.25 kB
+dist/assets/index-6wqP0hHp.css    0.86 kB │ gzip:  0.50 kB
+dist/assets/index-0-i2JeTW.js   224.59 kB │ gzip: 70.11 kB
+✓ built in 510ms
+
+> @topics/desktop@0.1.0 test
+> playwright test
+
+[WebServer] (node:87063) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:87066) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:87065) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/search.spec.ts:45:35 › Search shows results from the core (640ms)
+  ✓  3 tests/search.spec.ts:45:35 › Empty results say so (359ms)
+  ✓  2 tests/async.spec.ts:14:1 › late responses cannot replace newer results or cleared input (1.5s)
+  ✓  4 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (895ms)
+
+  4 passed (3.4s)
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.44s
+     Running `target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-P35GZq/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-6wqP0hHp.css            0.86 kB │ gzip:  0.50 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-BaG_aF9j.js           224.85 kB │ gzip: 70.27 kB
+✓ built in 524ms
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling libsqlite3-sys v0.36.0
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.1
+   Compiling objc2-core-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling objc2-javascript-core v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-core-text v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-security v0.3.2
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-wdio v1.5.1
+   Compiling tauri-plugin-wdio-webdriver v1.5.1
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 38.41s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-p0-shell/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-02T02:44:16.535Z
+
+[0-0] RUNNING in undefined - file:///tests/native/search.ts
+[0-0] PASSED in undefined - file:///tests/native/search.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 6086379a-9200-4b55-af60-ffaef9c813d5
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/search.ts
+[webkit 605.1.15 macos #0-0] Phase 0 real macOS app, real Rust store
+[webkit 605.1.15 macos #0-0]    ✓ searches synthetic notes through IPC and shows No matches
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] running app and independent CLI coherence
+[webkit 605.1.15 macos #0-0]    ✓ keeps the new root selected across watcher ticks and external edits
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 2 passing (3.5s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:04  
+
+
+Execution of 1 workers started at 2026-11-02T02:44:23.603Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 9f110b56-a1a6-46be-930f-f2ccfaf2ba5b
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (315ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
+
+
+Execution of 1 workers started at 2026-11-02T02:44:27.118Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 0f741bcd-1c89-4ea9-8099-431e3b6cafc8
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (316ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
+

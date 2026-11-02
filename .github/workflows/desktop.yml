@@ -12,9 +12,12 @@ jobs:
           node-version: '24.22.2'
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Browser BDD and real macOS smoke
-        run: bash scripts/check-desktop.sh
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.98.1'
+          components: rustfmt, clippy
+      - name: Full Rust, browser BDD and real macOS smoke
+        run: bash scripts/check.sh
       - name: Preserve synthetic UI evidence
         if: always()
         uses: actions/upload-artifact@v4
