@@ -8,7 +8,18 @@ Rust is pinned to stable 1.98.1. Install rustup, then run:
 scripts/check.sh --core-only
 ```
 
-After integrating the desktop shell, `scripts/check.sh` also invokes `scripts/check-desktop.sh` for the shell's tests. Core CI uses the same core-only command. See [contributing](docs/contributing.md) for crate boundaries, safety rules and an example UI-to-service call.
+On macOS, `scripts/check.sh` runs the full Rust, browser and real desktop checks. Core CI uses `--core-only`, excluding Tauri from the Linux build. See [contributing](docs/contributing.md) for crate boundaries, safety rules and an example UI-to-service call, and [the delivery report](docs/phase-0-report.md) for reviewed results.
+
+To run the desktop with your chosen existing notes folder:
+
+```sh
+cargo run --locked -p topics-cli -- use /absolute/path/to/notes
+cd apps/desktop
+npm ci
+npm run tauri dev
+```
+
+CLI and desktop must share the same `TOPICS_APP_DATA_DIR` override, if one is set. Without an override they use the same default app data directory. The desktop installs its pinned Node LTS locally through `npm ci`; no global Node change is required. Press Cmd+K to focus search. More details are in [the desktop README](apps/desktop/README.md).
 
 Try the CLI with a new synthetic temporary folder (never point tests at personal notes):
 

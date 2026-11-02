@@ -1,6 +1,8 @@
-# Topics — plan (draft for sign-off)
+# Topics — agreed plan
 
 Date: 2026-11-01. Revised after plan review on 2026-11-02. Based on the four reports in `docs/research/`; decisions below supersede their earlier recommendations.
+
+Phase 0's plan and 17 feature scenarios were approved on 2026-11-02 with the instruction to start the Orca team. Its implementation and independent Claude reviews are recorded in [the Phase 0 delivery report](phase-0-report.md). Later phases still require their own plan and scenario sign-off.
 
 ## What we are building
 
@@ -27,11 +29,11 @@ These findings describe the original corpus. The personal-laptop notes are essen
 - Each connection has stable endpoints, a type, provenance and review status, plus temporal validity when relevant. Document mentions, explicit relationships and inferred relationships remain distinguishable. LLM-inferred connections are proposals requiring approval.
 - Facts and relationships keep their sources. Corrections supersede earlier revisions rather than deleting history.
 - Use Markdown properties, wikilinks and stable identifiers for Obsidian compatibility. Obsidian can browse and filter the knowledge, but Topics must work without it. App-created records live under `topics/`; source meeting files remain untouched.
-- **SQLite is the leading candidate for a disposable index, not a final engine decision.** Assess it against synthetic retrieval scenarios before implementing persistence. A graph model does not itself require a dedicated graph database.
+- **Phase 0 uses SQLite/FTS5 as a disposable document index.** The [persistence assessment](persistence-assessment.md) records the bounded rationale. This does not fix the engine or durable format for future connected knowledge; a graph model does not itself require a dedicated graph database.
 
 **Decided:** one small `.md` file per task and per claim revision, with durable connection records also in the app-owned `topics/` folder. The derived index lives under Application Support and can be deleted and rebuilt without losing accepted knowledge.
 
-The first retrieval example is 1:1 preparation: find shared meetings, topics and decisions discussed, open actions, and changes since the person's last recorded exposure. Show evidence and uncertainty: attendance suggests possible exposure, not confirmed understanding. Before the persistence implementation is signed off, add synthetic scenarios covering shared attendance, ambiguous identity, a later decision and a correction, and assess the candidate index against them. Other use cases must be able to introduce different connections without redesigning the core model.
+The first retrieval example is 1:1 preparation: find shared meetings, topics and decisions discussed, open actions, and changes since the person's last recorded exposure. Show evidence and uncertainty: attendance suggests possible exposure, not confirmed understanding. Shared attendance, ambiguous identity, a later decision and a correction are design cases in the assessment, not implemented graph queries. The connected-knowledge feature must turn them into executable scenarios for sign-off before its build. Other use cases must be able to introduce different connections without redesigning the core model.
 
 Research precedents: [Basic Memory's file-first graph](https://docs.basicmemory.com/reference/technical-information), [Graphiti's temporal relationships and provenance](https://github.com/getzep/graphiti), [Glean's content, people and activity model](https://docs.glean.com/security/knowledge-graph), and [Obsidian properties](https://obsidian.md/help/properties) and [Bases](https://obsidian.md/help/bases).
 
@@ -71,7 +73,7 @@ Meeting files are never rewritten. Corrections apply on read and in generated pa
 - **Rust core** (cargo workspace): `topics-core` (domain), `topics-store` (Markdown + derived index + watcher), `topics-llm` (backends), `topics-mcp` (MCP server, `rmcp`), `topics-bdd` (cucumber-rs).
 - **UI shell — decided: Tauri 2, React and TypeScript** in the system WebView. Rust owns domain and persistence logic. UI tests: Playwright against the front end with mocked IPC, plus WebdriverIO embedded-provider smoke tests against the real macOS app.
 - **Learning and maintainability:** document crate responsibilities, dependency direction, a traced UI-to-core example and consequential Rust choices. Keep modules focused and BDD scenarios readable as service usage examples.
-- **Toolchain:** the personal Mac has Rust/Cargo 1.98.1 and rustup installed; Node is v23.6.0. Phase 0 verifies and pins stable Rust and sets up Node LTS. Full Xcode is not needed.
+- **Toolchain:** Rust is pinned to 1.98.1. The desktop pins project-local Node 24.22.2 LTS; the existing global Node installation is unchanged. Full Xcode is not needed.
 
 ## BDD process (each feature)
 
