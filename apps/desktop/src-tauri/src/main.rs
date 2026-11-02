@@ -15,7 +15,7 @@ struct StoreSession {
 
 #[derive(Clone)]
 struct SearchState {
-    app_data: PathBuf,
+    app_data: Result<PathBuf, String>,
     session: Arc<Mutex<Option<StoreSession>>>,
 }
 
@@ -27,14 +27,18 @@ async fn search_notes(
     let state = state.inner().clone();
     // Opening, scanning and SQLite queries never block the webview event loop.
     tauri::async_runtime::spawn_blocking(move || {
+        let app_data = state.app_data.as_ref().map_err(Clone::clone)?;
         let mut session = state
             .session
             .lock()
             .map_err(|_| "Search service unavailable".to_string())?;
         if session.is_none() {
-            let service =
-                TopicsService::open(&state.app_data).map_err(|error| error.to_string())?;
-            if service.notes_root().is_none() {
+            let service = TopicsService::open(app_data).map_err(|error| error.to_string())?;
+            if service
+                .notes_root()
+                .map_err(|error| error.to_string())?
+                .is_none()
+            {
                 return Err("No notes folder configured. Use topics use <path> first.".to_string());
             }
             let watcher = service.watch().map_err(|error| error.to_string())?;
@@ -62,7 +66,9 @@ fn main() {
         .plugin(tauri_plugin_wdio_webdriver::init());
     builder
         .setup(|app| {
-            let app_data = application_data_dir()?;
+            // Keep resolver failures in managed state so the window remains usable.
+            // A search presents the original error; never fall back to personal data.
+            let app_data = application_data_dir().map_err(|error| error.to_string());
             app.manage(SearchState {
                 app_data,
                 session: Arc::new(Mutex::new(None)),

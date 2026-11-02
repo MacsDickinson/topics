@@ -1,0 +1,95 @@
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.84s
+     Running `target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-5oxLBZ/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-6wqP0hHp.css            0.86 kB │ gzip:  0.50 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-BaG_aF9j.js           224.85 kB │ gzip: 70.27 kB
+✓ built in 542ms
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.85s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-p0-shell/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-02T02:22:47.057Z
+
+[0-0] RUNNING in undefined - file:///tests/native/search.ts
+[0-0] Error in "running app and independent CLI coherence.keeps the new root selected across watcher ticks and external edits"
+Error: Expect $(`h2`) to have text
+
+Expected: "New ledger migration"
+Received: "Ledger migration"
+    at Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/native/search.ts:38:29)
+[0-0] FAILED in undefined - file:///tests/native/search.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: f2f7a85d-3150-4774-8ea2-793e574393be
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/search.ts
+[webkit 605.1.15 macos #0-0] Phase 0 real macOS app, real Rust store
+[webkit 605.1.15 macos #0-0]    ✓ searches synthetic notes through IPC and shows No matches
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] running app and independent CLI coherence
+[webkit 605.1.15 macos #0-0]    ✖ keeps the new root selected across watcher ticks and external edits
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (10.9s)
+[webkit 605.1.15 macos #0-0] 1 failing
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1) running app and independent CLI coherence keeps the new root selected across watcher ticks and external edits
+[webkit 605.1.15 macos #0-0] Expect $(`h2`) to have text
+
+Expected: "New ledger migration"
+Received: "Ledger migration"
+[webkit 605.1.15 macos #0-0] Error: Expect $(`h2`) to have text
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] Expected: "New ledger migration"
+[webkit 605.1.15 macos #0-0] Received: "Ledger migration"
+[webkit 605.1.15 macos #0-0]     at Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/native/search.ts:38:29)
+
+
+Spec Files:	 0 passed, 1 failed, 1 total (100% completed) in 00:00:11  
+
+file:///Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/scripts/native-smoke.mjs:32
+  if (result.status !== 0) throw new Error(`${command} exited ${result.status}`);
+                                 ^
+
+Error: npm exited 1
+    at run (file:///Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/scripts/native-smoke.mjs:32:34)
+    at file:///Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/scripts/native-smoke.mjs:37:53
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.2

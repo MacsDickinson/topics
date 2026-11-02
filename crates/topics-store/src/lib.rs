@@ -2,7 +2,7 @@
 mod app_data;
 mod parse;
 pub use app_data::application_data_dir;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -55,34 +55,47 @@ struct Config {
 
 pub struct TopicsService {
     app_data: PathBuf,
-    root: Option<PathBuf>,
-    active_root: Arc<Mutex<Option<PathBuf>>>,
-    lock: Arc<Mutex<()>>,
 }
 impl TopicsService {
     pub fn open(app_data_dir: impl AsRef<Path>) -> Result<Self> {
         fs::create_dir_all(app_data_dir.as_ref())?;
-        let app_data = fs::canonicalize(app_data_dir)?;
-        let config_path = app_data.join("config.json");
-        let config: Config = match fs::read(config_path) {
+        let service = Self {
+            app_data: fs::canonicalize(app_data_dir)?,
+        };
+        let _guard = service.lock()?;
+        if let Some(root) = service.configured_root()? {
+            service.index_root(&root)?;
+        }
+        Ok(service)
+    }
+    // Each descriptor owns an OS lock shared across threads, instances and
+    // processes. Dropping it releases the lock on success, error or process exit.
+    // Never remove this file: replacing its inode would split the lock domain.
+    fn lock(&self) -> Result<fs::File> {
+        let file = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(self.app_data.join("store.lock"))?;
+        file.lock()?;
+        Ok(file)
+    }
+    // Caller holds store.lock throughout config discovery and any index use.
+    fn configured_root(&self) -> Result<Option<PathBuf>> {
+        let config: Config = match fs::read(self.app_data.join("config.json")) {
             Ok(bytes) => serde_json::from_slice(&bytes)?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Config::default(),
             Err(e) => return Err(e.into()),
         };
-        let service = Self {
-            app_data,
-            active_root: Arc::new(Mutex::new(config.notes_root.clone())),
-            root: config.notes_root,
-            lock: Arc::new(Mutex::new(())),
-        };
-        if let Some(root) = &service.root {
-            service.validate_root(root)?;
-            service.index()?;
-        }
-        Ok(service)
+        config
+            .notes_root
+            .map(|root| self.validate_root(&root))
+            .transpose()
     }
-    pub fn notes_root(&self) -> Option<&Path> {
-        self.root.as_deref()
+    pub fn notes_root(&self) -> Result<Option<PathBuf>> {
+        let _guard = self.lock()?;
+        self.configured_root()
     }
     fn validate_root(&self, root: &Path) -> Result<PathBuf> {
         let root = fs::canonicalize(root)?;
@@ -97,28 +110,14 @@ impl TopicsService {
         Ok(root)
     }
     pub fn use_notes_root(&mut self, path: impl AsRef<Path>) -> Result<IndexReport> {
+        let _guard = self.lock()?;
         let root = self.validate_root(path.as_ref())?;
-        let old = self.root.replace(root.clone());
-        *self
-            .active_root
-            .lock()
-            .map_err(|_| StoreError::Invalid("Root lock poisoned".into()))? = self.root.clone();
-        let report = match self.index() {
-            Ok(r) => r,
-            Err(e) => {
-                self.root = old;
-                *self
-                    .active_root
-                    .lock()
-                    .map_err(|_| StoreError::Invalid("Root lock poisoned".into()))? =
-                    self.root.clone();
-                return Err(e);
-            }
-        };
+        // Readers and other scanners cannot observe the intermediate new index
+        // with old config. The index's root identity repairs that pair after a crash.
+        let report = self.index_root(&root)?;
         let bytes = serde_json::to_vec_pretty(&Config {
             notes_root: Some(root),
         })?;
-        // Atomic config publication, entirely outside the notes tree.
         let temporary = self.app_data.join("config.json.tmp");
         fs::write(&temporary, bytes)?;
         fs::rename(temporary, self.app_data.join("config.json"))?;
@@ -178,26 +177,51 @@ impl TopicsService {
     fn connection(&self) -> Result<Connection> {
         let c = Connection::open(self.app_data.join("index.sqlite3"))?;
         c.busy_timeout(Duration::from_secs(3))?;
-        c.execute_batch("CREATE TABLE IF NOT EXISTS documents(path TEXT PRIMARY KEY, data TEXT NOT NULL, body TEXT NOT NULL);
+        c.execute_batch("CREATE TABLE IF NOT EXISTS index_state(id INTEGER PRIMARY KEY CHECK(id=1), root TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS documents(path TEXT PRIMARY KEY, data TEXT NOT NULL, body TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS people(path TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(path UNINDEXED, title, body);")?;
         Ok(c)
     }
     pub fn index(&self) -> Result<IndexReport> {
-        let _guard = self
-            .lock
-            .lock()
-            .map_err(|_| StoreError::Invalid("Index lock poisoned".into()))?;
+        let _guard = self.lock()?;
         let root = self
-            .active_root
-            .lock()
-            .map_err(|_| StoreError::Invalid("Root lock poisoned".into()))?
-            .clone()
+            .configured_root()?
             .ok_or_else(|| StoreError::Invalid("Choose a notes root first".into()))?;
-        self.validate_root(&root)?;
+        self.index_root(&root)
+    }
+    fn indexed_root(&self) -> Result<Option<PathBuf>> {
+        Ok(self
+            .connection()?
+            .query_row("SELECT root FROM index_state WHERE id=1", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .optional()?
+            .map(PathBuf::from))
+    }
+    // A crash between the SQLite commit and config rename leaves two valid
+    // files identifying different roots. Rebuild the disposable index before
+    // serving any rows. Legacy indexes without identity rebuild on first use.
+    fn ensure_current_index(&self) -> Result<()> {
+        let configured = self.configured_root()?;
+        let indexed = self.indexed_root()?;
+        if configured.is_none() || configured != indexed {
+            if let Some(root) = configured {
+                self.index_root(&root)?;
+            } else {
+                let mut c = self.connection()?;
+                let tx = c.transaction()?;
+                tx.execute_batch("DELETE FROM documents; DELETE FROM people; DELETE FROM search; DELETE FROM index_state;")?;
+                tx.commit()?;
+            }
+        }
+        Ok(())
+    }
+    fn index_root(&self, root: &Path) -> Result<IndexReport> {
+        self.validate_root(root)?;
         let mut records = Vec::new();
         let mut warnings = Vec::new();
-        for entry in walkdir::WalkDir::new(&root).follow_links(false) {
+        for entry in walkdir::WalkDir::new(root).follow_links(false) {
             let entry = match entry {
                 Ok(e) => e,
                 Err(e) => {
@@ -210,7 +234,7 @@ impl TopicsService {
             }
             let path = entry
                 .path()
-                .strip_prefix(&root)
+                .strip_prefix(root)
                 .map_err(|e| StoreError::Invalid(e.to_string()))?
                 .to_string_lossy()
                 .replace('\\', "/");
@@ -255,7 +279,10 @@ impl TopicsService {
             document_count: records.len(),
             warnings,
         };
-        if self.documents()? == records.iter().map(|(d, _)| d.clone()).collect::<Vec<_>>() {
+        if self.indexed_root()?.as_deref() == Some(root)
+            && self.read_rows::<Document>("SELECT data FROM documents ORDER BY path")?
+                == records.iter().map(|(d, _)| d.clone()).collect::<Vec<_>>()
+        {
             return Ok(report);
         }
         let aliases = parse::aliases(
@@ -286,13 +313,21 @@ impl TopicsService {
                 )?;
             }
         }
+        tx.execute(
+            "INSERT OR REPLACE INTO index_state(id,root) VALUES (1,?1)",
+            [root.to_string_lossy().as_ref()],
+        )?;
         tx.commit()?;
         Ok(report)
     }
     pub fn documents(&self) -> Result<Vec<Document>> {
+        let _guard = self.lock()?;
+        self.ensure_current_index()?;
         self.read_rows("SELECT data FROM documents ORDER BY path")
     }
     pub fn people(&self) -> Result<Vec<Person>> {
+        let _guard = self.lock()?;
+        self.ensure_current_index()?;
         self.read_rows("SELECT data FROM people ORDER BY path")
     }
     fn read_rows<T: serde::de::DeserializeOwned>(&self, sql: &str) -> Result<Vec<T>> {
@@ -302,6 +337,8 @@ impl TopicsService {
         rows.map(|r| Ok(serde_json::from_str(&r?)?)).collect()
     }
     pub fn search(&self, query: &str) -> Result<Vec<SearchResult>> {
+        let _guard = self.lock()?;
+        self.ensure_current_index()?;
         // Treat user input as literal terms, not SQL or unrestricted FTS syntax.
         let terms: Vec<String> = query
             .split_whitespace()
@@ -322,14 +359,11 @@ impl TopicsService {
         Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
     }
     pub fn watch(&self) -> Result<WatchHandle> {
-        if self.root.is_none() {
+        if self.notes_root()?.is_none() {
             return Err(StoreError::Invalid("Choose a notes root first".into()));
         }
         let worker = Self {
             app_data: self.app_data.clone(),
-            root: self.root.clone(),
-            active_root: self.active_root.clone(),
-            lock: self.lock.clone(),
         };
         let stop = Arc::new(AtomicBool::new(false));
         let stop_worker = stop.clone();

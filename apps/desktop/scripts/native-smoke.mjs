@@ -5,10 +5,16 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
 if (process.platform !== 'darwin') throw new Error('This smoke test requires a real macOS app session.');
+const startupOnly = process.argv.includes('--startup-only');
+if (process.argv.slice(2).some(arg => arg !== '--startup-only')) throw new Error('Usage: native-smoke.mjs [--startup-only]');
 const desktop = resolve(import.meta.dirname, '..');
 const repo = resolve(desktop, '../..');
 const fixture = mkdtempSync(join(tmpdir(), 'topics-native-'));
 const notes = join(fixture, 'notes');
+const newNotes = join(fixture, 'new-notes');
+mkdirSync(newNotes);
+writeFileSync(join(newNotes, 'new.md'), '# New ledger migration\n\nNewRoot ledger content.\n');
+const newBefore = JSON.stringify(snapshot(newNotes));
 const note = join(notes, 'memory/projects/ledger-migration.md');
 mkdirSync(join(notes, 'memory/projects'), { recursive: true });
 writeFileSync(note, '# Ledger migration\n\nThe ledger migration is ready for review.\n');
@@ -20,8 +26,8 @@ function snapshot(root) {
   });
 }
 const before = JSON.stringify(snapshot(notes));
-for (const file of ['native-ledger.png', 'native-no-matches.png']) rmSync(join(desktop, 'evidence', file), { force: true });
-const env = { ...process.env, TOPICS_APP_DATA_DIR: join(fixture, 'app-data'), VITE_NATIVE_TEST: '1', PATH: `${join(desktop, 'node_modules/.bin')}:${process.env.PATH}` };
+for (const file of ['native-ledger.png', 'native-no-matches.png', 'native-root-switch.png', 'native-watcher-edit.png', 'native-startup-empty.png', 'native-startup-relative.png']) rmSync(join(desktop, 'evidence', file), { force: true });
+const env = { ...process.env, TOPICS_APP_DATA_DIR: join(fixture, 'app-data'), VITE_NATIVE_TEST: '1', TOPICS_TEST_SANDBOX: fixture, TOPICS_TEST_NEW_ROOT: newNotes, TOPICS_TEST_CLI: join(repo, 'target/debug/topics'), PATH: `${join(desktop, 'node_modules/.bin')}:${process.env.PATH}` };
 function run(command, args, cwd = desktop) {
   const result = spawnSync(command, args, { cwd, env, stdio: 'inherit' });
   if (result.error) throw result.error;
@@ -30,8 +36,15 @@ function run(command, args, cwd = desktop) {
 try {
   run('cargo', ['run', '-p', 'topics-cli', '--', 'use', notes], repo);
   run('npm', ['run', 'tauri', '--', 'build', '--debug', '--no-bundle', '--features', 'native-test', '--config', 'src-tauri/tauri.native-test.conf.json']);
-  run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts']);
+  if (!startupOnly) run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts']);
+  if (JSON.stringify(snapshot(newNotes)) !== newBefore) throw new Error('Native smoke modified synthetic new-root notes');
   if (JSON.stringify(snapshot(notes)) !== before) throw new Error('Native smoke modified the synthetic source note');
+  for (const invalid of ['', 'relative-app-data']) {
+    env.TOPICS_APP_DATA_DIR = invalid;
+    env.TOPICS_TEST_STARTUP = '1';
+    run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts']);
+  }
+  if (readdirSync(fixture).includes('isolated-home')) throw new Error('Invalid override created fallback application data');
 } finally {
   rmSync(fixture, { recursive: true, force: true });
 }

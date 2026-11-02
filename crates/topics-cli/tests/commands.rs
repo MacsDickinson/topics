@@ -88,3 +88,39 @@ fn os_default_matches_application_identifier_in_synthetic_home() {
     );
     assert!(!base.join("Topics").exists());
 }
+
+#[test]
+fn cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher() {
+    use std::{thread, time::Duration};
+    use topics_store::TopicsService;
+    let temp = tempfile::tempdir().unwrap();
+    let app = temp.path().join("app");
+    let old = temp.path().join("old");
+    let new = temp.path().join("new");
+    fs::create_dir(&old).unwrap();
+    fs::create_dir(&new).unwrap();
+    fs::write(old.join("old.md"), "OldRoot ledger").unwrap();
+    fs::write(new.join("new.md"), "NewRoot ledger").unwrap();
+    let mut retained = TopicsService::open(&app).unwrap();
+    retained.use_notes_root(&old).unwrap();
+    let watcher = retained.watch().unwrap();
+    let run = |args: &[&str]| {
+        isolated_command(temp.path())
+            .env("TOPICS_APP_DATA_DIR", &app)
+            .args(args)
+            .output()
+            .unwrap()
+    };
+    assert!(run(&["use", new.to_str().unwrap()]).status.success());
+    for _ in 0..5 {
+        thread::sleep(Duration::from_millis(250));
+        assert!(retained.search("OldRoot").unwrap().is_empty());
+        assert_eq!(retained.search("NewRoot").unwrap().len(), 1);
+        let result = run(&["search", "ledger"]);
+        assert!(result.status.success());
+        let rows: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(rows.as_array().unwrap().len(), 1);
+        assert_eq!(rows[0]["path"], "new.md");
+    }
+    assert!(watcher.last_error().is_none());
+}

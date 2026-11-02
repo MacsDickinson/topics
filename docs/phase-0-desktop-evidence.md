@@ -41,3 +41,7 @@ Browser-only screenshots (mocked IPC, visually inspected): [ledger](../apps/desk
 - No live notes, malformed repository notes symlink, cloud submission of note content, push, or merge to main occurred.
 
 Local shell commits before final evidence: `105c527` (UI/BDD), `c5ee637` (required local/CI smoke), `33b6480` (workspace/icon integration). Imported core commits are listed above so the coordinator can integrate originals or this branch without mistaking them for independently authored core work. Independent Claude review remains the coordinator's follow-up; macOS native CI is configured but has not been run on GitHub from this local-only task. Development-tool advisories remain as recorded above.
+
+## Accepted review fixes
+
+The retained app / independent CLI folder-switch race and invalid app-data startup abort are fixed in the follow-up described in [Phase 0 coherence evidence](phase-0-coherence-evidence.md). That report supersedes the original verification totals above: the full check now includes 16 Rust tests and four native assertions across three real app sessions, including root switching, external edit convergence and invalid overrides. Shared store config discovery and index publication now use an OS-backed lock and indexed-root identity; `notes_root()` is fallible and reads the current selection.

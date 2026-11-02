@@ -1,0 +1,33 @@
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.31s
+     Running tests/coherence.rs (target/debug/deps/coherence-1ffcf0abd67bd995)
+
+running 2 tests
+test reads_recover_a_config_index_mismatch_after_interrupted_switch ... FAILED
+test independent_instances_and_old_watcher_never_restore_previous_root ... FAILED
+
+failures:
+
+---- reads_recover_a_config_index_mismatch_after_interrupted_switch stdout ----
+
+thread 'reads_recover_a_config_index_mismatch_after_interrupted_switch' (1465381) panicked at crates/topics-store/tests/coherence.rs:52:5:
+assertion `left == right` failed
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- independent_instances_and_old_watcher_never_restore_previous_root stdout ----
+
+thread 'independent_instances_and_old_watcher_never_restore_previous_root' (1465380) panicked at crates/topics-store/tests/coherence.rs:23:9:
+assertion failed: first.search("OldRoot").unwrap().is_empty()
+
+
+failures:
+    independent_instances_and_old_watcher_never_restore_previous_root
+    reads_recover_a_config_index_mismatch_after_interrupted_switch
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p topics-store --test coherence`

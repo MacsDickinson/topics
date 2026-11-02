@@ -1,0 +1,12 @@
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.15s
+     Running tests/coherence.rs (target/debug/deps/coherence-1ffcf0abd67bd995)
+
+running 2 tests
+test reads_recover_a_config_index_mismatch_after_interrupted_switch ... ok
+test independent_instances_and_old_watcher_never_restore_previous_root ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s
+

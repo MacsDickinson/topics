@@ -104,7 +104,7 @@ fn execute_step(w: &mut Notes, step: &cucumber::gherkin::Step) {
         w.files(q[0], count);
         if s.starts_with("the notes root is") {
             w.service.use_notes_root(&w.root).unwrap();
-        } else if w.service.notes_root().is_some() {
+        } else if w.service.notes_root().unwrap().is_some() {
             w.root = previous;
         }
     } else if s.starts_with("a notes root with 3") {
@@ -121,7 +121,7 @@ fn execute_step(w: &mut Notes, step: &cucumber::gherkin::Step) {
         w.error = result.err().map(|e| e.to_string()).unwrap_or_default();
     } else if s.starts_with("the notes root setting") {
         assert_eq!(
-            w.service.notes_root().unwrap(),
+            w.service.notes_root().unwrap().unwrap(),
             fs::canonicalize(w.temp.path().join(q[0])).unwrap()
         );
     } else if s.contains("contains the folders") {

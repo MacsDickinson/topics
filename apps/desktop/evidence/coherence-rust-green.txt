@@ -1,0 +1,55 @@
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.49s
+     Running unittests src/main.rs (target/debug/deps/topics-b6040c15448d2730)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/commands.rs (target/debug/deps/commands-dd8ef42960a5c877)
+
+running 4 tests
+test invalid_overrides_fail_without_creating_any_app_data ... ok
+test os_default_matches_application_identifier_in_synthetic_home ... ok
+test commands_share_isolated_config_and_report_failures ... ok
+test cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.55s
+
+     Running unittests src/lib.rs (target/debug/deps/topics_store-f203e088c77b44fe)
+
+running 5 tests
+test app_data::tests::invalid_override_never_falls_back ... ok
+test app_data::tests::default_uses_tauri_identifier_and_reports_missing_base ... ok
+test app_data::tests::override_is_exact_and_does_not_discover_default ... ok
+test parse::tests::malformed_and_unicode_dates_do_not_panic_or_become_dates ... ok
+test parse::tests::meeting_metadata_comes_from_filename ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/coherence.rs (target/debug/deps/coherence-1ffcf0abd67bd995)
+
+running 2 tests
+test reads_recover_a_config_index_mismatch_after_interrupted_switch ... ok
+test independent_instances_and_old_watcher_never_restore_previous_root ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.08s
+
+     Running tests/safety.rs (target/debug/deps/safety-7b43317c61c4dfc1)
+
+running 5 tests
+test malformed_config_is_an_explicit_error ... ok
+test root_boundaries_and_nonempty_init_leave_sources_untouched ... ok
+test symlinks_never_expand_scan_beyond_root ... ok
+test startup_hash_scan_detects_equal_mtime_edit_and_invalid_utf8_stays_plain ... ok
+test retained_watcher_follows_root_switch ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+   Doc-tests topics_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
