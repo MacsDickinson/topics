@@ -1,6 +1,6 @@
 # Topics — plan (draft for sign-off)
 
-Date: 2026-11-01. Based on the four reports in `docs/research/`.
+Date: 2026-11-01. Revised after plan review on 2026-11-02. Based on the four reports in `docs/research/`; decisions below supersede their earlier recommendations.
 
 ## What we are building
 
@@ -9,7 +9,9 @@ A local macOS app that is your daily driver for two things:
 1. **Context** — topics (people, projects, threads). Each topic shows what the app currently believes, where each fact came from, and lets you correct it via chat.
 2. **Tasks** — one persistent backlog with stable IDs, comments and history. Bullet-journal daily log and migration replace the Monday rewrite and the big Friday correction.
 
-## Key findings from your notes
+## Findings from the original work-laptop notes
+
+These findings describe the original corpus. The personal-laptop notes are essentially a fresh start; do not assume the same files, counts or imports exist here.
 
 - Tasks have no identity. Each Monday the actions page is rewritten, so age, history and duplicates are lost.
 - Transcript errors repeat: pronouns, misheard names ("Talon" for Tallinn), two "Joe"s, invented explanations. "Unverified" appears 67 times with no owner or way to close it.
@@ -17,16 +19,21 @@ A local macOS app that is your daily driver for two things:
 - Live docs drift: `AGENTS.md` is a stale copy of `CLAUDE.md` with a bad find-replace. People pages are months old. Skills use paths that do not match the folders.
 - `~/notes` is not under git. There is no history.
 
-## Answer: markdown or knowledge graph?
+## Persistence and connected knowledge
 
-**Markdown stays. Add a SQLite index behind it. No graph database.**
+**Decided: Markdown is authoritative; Topics models a knowledge graph over it.** Source format, knowledge model and query engine are separate choices.
 
-- Scale is small (~35 people, ~10 projects, hundreds of tasks a year). SQL join tables and FTS5 search cover every query.
-- Kuzu is archived. CozoDB looks unmaintained. A graph engine adds risk without a gain at this size.
-- What markdown alone cannot do: stable task IDs, claim provenance, corrections that stick. These need structure. They do **not** need a graph.
-- We borrow one idea from temporal knowledge graphs: every fact keeps its source, and a correction supersedes a fact instead of deleting it.
+- Connections can link topics, people, meetings, tasks, claims, documents and identifiable passages within documents. Their types must be extensible to an individual's use cases; attendance and discussion are examples, not a fixed ontology.
+- Each connection has stable endpoints, a type, provenance and review status, plus temporal validity when relevant. Document mentions, explicit relationships and inferred relationships remain distinguishable. LLM-inferred connections are proposals requiring approval.
+- Facts and relationships keep their sources. Corrections supersede earlier revisions rather than deleting history.
+- Use Markdown properties, wikilinks and stable identifiers for Obsidian compatibility. Obsidian can browse and filter the knowledge, but Topics must work without it. App-created records live under `topics/`; source meeting files remain untouched.
+- **SQLite is the leading candidate for a disposable index, not a final engine decision.** Assess it against synthetic retrieval scenarios before implementing persistence. A graph model does not itself require a dedicated graph database.
 
-**Decided:** markdown is the source of truth for tasks and claims too. One small `.md` file per task and per claim revision, in an app-owned folder inside the notes root (`topics/`). SQLite is a disposable index under Application Support. Delete it and the app rebuilds it.
+**Decided:** one small `.md` file per task and per claim revision, with durable connection records also in the app-owned `topics/` folder. The derived index lives under Application Support and can be deleted and rebuilt without losing accepted knowledge.
+
+The first retrieval example is 1:1 preparation: find shared meetings, topics and decisions discussed, open actions, and changes since the person's last recorded exposure. Show evidence and uncertainty: attendance suggests possible exposure, not confirmed understanding. Before the persistence implementation is signed off, add synthetic scenarios covering shared attendance, ambiguous identity, a later decision and a correction, and assess the candidate index against them. Other use cases must be able to introduce different connections without redesigning the core model.
+
+Research precedents: [Basic Memory's file-first graph](https://docs.basicmemory.com/reference/technical-information), [Graphiti's temporal relationships and provenance](https://github.com/getzep/graphiti), [Glean's content, people and activity model](https://docs.glean.com/security/knowledge-graph), and [Obsidian properties](https://obsidian.md/help/properties) and [Bases](https://obsidian.md/help/bases).
 
 ## Core concepts
 
@@ -35,6 +42,7 @@ A local macOS app that is your daily driver for two things:
 | Topic | Person, project, team or thread. Has aliases (including known mishearings). |
 | Source | A meeting file, Slack link, Jira key, chat message or hand edit. Has a reliability level. Transcripts are low. |
 | Claim | One fact on a topic, with source, status (proposed, accepted, superseded) and dates. |
+| Connection | An extensible typed relationship between knowledge items or source passages, with evidence, review status and relevant dates. |
 | Correction | A rule applied to every future import ("Talon → Tallinn", "Codie: he/him", "'Joe' in Banking Services → ask"). |
 | Task | Stable ID, owner, topics, status, due/scheduled date, source, times migrated, comment log. Kinds: task, waiting-on, verify, decision. |
 | Log entry | One line in the daily log with a bullet-journal signifier. Can create a task, claim or event. |
@@ -50,26 +58,30 @@ Meeting files are never rewritten. Corrections apply on read and in generated pa
 
 - **The app hosts an MCP server.** It is the one tool surface for in-app chat, your Claude scheduled jobs and Codex.
 - **Every LLM change is a proposal.** The model calls `propose_changes`. You approve, edit or reject a diff card. Nothing writes without approval.
-- **"Sign in with ChatGPT":** the official programme (launched 29 Sep 2026) lists only Plus and Pro plans. Your Codex login is ChatGPT Business (lhvbank.com). The working route: the app runs `codex app-server` and Codex owns the sign-in. You get a "Sign in with ChatGPT" button, and no tokens touch app code. Reusing Codex tokens directly is rejected.
-- **Claude** (`claude -p`, LHV Enterprise org). **Decided: both backends ship together; you pick per chat.**
+- **Decided: Codex first, then Claude.** Test the first in-app chat release on the personal laptop with Codex. Claude is required for meaningful work-laptop testing, but does not gate the first personal release. Select the connection per chat once alternatives exist.
+- **Installed runtimes:** start with `codex app-server`, which owns its sign-in and credentials; add the unmodified `claude -p` runtime with its own authentication. Never extract or reuse installed applications' session tokens.
+- **Direct Sign in with ChatGPT:** a separate feature with its own sign-off, worth testing with the user's personal Pro plan and potentially demonstrating through the OpenAI ambassador network. Official [plan usage](https://developers.openai.com/siwc/token-sharing-open-source) supports open-source and locally hosted apps, with [eligible Plus and Pro users](https://developers.openai.com/siwc/quickstart). Do not assume the same eligibility for work accounts.
+- **API connections:** plan for provider API keys, local model endpoints and configurable gateways such as Bifrost and OpenRouter. Connection configuration includes protocol, endpoint, credential reference, model and headers; verify streaming and tool-calling capabilities per integration. Keep credentials in secure OS storage.
+- **Two entry points:** external agents drive Topics through MCP; in-app chat uses an installed runtime or an API connection. For direct API connections, Topics owns the conversation/tool loop and invokes the same tool contracts through an internal MCP client. All routes share proposal approval rules.
 - **Ollama** is for small local jobs only: tag new meetings, pull out candidate tasks.
 - Sensitive topics (HR, health, family) can be flagged local-only. The MCP server never sends them to cloud models.
 
 ## Tech stack
 
-- **Rust core** (cargo workspace): `topics-core` (domain), `topics-store` (markdown + SQLite + watcher), `topics-llm` (backends), `topics-mcp` (MCP server, `rmcp`), `topics-bdd` (cucumber-rs).
-- **UI shell — decided: Tauri 2** with a web front end in the system WebView. Rust owns all logic. UI tests: Playwright against the front end with mocked IPC, plus WebdriverIO embedded-provider smoke tests against the real macOS app.
-- **Toolchain:** Rust is not installed on this Mac. Phase 0 installs `rustup` and Node. Full Xcode is not needed.
+- **Rust core** (cargo workspace): `topics-core` (domain), `topics-store` (Markdown + derived index + watcher), `topics-llm` (backends), `topics-mcp` (MCP server, `rmcp`), `topics-bdd` (cucumber-rs).
+- **UI shell — decided: Tauri 2, React and TypeScript** in the system WebView. Rust owns domain and persistence logic. UI tests: Playwright against the front end with mocked IPC, plus WebdriverIO embedded-provider smoke tests against the real macOS app.
+- **Learning and maintainability:** document crate responsibilities, dependency direction, a traced UI-to-core example and consequential Rust choices. Keep modules focused and BDD scenarios readable as service usage examples.
+- **Toolchain:** the personal Mac has Rust/Cargo 1.98.1 and rustup installed; Node is v23.6.0. Phase 0 verifies and pins stable Rust and sets up Node LTS. Full Xcode is not needed.
 
 ## BDD process (each feature)
 
 1. I draft the feature plan and Gherkin scenarios with synthetic data.
 2. **You sign off** the plan and scenarios.
-3. A worker writes failing scenarios, then the code, through core services (the UI calls the same services).
+3. A worker writes failing scenarios, records the failing evidence, then writes the code through core services (the UI calls the same services).
 4. A reviewer from the other provider checks it (Claude reviews Codex, Codex reviews Claude).
 5. I show you passing results and UI evidence.
 
-CI: `cargo fmt`, `clippy -D warnings`, `cargo test`, cucumber with `fail_on_skipped`, then UI smoke tests. Tests never touch your live notes.
+CI: `cargo fmt`, `clippy -D warnings`, `cargo test`, cucumber with `fail_on_skipped`, then UI smoke tests. One local check script is also called by CI. Tests never touch your live notes. Build work uses Orca teams with one worker per independent workstream and cross-provider review.
 
 ## Delivery phases
 
@@ -78,16 +90,16 @@ Each phase is one feature with its own sign-off.
 | # | Feature | You get |
 |---|---|---|
 | 0 | Foundations: toolchain, workspace, BDD harness, choose or create a notes folder, read-only index of people, projects, meetings and logs. Full-text search. CLI. | Searchable index. Nothing writes to notes. |
-| 1 | Backlog + daily log + first UI. Import the 26 Oct actions page as tasks (you confirm matches). Comments, status, migration. | **First daily driver.** Can replace "Monday actions prep". |
-| 2 | Topics + claims + corrections. Topic view with sources. Correction rules applied on import. Verify tasks replace "Unverified". | See and fix current understanding. |
+| 1 | Backlog + daily log + task UI. Fresh capture and optional import from an existing actions page (you confirm matches). Comments, status, migration. | **First daily driver.** Can replace "Monday actions prep". |
+| 2 | Topics + claims + extensible connections + corrections. Topic view with sources. Correction rules applied on import. Verify tasks replace "Unverified". | See and fix current understanding and retrieve connected context. |
 | 3 | MCP server. Claude jobs read the backlog, then send proposals into the inbox. | Scheduled jobs feed the app instead of rewriting files. |
-| 4 | Chat: Codex app-server (Sign in with ChatGPT) and Claude backends, picker per chat, diff-card approvals. | Correct facts by chat. |
+| 4 | Chat: Codex app-server first, then Claude for work-laptop testing; diff-card approvals and connection selection. Direct ChatGPT plan usage and API/gateway connections get separate feature plans and sign-off. | Correct facts by chat, first at home and then at work. |
 | 5 | Generated views: actions page, people pages, one generator for `CLAUDE.md` + `AGENTS.md`. Retire Monday actions prep. | No more drift. |
 | 6 | Import inbox: new meetings auto-tagged locally, corrections applied, claims and tasks proposed for the daily review. | Smaller, daily corrections. |
 
 ## Risks
 
-- The Codex app-server is marked experimental. Mitigation: pin the version, add a schema contract test, keep Claude as a fallback.
+- The Codex app-server is marked experimental. Mitigation: pin the version, add a schema contract test, and add Claude as an alternative in the follow-up release.
 - Codex has shell tools. Mitigation: run it in an empty folder with a read-only sandbox, deny approvals, and add a BDD test that checks this.
 - Hand edits to generated files in Obsidian. Mitigation: a generated header plus an editable region that is read back.
 - Over-structuring killed the February system. Capture must stay one line.
