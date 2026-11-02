@@ -6,6 +6,8 @@ Date: 2026-11-02. Orca Run: `run_dc62697a69ad`.
 
 The user approved the Phase 0 plan and all 17 existing Gherkin scenarios, then requested the Orca team build. The approved feature files are unchanged. Production implementation `f31bf55` received independent Claude Opus acceptance; the tests/docs-only follow-up `bb88282` received fresh Claude Sonnet acceptance and leaves production behavior unchanged.
 
+Phase 0 is complete on main. The final native-harness correction `712014f` also received fresh Claude Sonnet acceptance. [Linux core CI](https://github.com/MacsDickinson/topics/actions/runs/41467316951) and [macOS full CI](https://github.com/MacsDickinson/topics/actions/runs/41467317179) both passed that commit. The final report-only commit changes no executable code.
+
 Delivered: Rust workspace and CLI; configurable existing/new notes roots; read-only Markdown indexing, person/glossary parsing and SQLite FTS5 search; rebuild and startup reconciliation; metadata-first watcher; Tauri 2 React/TypeScript search window; isolated BDD/browser/native checks; and contributor documentation. Tasks, claims, connection editing, chat and MCP remain future features with separate sign-off.
 
 SQLite is the Phase 0 derived document index. The [assessment](persistence-assessment.md) is a design assessment of future connected-retrieval examples, not an implementation or benchmark of graph queries. Extensible connections remain a product requirement for the later knowledge feature.
@@ -19,6 +21,7 @@ SQLite is the Phase 0 derived document index. The [assessment](persistence-asses
 - The new lock regression fails on an isolated no-op-lock mutation. Explicit BDD steps fail closed on undefined input, and snapshots cover files and directories. The hostile-markup case verifies literal rendering, no injected image/script nodes, no execution and working highlighting.
 - Real synthetic native screenshots were visually inspected: [search](../apps/desktop/evidence/native-ledger.png), [no matches](../apps/desktop/evidence/native-no-matches.png), [root switch](../apps/desktop/evidence/native-root-switch.png), [watcher update](../apps/desktop/evidence/native-watcher-edit.png) and [startup error](../apps/desktop/evidence/native-startup-relative.png).
 - [Linux core CI](../.github/workflows/core.yml) runs the core-only command; [macOS CI](../.github/workflows/desktop.yml) runs the full check. Hosted results are available in the repository's GitHub Actions runs after push.
+- Final hosted macOS verification at `712014f` passed formatting, strict Clippy, all 35 Rust tests, 15 core scenarios/78 steps, five Playwright checks (including the two approved UI scenarios), two native-environment checks and four real native assertions across three sessions. All 17 approved scenarios are covered with no skips or undefined steps.
 
 ## Read-only acceptance and confidentiality
 
@@ -41,6 +44,8 @@ One initial reviewer probe violated the temp-only protocol by creating an empty 
 | Core/final production review | Anthropic Claude Opus 5.5 | `0c8bb3a..f31bf55` | Actual diff, scratch full/native run, consistency/recovery probes; **accept** | Settled; report preserved |
 | Desktop review | Anthropic Claude Sonnet 5.5 | `0c8bb3a` | Actual IPC/UI/native checks; switching finding fixed | Settled/released |
 | Final tests/docs review | Anthropic Claude Sonnet 5.5 | `f31bf55..bb88282` | Actual diff and focused CLI/hostile-markup checks; **accept** | Settled/released |
+| Hosted native harness correction | Codex GPT-6.1 Sol, medium | `topics-p0-shell`, `712014f` | Two isolation checks, four real native assertions, production build; hosted Linux/macOS green | Landed in main |
+| Native harness review | Anthropic Claude Sonnet 5.5 | `268b4d8..712014f` | Actual diff, Node checks and unchanged-product proof; **accept** with recorded causal limits | Settled/released |
 
 Sol followed the user's explicit implementation choice. The bundled router was invoked per distinct task but had no TypeSafe key and returned deterministic fallbacks; no key was requested or exposed. Claude cross-provider review was explicitly requested, with Opus used for filesystem/multi-process correctness and Sonnet for bounded UI and test/doc review. Initial Orca readiness attempts failed before delivery; recorded recovery dispatches completed the work without duplicate writers.
 
@@ -57,4 +62,4 @@ Phase 1 build work has not started. Its plan and scenarios need the user's sign-
 
 ## Hosted CI follow-up
 
-After `268b4d8`, hosted [Linux core 41446356310](https://github.com/MacsDickinson/topics/actions/runs/41446356310) passed, while [macOS native 41446356300](https://github.com/MacsDickinson/topics/actions/runs/41446356300) passed its normal session and failed the empty app-data startup session on macOS 26.6.2. The native test harness now has a locally verified synthetic-session/WebKit isolation correction and bounded process/backend diagnostics; all four real native assertions pass locally on macOS 15.5. This is **not yet a confirmed hosted CI fix**: one earlier local disconnect remains unexplained, and the actual hosted WebKit mechanism is unconfirmed. See [CI investigation, evidence and causal limits](phase-0-ci-fix.md). The original Sol worker owns this focused follow-up; production behavior is unchanged, and independent review plus hosted rerun remain required.
+After `268b4d8`, hosted [Linux core 41446356310](https://github.com/MacsDickinson/topics/actions/runs/41446356310) passed, while [macOS native 41446356300](https://github.com/MacsDickinson/topics/actions/runs/41446356300) passed its normal session and failed the empty app-data startup session on macOS 26.6.2. The original Sol worker corrected native-session/WebKit isolation and added process/backend diagnostics in `712014f`; fresh Claude Sonnet accepted the diff, and both hosted jobs subsequently passed. Production behavior and all native assertions are unchanged. One earlier local disconnect and the original hosted WebKit mechanism remain unexplained; a green rerun does not establish a single cause. See [CI investigation, evidence and causal limits](phase-0-ci-fix.md) and [independent review](reviews/phase-0-ci-review.md). Both follow-up Tasks are settled and their worker release decisions recorded.

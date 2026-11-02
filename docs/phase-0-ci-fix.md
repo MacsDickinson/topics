@@ -1,6 +1,6 @@
 # Phase 0 hosted macOS native startup investigation
 
-Status: **local harness correction verified; hosted failure is not yet confirmed fixed**. This branch fast-forwarded from `bb88282` to clean main/origin-main `268b4d84fdd850edaa4161aa93192da3cb452411` before changes. No main-worktree edit, push, production logic change or approved-feature change occurred.
+Status: **independent review accepted; Linux and macOS hosted verification passed at `712014f4a815980b59f59884f4e32028302a9a92`**. The original WebKit failure mechanism remains unconfirmed. The implementation branch fast-forwarded from `bb88282` to clean main/origin-main `268b4d84fdd850edaa4161aa93192da3cb452411` before changes; the coordinator subsequently integrated and pushed the reviewed commit. Production logic and approved features are unchanged.
 
 ## Failure and evidence
 
@@ -38,8 +38,12 @@ The coordinator explicitly approved this deterministic isolation correction with
 
 Native source snapshots remained unchanged after their explicit synthetic editor fixture was restored, no Topics fallback directory appeared, and the temporary notes/config/index/home were removed. All instrumented child processes exited. No live notes or personal Topics configuration/defaults were probed. No personal diagnostic-report folder was inspected to explain the first disconnect.
 
-## Unchanged product and next gate
+## Unchanged product and hosted verification
 
 `git diff --exit-code 268b4d8` is empty for crates/core services, frontend source, production Tauri Rust/config/manifest, package/Cargo manifests and lockfiles, approved features and plan. [Proof](../apps/desktop/evidence/ci-unchanged-production.txt). Test-only overlay/harness/diagnostics and this evidence are the scope.
 
-The remaining uncertainty is the actual macOS-26 WebKit failure mechanism and whether this correction makes the hosted job green. Independent review and coordinator-hosted rerun must precede any claim that CI is fixed. If it fails again, retain the per-session process/backend/driver artifacts; do not add retries or relax the native checks. Previously accepted nonblocking product follow-ups remain unchanged.
+Fresh Claude Sonnet 5.5 independently reviewed `268b4d8..712014f` and accepted it with no blocking findings. The [review record](reviews/phase-0-ci-review.md) includes its verification and nonblocking diagnostic/cleanup limitations. The reviewer did not repeat the GUI run.
+
+The coordinator fast-forwarded main and pushed `712014f`. [Linux core CI 41467316951](https://github.com/MacsDickinson/topics/actions/runs/41467316951) and [macOS desktop CI 41467317179](https://github.com/MacsDickinson/topics/actions/runs/41467317179) both completed successfully. The macOS job passed the full Rust, BDD, browser and real native script, including both invalid-override startup sessions, and uploaded its synthetic UI evidence.
+
+This is evidence that the revised harness passes on the hosted runner. It does not identify the original WebKit mechanism or attribute the improvement to a single setting. If the failure recurs, retain the per-session process/backend/driver artifacts; do not add retries or relax the native checks. Previously accepted nonblocking product follow-ups remain unchanged.
