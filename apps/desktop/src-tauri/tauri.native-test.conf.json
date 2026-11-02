@@ -1,1 +1,31 @@
-{"app":{"withGlobalTauri":true,"security":{"capabilities":[{"identifier":"native-test","windows":["main"],"permissions":["core:default","wdio:default","wdio-webdriver:default"]}]}}}
+{
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "capabilities": [
+        {
+          "identifier": "native-test",
+          "windows": [
+            "main"
+          ],
+          "permissions": [
+            "core:default",
+            "wdio:default",
+            "wdio-webdriver:default"
+          ]
+        }
+      ]
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Topics",
+        "width": 760,
+        "height": 560,
+        "minWidth": 400,
+        "minHeight": 300,
+        "incognito": true
+      }
+    ]
+  }
+}

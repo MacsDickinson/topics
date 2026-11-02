@@ -54,3 +54,7 @@ All implementation/review Tasks are settled and their release decisions recorded
 - Existing npm development-tool advisories are recorded in desktop evidence; those tools are absent from the production frontend dependency graph.
 
 Phase 1 build work has not started. Its plan and scenarios need the user's sign-off.
+
+## Hosted CI follow-up
+
+After `268b4d8`, hosted [Linux core 41446356310](https://github.com/MacsDickinson/topics/actions/runs/41446356310) passed, while [macOS native 41446356300](https://github.com/MacsDickinson/topics/actions/runs/41446356300) passed its normal session and failed the empty app-data startup session on macOS 26.6.2. The native test harness now has a locally verified synthetic-session/WebKit isolation correction and bounded process/backend diagnostics; all four real native assertions pass locally on macOS 15.5. This is **not yet a confirmed hosted CI fix**: one earlier local disconnect remains unexplained, and the actual hosted WebKit mechanism is unconfirmed. See [CI investigation, evidence and causal limits](phase-0-ci-fix.md). The original Sol worker owns this focused follow-up; production behavior is unchanged, and independent review plus hosted rerun remain required.

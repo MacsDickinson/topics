@@ -1,0 +1,10 @@
+✔ native WebKit is nonpersistent while production window config is unchanged (1.413ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (2.023334ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 52.031125

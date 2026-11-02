@@ -1,0 +1,116 @@
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.478167ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (2.024292ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48.6785
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.01s
+     Running `target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-pPZpmH/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-6wqP0hHp.css            0.86 kB │ gzip:  0.50 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-BaG_aF9j.js           224.85 kB │ gzip: 70.27 kB
+✓ built in 571ms
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/crates/topics-store)
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.09s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-p0-shell/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-02T14:44:23.170Z
+
+[0-0] RUNNING in undefined - file:///tests/native/search.ts
+[0-0] PASSED in undefined - file:///tests/native/search.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: cd6e63bc-1403-4763-8e1d-5c66c234f264
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/search.ts
+[webkit 605.1.15 macos #0-0] Phase 0 real macOS app, real Rust store
+[webkit 605.1.15 macos #0-0]    ✓ searches synthetic notes through IPC and shows No matches
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] running app and independent CLI coherence
+[webkit 605.1.15 macos #0-0]    ✓ keeps the new root selected across watcher ticks and external edits
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 2 passing (3.8s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:04  
+
+
+Execution of 1 workers started at 2026-11-02T14:44:30.493Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 9205a0af-771a-4bc8-b004-b97511bac4c8
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (319ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
+
+
+Execution of 1 workers started at 2026-11-02T14:44:34.044Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 15dd87b1-5c33-4984-9fe2-0f343d65ed29
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (321ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
+

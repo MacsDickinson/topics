@@ -1,0 +1,7 @@
+Safe Foundation home-directory probe on local macOS 15.5:
+- Created an owned temporary sandbox and selected a nonexistent child as HOME.
+- In a child Python process, loaded Foundation and called NSHomeDirectory, comparing only its returned string to synthetic HOME.
+- Did not enumerate/read/create any real home/Application Support content.
+Observed: {"foundation_matches_synthetic_home": false, "synthetic_home_exists": false}
+The temporary sandbox was removed afterward.
+Conclusion: HOME substitution alone is not Cocoa/WebKit storage isolation on this host; it does not prove the cause of hosted WKError code 5.

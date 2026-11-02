@@ -1,0 +1,2 @@
+PASS: git diff --exit-code 268b4d8 over core/crates, frontend source, production Tauri Rust/config/manifest, package manifests/locks, approved features and plan is empty.
+Only the native-test configuration overlay and synthetic native harness/diagnostics are changed.
