@@ -1,0 +1,1 @@
+{"app":{"withGlobalTauri":true,"security":{"capabilities":[{"identifier":"native-test","windows":["main"],"permissions":["core:default","wdio:default","wdio-webdriver:default"]}]}}}

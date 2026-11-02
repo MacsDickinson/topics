@@ -1,0 +1,76 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test
+
+[WebServer] (node:17029) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:17032) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/search.spec.ts:44:35 › Search shows results from the core (5.2s)
+(node:17189) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/search.spec.ts:44:35 › Empty results say so (10.0s)
+
+
+  1) tests/search.spec.ts:44:35 › Search shows results from the core › I focus the search box with Cmd+K 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator: getByRole('searchbox', { name: 'Search notes' })
+    Expected: focused
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeFocused" getByRole('searchbox', { name: 'Search notes' }) with timeout 5000ms
+      - waiting for getByRole('searchbox', { name: 'Search notes' })
+
+
+      16 |   'I focus the search box with Cmd+K': async page => {
+      17 |     await page.keyboard.press('Meta+k');
+    > 18 |     await expect(page.getByRole('searchbox', { name: 'Search notes' })).toBeFocused();
+         |                                                                         ^
+      19 |   },
+      20 |   'I type "ledger"': page => page.getByRole('searchbox', { name: 'Search notes' }).fill('ledger'),
+      21 |   'I see a result titled "Ledger migration"': async page => {
+        at Object.I focus the search box with Cmd+K (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/search.spec.ts:18:73)
+        at /Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/search.spec.ts:45:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/search-Search-shows-results-from-the-core/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/search-Search-shows-results-from-the-core/error-context.md
+
+  2) tests/search.spec.ts:44:35 › Empty results say so › I search for "zzzz-no-match" ──────────────
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.fill: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('searchbox', { name: 'Search notes' })
+
+
+      24 |   },
+      25 |   'the result shows its path "memory/projects/ledger-migration.md"': page => expect(page.getByText('memory/projects/ledger-migration.md', { exact: true })).toBeVisible(),
+    > 26 |   'I search for "zzzz-no-match"': page => page.getByRole('searchbox', { name: 'Search notes' }).fill('zzzz-no-match'),
+         |                                                                                                 ^
+      27 |   'I see "No matches"': page => expect(page.getByRole('status')).toHaveText('No matches'),
+      28 | };
+      29 | // The approved source drives registration. Any new/undefined step fails collection;
+        at Object.I search for "zzzz-no-match" (/Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/search.spec.ts:26:97)
+        at /Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/search.spec.ts:45:77
+        at /Users/macs/orca/workspaces/topics/topics-p0-shell/apps/desktop/tests/search.spec.ts:45:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/search-Empty-results-say-so/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/search-Empty-results-say-so/error-context.md
+
+  2 failed
+    tests/search.spec.ts:44:35 › Search shows results from the core ────────────────────────────────
+    tests/search.spec.ts:44:35 › Empty results say so ──────────────────────────────────────────────

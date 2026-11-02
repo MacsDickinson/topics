@@ -1,0 +1,19 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test
+
+[WebServer] (node:18862) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:18877) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:18878) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 tests/search.spec.ts:45:35 › Search shows results from the core (575ms)
+  ✓  3 tests/search.spec.ts:45:35 › Empty results say so (322ms)
+  ✓  1 tests/async.spec.ts:14:1 › late responses cannot replace newer results or cleared input (1.5s)
+  ✓  4 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (908ms)
+
+  4 passed (3.4s)
