@@ -251,3 +251,10 @@ value!(UserStatementRequest {
     topic_id: Id,
     text: String
 });
+value!(ManualProposeRequest { root_id: Id, candidates: Vec<Candidate> });
+value!(ManualProposeResult { proposal: Proposal });
+value!(SourcesListResult { sources: Vec<SourceSummary> });
+value!(SourceGetRequest {
+    root_id: Id,
+    source_id: Id
+});
