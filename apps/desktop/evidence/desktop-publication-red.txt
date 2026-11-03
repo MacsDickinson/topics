@@ -1,0 +1,29 @@
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 2.46s
+     Running unittests src/main.rs (target/debug/deps/topics_desktop-a0db99f0f2b3d13b)
+
+running 2 tests
+test workspace::tests::publication_denial_cannot_leave_a_pending_proposal_visible ... FAILED
+test workspace::tests::revocation_before_final_publication_cannot_stage_late ... FAILED
+
+failures:
+
+---- workspace::tests::publication_denial_cannot_leave_a_pending_proposal_visible stdout ----
+
+thread 'workspace::tests::publication_denial_cannot_leave_a_pending_proposal_visible' (3426971) panicked at apps/desktop/src-tauri/src/workspace.rs:605:9:
+denied publication must not become visible
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- workspace::tests::revocation_before_final_publication_cannot_stage_late stdout ----
+
+thread 'workspace::tests::revocation_before_final_publication_cannot_stage_late' (3426972) panicked at apps/desktop/src-tauri/src/workspace.rs:655:9:
+late host work must not publish after revocation
+
+
+failures:
+    workspace::tests::publication_denial_cannot_leave_a_pending_proposal_visible
+    workspace::tests::revocation_before_final_publication_cannot_stage_late
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.22s
+
+error: test failed, to rerun pass `-p topics-desktop --bin topics-desktop`

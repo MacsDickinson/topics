@@ -8,7 +8,7 @@ use std::{
 };
 use tauri::Emitter;
 use topics_core::workspace::*;
-use topics_runtime::{HostTools, RunRequest, Runtime, RuntimeConfig};
+use topics_runtime::{CommitPermit, HostTools, RunRequest, Runtime, RuntimeConfig};
 use topics_store::WorkspaceService;
 
 #[derive(Clone)]
@@ -261,6 +261,26 @@ impl ScopedHost {
             candidates,
         }
     }
+    // Validation and preparation may block; only the supplied runtime permit
+    // can authorize the core's final pending-proposal visibility action.
+    fn stage_with_publisher(
+        &self,
+        candidates: Vec<Candidate>,
+        publisher: impl FnOnce(
+            &Proposal,
+            &mut dyn FnMut() -> WorkspaceResult<()>,
+        ) -> WorkspaceResult<()>,
+    ) -> WorkspaceResult<()> {
+        if candidates.is_empty() {
+            return Ok(());
+        }
+        self.state.with(|service| {
+            self.check_live(service)?;
+            service
+                .stage_proposal_guarded(self.stage_request(candidates), publisher)
+                .map(|_| ())
+        })
+    }
     fn check_live(&self, service: &WorkspaceService) -> WorkspaceResult<()> {
         service
             .scope_read(ScopeReadRequest {
@@ -372,14 +392,13 @@ impl HostTools for ScopedHost {
         }
         result
     }
-    fn commit_candidates(&self, candidates: Vec<Candidate>) -> WorkspaceResult<Vec<String>> {
-        if candidates.is_empty() {
-            return Ok(Vec::new());
-        }
-        self.state.with(|service| {
-            self.check_live(service)?;
-            let proposal = service.stage_proposal(self.stage_request(candidates))?;
-            Ok(vec![proposal.id])
+    fn commit_candidates(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> WorkspaceResult<()> {
+        self.stage_with_publisher(candidates, |proposal, action| {
+            permit.publish(vec![proposal.id.clone()], action)
         })
     }
 }
@@ -560,6 +579,40 @@ mod tests {
         };
         (fixture, state, host, candidate)
     }
+    // Tests exercise the exact guarded helper without forging a runtime permit.
+    fn publish_for_test(
+        host: &ScopedHost,
+        candidates: Vec<Candidate>,
+    ) -> WorkspaceResult<Vec<String>> {
+        let mut published = Vec::new();
+        host.stage_with_publisher(candidates, |proposal, action| {
+            action()?;
+            published.push(proposal.id.clone());
+            Ok(())
+        })?;
+        Ok(published)
+    }
+    fn assert_no_pending_after_reopen(state: &WorkspaceState, root_id: &str) {
+        let request = RootRequest {
+            root_id: root_id.to_owned(),
+        };
+        assert!(
+            state
+                .with(|service| service.proposals_list(request.clone()))
+                .unwrap()
+                .proposals
+                .is_empty()
+        );
+        let reopened = WorkspaceService::open(state.ready().unwrap()).unwrap();
+        assert!(
+            reopened
+                .proposals_list(request)
+                .unwrap()
+                .proposals
+                .is_empty(),
+            "reopening must not publish abandoned preparation"
+        );
+    }
     #[test]
     fn invalid_request_shapes_keep_typed_api_errors_before_service_access() {
         assert_eq!(
@@ -577,6 +630,56 @@ mod tests {
         assert!(decode_request::<RootGetRequest>(Some(json!({}))).is_ok());
     }
     #[test]
+    fn publication_denial_cannot_leave_a_pending_proposal_visible() {
+        let (_fixture, state, host, candidate) = host();
+        let result = host.stage_with_publisher(vec![candidate], |_proposal, _action| {
+            Err(ApiError::new("cancelled", "Publication permit revoked"))
+        });
+        assert_eq!(result.unwrap_err().code, "cancelled");
+        assert_no_pending_after_reopen(&state, &host.root_id);
+        assert!(
+            state
+                .with(|service| service.topics_list(RootRequest {
+                    root_id: host.root_id.clone()
+                }))
+                .unwrap()
+                .topics
+                .is_empty()
+        );
+    }
+    #[test]
+    fn revocation_before_final_publication_cannot_stage_late() {
+        use std::sync::{
+            atomic::{AtomicBool, Ordering},
+            mpsc,
+        };
+        use std::time::Duration;
+        let (_fixture, state, host, candidate) = host();
+        let root_id = host.root_id.clone();
+        let revoked = Arc::new(AtomicBool::new(false));
+        let worker_revoked = revoked.clone();
+        let (prepared_tx, prepared_rx) = mpsc::sync_channel(1);
+        let (resume_tx, resume_rx) = mpsc::sync_channel(1);
+        std::thread::scope(|scope| {
+            let worker = scope.spawn(move || {
+                host.stage_with_publisher(vec![candidate], |_proposal, action| {
+                    prepared_tx.send(()).unwrap();
+                    resume_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+                    if worker_revoked.load(Ordering::SeqCst) {
+                        Err(ApiError::new("cancelled", "Publication permit expired"))
+                    } else {
+                        action()
+                    }
+                })
+            });
+            prepared_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            revoked.store(true, Ordering::SeqCst);
+            resume_tx.send(()).unwrap();
+            assert_eq!(worker.join().unwrap().unwrap_err().code, "cancelled");
+        });
+        assert_no_pending_after_reopen(&state, &root_id);
+    }
+    #[test]
     fn host_validates_without_staging_then_commits_pending_only() {
         let (_fixture, state, host, candidate) = host();
         host.call("propose_changes", json!({"candidates":[candidate.clone()]}))
@@ -590,7 +693,7 @@ mod tests {
                 .proposals
                 .is_empty()
         );
-        let ids = host.commit_candidates(vec![candidate]).unwrap();
+        let ids = publish_for_test(&host, vec![candidate]).unwrap();
         assert_eq!(ids.len(), 1);
         let pending = state
             .with(|service| {
@@ -601,6 +704,7 @@ mod tests {
             .unwrap()
             .proposals;
         assert_eq!(pending[0].status, ProposalStatus::Pending);
+        assert_eq!(ids, vec![pending[0].id.clone()]);
         assert!(
             state
                 .with(|service| service.topics_list(RootRequest {
@@ -682,7 +786,10 @@ mod tests {
                 .proposals
                 .is_empty()
         );
-        assert_eq!(host.commit_candidates(vec![topic, claim]).unwrap().len(), 1);
+        assert_eq!(
+            publish_for_test(&host, vec![topic, claim]).unwrap().len(),
+            1
+        );
     }
     #[test]
     fn scoped_context_never_exposes_unrelated_or_local_only_topic_inventory() {
@@ -750,7 +857,18 @@ mod tests {
                 })
             })
             .unwrap();
-        assert!(host.commit_candidates(vec![candidate]).is_err());
+        let mut publisher_called = false;
+        assert!(
+            host.stage_with_publisher(vec![candidate], |_, action| {
+                publisher_called = true;
+                action()
+            })
+            .is_err()
+        );
+        assert!(
+            !publisher_called,
+            "cancelled core capability must fail before publication"
+        );
         assert!(
             state
                 .with(|service| service.proposals_list(RootRequest {
