@@ -52,3 +52,39 @@ same-user process replacing the entry between check and Codex dotenv import.
 Existing outside-root hardlink/copy and final atomic-publication nonpreemption
 limits remain documented in REREVIEW-REMEDIATION.md. No new capability, domain type,
 external endpoint, login/auth access, root manifest change or push is added.
+
+## Final source-frozen native result
+
+Source patch: `8ae44f9cd5af2a514f1639def47996714cc9a4a0`, committed
+2026-11-03 07:04:30 UTC. Final verification ran 07:04:42.337–07:05:48.151 UTC,
+with no subsequent runtime src/test/manifest changes. The final evidence commit
+therefore contains the identical tested product source. Source-scope SHA256:
+`707dc53ffaa6a65dd086e13dedd55ba75b930806c279339ee7aa8000eafcce63`.
+
+`python3 crates/topics-runtime/evidence/run-final-native.py --output-prefix
+dotenv-final` passed all four explicit native tests in one invocation, with no
+live retry: pinned schema (16 projections), isolated effective config, genuine
+subscription discovery/correction and genuine adversarial isolation. This adds
+to the 49 passing deterministic tests; none are ignored. Discovery yielded three
+cited candidates and one proposal event after a real scoped read; persisted
+statement correction yielded one typed candidate and one proposal event after a
+real scoped read. The adversarial test required a successful real baseline tool
+read, returned no randomized private sentinel, staged zero candidates and emitted
+one terminal. All synthetic source bytes were unchanged.
+
+The final model-test executable SHA256 is
+`c7857afb3801bf7a1eeec71ae49f697981adfe7c66a1eb2aad65919c4b97f441`.
+`dotenv-final-chronology.json` records all three executable SHA256 and mtimes,
+source commit/digest and unchanged-source checks. Executables were built after
+the last source edit and after the freeze commit. The final live run retained the
+prior harness's ten fake hostile trace/CA/auth/endpoint/proxy/OTEL parent variables;
+production children stripped them, and no trace or keylog path was created.
+No model/account/config/capability/auth payloads were captured or logged.
+
+Final native evidence is kept separately in dotenv-final-schema_pin.log,
+dotenv-final-config_override_native.log, dotenv-final-live_codex.log and
+dotenv-final-chronology.json; accepted previous logs are preserved. Public
+Runtime new/status/analysis_start/chat_start/cancel, HostTools call and
+guarded commit_candidates, CommitPermit publish, EventSink and RunRequest are
+unchanged from the API recorded in REREVIEW-REMEDIATION.md. Ready for bounded
+independent R2b-only confirmation; integration and push remain manager-owned.

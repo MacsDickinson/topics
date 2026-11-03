@@ -1,5 +1,9 @@
 # Bounded runtime re-review patch
 
+Subsequent R2b dotenv closure and current counts/chronology:
+[DOTENV-REMEDIATION.md](DOTENV-REMEDIATION.md). This report preserves the accepted
+pre-dotenv source revision and its evidence.
+
 This patch follows Opus re-review of the exact two-tool production Runtime/SDK
 route; it does not replace the accepted architecture or public host interfaces.
 The manager preserves the independent report at

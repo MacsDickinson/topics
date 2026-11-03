@@ -1,5 +1,7 @@
 # Runtime Opus review remediation
 
+Latest R2b follow-up: [DOTENV-REMEDIATION.md](DOTENV-REMEDIATION.md).
+
 Final bounded re-review fixes, current 45-test count and frozen-source native
 chronology: [REREVIEW-REMEDIATION.md](REREVIEW-REMEDIATION.md). Counts and final-run
 records below describe the earlier first-review remediation revision.
