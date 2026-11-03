@@ -768,16 +768,17 @@ fn corrected_reanalysis(w: &mut Workspace) {
             confirm_unknown: true,
         })
         .unwrap();
-    w.error = Some(
-        w.service
-            .stage_proposal(StageProposalRequest {
-                root_id: w.root_id.clone(),
-                scope_id: Some(scope_id),
-                origin: Origin::Analysis { run_id: run.run_id },
-                candidates: w.candidates.clone(),
-            })
-            .unwrap_err(),
-    );
+    let no_change = w
+        .service
+        .stage_proposal(StageProposalRequest {
+            root_id: w.root_id.clone(),
+            scope_id: Some(scope_id),
+            origin: Origin::Analysis { run_id: run.run_id },
+            candidates: w.candidates.clone(),
+        })
+        .unwrap();
+    assert_eq!(no_change.status, ProposalStatus::Accepted);
+    assert!(no_change.candidates.is_empty());
     w.restart();
 }
 #[then("\"he/him\" is not restored as current knowledge")]
@@ -867,7 +868,7 @@ fn no_overwrite(w: &mut Workspace) {
             .unwrap()
             .proposals
             .iter()
-            .filter(|p| p.status == ProposalStatus::Pending)
+            .filter(|p| p.status == ProposalStatus::Conflict)
             .count(),
         1
     );

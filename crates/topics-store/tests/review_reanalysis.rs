@@ -16,7 +16,7 @@ fn topic(name: &str) -> Topic {
     }
 }
 struct F {
-    temp: tempfile::TempDir,
+    _temp: tempfile::TempDir,
     root: PathBuf,
     root_id: Id,
     service: WorkspaceService,
@@ -35,7 +35,7 @@ impl F {
             .root
             .root_id;
         Self {
-            temp,
+            _temp: temp,
             root,
             root_id,
             service,
@@ -162,26 +162,14 @@ impl F {
             .unwrap()
             .operation
     }
-    fn undo(&self, op: &Id) -> WorkspaceResult<OperationResult> {
-        self.service.undo(UndoRequest {
-            root_id: self.root_id.clone(),
-            operation_id: op.clone(),
-        })
-    }
+
     fn view(&self, t: &Topic) -> WorkspaceResult<TopicView> {
         self.service.topic_get(TopicGetRequest {
             root_id: self.root_id.clone(),
             topic_id: t.id.clone(),
         })
     }
-    fn partition(&self) -> PathBuf {
-        fs::read_dir(self.temp.path().join("app-data/workspaces"))
-            .unwrap()
-            .next()
-            .unwrap()
-            .unwrap()
-            .path()
-    }
+
     fn claim(&self, t: &Topic, s: &SourceRef, v: &str) -> Claim {
         Claim {
             id: id(),
@@ -215,7 +203,7 @@ impl F {
             .user_statement(UserStatementRequest {
                 root_id: self.root_id.clone(),
                 topic_id: t.id.clone(),
-                text: "correction".into(),
+                text: "SYNTHETIC UNREQUESTED STATEMENT BODY".into(),
             })
             .unwrap();
         let mut c = old.clone();
@@ -594,6 +582,13 @@ fn r14_edited_away_value_reproposal_must_not_duplicate() {
     let mut n = fresh(&c);
     n.uncertainty = Some("again".into());
     let q = f.model_stage(vec!["M/a.md"], vec![cc(&n)]).unwrap();
+    assert_eq!(q.status, ProposalStatus::Pending);
+    assert!(
+        q.candidates
+            .iter()
+            .any(|c| matches!(c,Candidate::Claim{claim} if claim.value=="Friday"))
+    );
+    assert_eq!(f.view(&t).unwrap().current_claims[0].value, "Monday");
     eprintln!(
         "OBS re-proposal status={:?} values={:?}",
         q.status,
@@ -690,5 +685,72 @@ fn r18_context_errors_are_uniform_for_missing_and_private_topics() {
         ctx(&f, vec!["M/a.md"], &topic("none")).unwrap_err(),
     );
     eprintln!("OBS private={} missing={}", e1.code, e2.code);
+    assert_eq!(e1.code, e2.code);
+    assert_eq!(e1.code, "forbidden");
     assert!(!e1.message.contains("Secret"));
+}
+
+#[test]
+fn redacted_current_correction_excludes_unselected_evidence_and_unrequested_statement_text() {
+    let f = F::new();
+    let (t, _, source) = corrected(&f);
+    f.write("M/selected.md", "selected eligible unrelated meeting\n");
+    f.source("M/selected.md");
+    let view = ctx(&f, vec!["M/selected.md"], &t).unwrap();
+    let wire = serde_json::to_string(&view).unwrap();
+    assert_eq!(view.current_claims[0].value, "they/them");
+    assert!(view.current_claims[0].sources.is_empty());
+    assert!(view.current_claims[0].supersedes.is_empty());
+    assert!(view.history.is_empty());
+    assert!(view.warnings.iter().any(|w| w.contains("redacted")));
+    for forbidden in [
+        &source.path,
+        &source.document_hash,
+        &source.source_id,
+        &source.excerpt,
+    ] {
+        assert!(
+            !wire.contains(forbidden),
+            "out-of-scope evidence escaped redaction"
+        );
+    }
+    assert!(!wire.contains("SYNTHETIC UNREQUESTED STATEMENT BODY"));
+    assert!(!wire.contains("User edited"));
+    f.label(&f.summary("M/a.md"), Sensitivity::LocalOnly);
+    let error = ctx(&f, vec!["M/selected.md"], &t).unwrap_err();
+    assert_eq!(error.code, "forbidden");
+    assert!(!error.message.contains("Alex"));
+}
+#[test]
+fn missing_committed_marker_does_not_silently_resurrect_the_transcript_claim() {
+    let f = F::new();
+    let (t, _, _) = corrected(&f);
+    let operation = f
+        .service
+        .history_list(f.req())
+        .unwrap()
+        .operations
+        .into_iter()
+        .rev()
+        .find(|o| o.description == "Approve reviewed proposal")
+        .unwrap();
+    fs::remove_file(
+        f.root
+            .join(format!("topics/operations/{}.md", operation.id)),
+    )
+    .unwrap();
+    let view = f.view(&t).unwrap();
+    assert!(!view.warnings.is_empty());
+    assert!(view.current_claims.iter().all(|c| c.value != "he/him"));
+}
+#[test]
+fn previously_registered_unknown_rename_target_does_not_drop_a_restrictive_content_label() {
+    let f = F::new();
+    f.write("M/private.md", "same private bytes\n");
+    let original = f.summary("M/private.md");
+    f.write("M/destination.md", "same private bytes\n");
+    f.summary("M/destination.md");
+    f.label(&original, Sensitivity::LocalOnly);
+    fs::remove_file(f.root.join("M/private.md")).unwrap();
+    assert!(f.preview(vec!["M/destination.md"]).sources.is_empty());
 }

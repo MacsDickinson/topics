@@ -20,6 +20,12 @@ fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
     }
     let mut out = vec![];
     let state = load(ctx)?;
+    let conflicted: BTreeSet<_> = journals(ctx)?
+        .0
+        .into_iter()
+        .filter(|(_, j)| j.status == "conflict")
+        .map(|(_, j)| j.commit.operation.id)
+        .collect();
     for path in json_entries(&dir)? {
         let Ok(mut p) = read_json::<SavedProposal>(&path) else {
             continue;
@@ -43,9 +49,10 @@ fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
                 }
             }
         } else if p.proposal.status == ProposalStatus::Pending
-            && p.expected
-                .iter()
-                .any(|(path, h)| state.hashes.get(path) != Some(h))
+            && (conflicted.contains(&p.operation_id)
+                || p.expected
+                    .iter()
+                    .any(|(path, h)| state.hashes.get(path) != Some(h)))
         {
             p.proposal.status = ProposalStatus::Conflict;
         }
@@ -282,12 +289,11 @@ fn validate(
                     .ok_or_else(|| error("invalid_input", "Missing dependency: source"))?;
                 let bytes = scopes::source_bytes(ctx, &source.path)?;
                 let text = std::str::from_utf8(&bytes).map_err(internal)?;
-                if locator.start_byte >= locator.end_byte
-                    || text
-                        .get(locator.start_byte as usize..locator.end_byte as usize)
-                        .is_none()
-                {
-                    return Err(error("invalid_input", "Invalid endpoint passage locator"));
+                if hash(&bytes) != source.hash || !scopes::locator_valid(text, locator) {
+                    return Err(error(
+                        "stale_evidence",
+                        "Invalid or stale endpoint passage locator",
+                    ));
                 }
                 Ok(())
             }
@@ -782,42 +788,64 @@ fn prepared_candidates(
             }
             if matches.len() == 1 && referenced {
                 let accepted = matches[0];
-                let evidence_match = candidates.iter().any(|c| match c {
-                    Candidate::Claim { claim } | Candidate::Correction { claim, .. }
-                        if claim.subject_id == topic.id =>
-                    {
-                        state.claims.values().any(|old| {
-                            old.subject_id == accepted.id
-                                && old.predicate == claim.predicate
-                                && old.value == claim.value
-                        }) || state.rules.values().any(|rule| {
-                            rule.topic_id == accepted.id
-                                && rule.predicate == claim.predicate
-                                && rule.match_value == claim.value
-                        })
-                    }
-                    Candidate::Connection { connection } => state.connections.values().any(|old| {
-                        old.relation == connection.relation
-                            && [&old.from, &old.to]
-                                .iter()
-                                .any(|e| matches!(e,Endpoint::Topic{id} if id==&accepted.id))
-                            && connection.sources.iter().any(|s| {
-                                old.sources.iter().any(|old| {
-                                    old.document_hash == s.document_hash
-                                        && old.passage_hash == s.passage_hash
+                let same_aliases = topic.aliases.iter().collect::<BTreeSet<_>>()
+                    == accepted.aliases.iter().collect::<BTreeSet<_>>();
+                let prospective = |endpoint: &Endpoint| -> Option<Endpoint> {
+                    match endpoint {
+                        Endpoint::Topic { id } => {
+                            if state.topics.contains_key(id) {
+                                Some(endpoint.clone())
+                            } else {
+                                let proposed = candidates.iter().find_map(|c| {
+                                    if let Candidate::Topic { topic } = c {
+                                        (&topic.id == id).then_some(topic)
+                                    } else {
+                                        None
+                                    }
+                                })?;
+                                let options: Vec<_> = state
+                                    .topics
+                                    .values()
+                                    .filter(|t| {
+                                        t.topic_kind == proposed.topic_kind
+                                            && t.name == proposed.name
+                                            && t.aliases.iter().collect::<BTreeSet<_>>()
+                                                == proposed.aliases.iter().collect::<BTreeSet<_>>()
+                                    })
+                                    .collect();
+                                (options.len() == 1).then(|| Endpoint::Topic {
+                                    id: options[0].id.clone(),
                                 })
-                            })
-                    }),
-                    _ => false,
+                            }
+                        }
+                        Endpoint::Claim { id } => state
+                            .claims
+                            .values()
+                            .find(|c| &c.id == id || &c.revision_id == id)
+                            .map(|c| Endpoint::Claim { id: c.id.clone() }),
+                        Endpoint::Source { .. } => Some(endpoint.clone()),
+                    }
+                };
+                let evidence_match=same_aliases&&candidates.iter().any(|c|match c {
+                    Candidate::Claim{claim}|Candidate::Correction{claim,..} if claim.subject_id==topic.id=>state.claims.values().any(|old|old.subject_id==accepted.id&&old.predicate==claim.predicate&&old.value==claim.value&&claim.sources.iter().any(|e|matches!(e,Evidence::Passage{source} if old.sources.iter().any(|old|matches!(old,Evidence::Passage{source:old} if old.document_hash==source.document_hash&&old.passage_hash==source.passage_hash))))),
+                    Candidate::Connection{connection}=>state.connections.values().any(|old|old.relation==connection.relation&&prospective(&connection.from)==Some(endpoint_identity(state,&old.from))&&prospective(&connection.to)==Some(endpoint_identity(state,&old.to))&&connection.sources.iter().any(|s|old.sources.iter().any(|old|old.document_hash==s.document_hash&&old.passage_hash==s.passage_hash))),_=>false,
                 });
                 if evidence_match {
                     mapping.insert(topic.id.clone(), accepted.id.clone());
+                } else {
+                    ambiguous.insert(
+                        topic.id.clone(),
+                        (
+                            topic.name.clone(),
+                            vec![accepted.id.clone(), topic.id.clone()],
+                        ),
+                    );
                 }
             }
         }
     }
     remap(&mut candidates, &mapping)?;
-    candidates.retain(|c|!matches!(c,Candidate::Topic{topic} if mapping.values().any(|id|id==&topic.id)||ambiguous.contains_key(&topic.id)));
+    candidates.retain(|c|!matches!(c,Candidate::Topic{topic} if mapping.values().any(|id|id==&topic.id)||ambiguous.get(&topic.id).is_some_and(|(_,ids)|!ids.contains(&topic.id))));
     for candidate in &mut candidates {
         if let Candidate::Topic { topic } = candidate
             && topic.sensitivity == Sensitivity::CloudAllowed
@@ -945,6 +973,15 @@ impl WorkspaceService {
         })
     }
     pub fn stage_proposal(&self, request: StageProposalRequest) -> WResult<Proposal> {
+        self.stage_proposal_guarded(request, |_, publish| publish())
+    }
+    /// Blocking preparation precedes the caller's final visibility gate. The gate
+    /// must invoke the action only when publication is still authorized.
+    pub fn stage_proposal_guarded(
+        &self,
+        request: StageProposalRequest,
+        publisher: impl FnOnce(&Proposal, &mut dyn FnMut() -> WResult<()>) -> WResult<()>,
+    ) -> WResult<Proposal> {
         self.with(&request.root_id, |ctx| {
             let state = load(ctx)?;
             let (selected, run) = bound_model_run(ctx, &request)?;
@@ -978,6 +1015,18 @@ impl WorkspaceService {
                     && (!matches!(request.origin, Origin::Manual)
                         || p.proposal.candidates == request.candidates)
             }) {
+                let mut published = false;
+                let mut action = || {
+                    published = true;
+                    Ok(())
+                };
+                publisher(&existing.proposal, &mut action)?;
+                if !published {
+                    return Err(error(
+                        "internal",
+                        "Publisher did not authorize its no-change outcome",
+                    ));
+                }
                 return Ok(existing.proposal);
             }
             let proposal = Proposal {
@@ -1031,7 +1080,19 @@ impl WorkspaceService {
                 },
                 operation: None,
             };
-            save_json(&proposal_file(ctx, &proposal.id)?, &saved)?;
+            let path = proposal_file(ctx, &proposal.id)?;
+            let mut prepared = prepare_publication(&path, &saved)?;
+            let mut action = || prepared.publish();
+            publisher(&proposal, &mut action)?;
+            if !prepared.published {
+                return Err(error(
+                    "internal",
+                    "Publisher did not authorize proposal visibility",
+                ));
+            }
+            // Pending/no-change caches are disposable. Their file bytes were flushed
+            // before the gate; best-effort directory durability stays outside it.
+            let _ = fs::File::open(path.parent().unwrap()).and_then(|file| file.sync_all());
             Ok(proposal)
         })
     }
@@ -1114,7 +1175,6 @@ impl WorkspaceService {
                         if let Some(original)=original && (original.value!=claim.value||original.subject_id!=claim.subject_id||original.uncertainty!=claim.uncertainty||original.predicate!=claim.predicate||original.valid_from!=claim.valid_from||original.valid_to!=claim.valid_to||original.sources!=claim.sources) {
                             let statement=UserStatement{id:new_id(),topic_id:claim.subject_id.clone(),text:format!("User edited proposed assertion from {} to {}.",serde_json::to_string(original).map_err(internal)?,serde_json::to_string(&claim).map_err(internal)?),recorded_at:now()};
                             claim.sources.push(Evidence::UserStatement{statement_id:statement.id.clone()});
-                            claim.uncertainty=Some(format!("{}; user edit recorded as evidence",claim.uncertainty.as_deref().unwrap_or("User-reviewed assertion")));
                             records.push((format!("topics/statements/{}.md",statement.id),Record::new("statement",&statement.id,&op,&statement)?));state.statements.insert(statement.id.clone(),statement);
                         }
                     }
@@ -1123,14 +1183,19 @@ impl WorkspaceService {
                     if let Candidate::Connection{connection}=candidate {
                         let original=saved.proposal.candidates.iter().find_map(|c|match c{Candidate::Connection{connection:old} if old.id==connection.id=>Some(old),_=>None});
                         if let Some(original)=original&&original!=connection {
-                            let topic_id=scopes::endpoint_topic(&state,&connection.from).or_else(||scopes::endpoint_topic(&state,&connection.to)).or_else(||scopes::endpoint_topic(&state,&original.from)).or_else(||scopes::endpoint_topic(&state,&original.to)).unwrap_or_else(||connection.id.clone());
+                            let topic_id=scopes::endpoint_topic(&state,&connection.from).or_else(||scopes::endpoint_topic(&state,&connection.to)).or_else(||scopes::endpoint_topic(&state,&original.from)).or_else(||scopes::endpoint_topic(&state,&original.to));
+                            if let Some(topic_id)=topic_id {
                             let statement=UserStatement{id:new_id(),topic_id,text:format!("User edited connection {} from {} to {}.",connection.id,serde_json::to_string(original).map_err(internal)?,serde_json::to_string(&connection).map_err(internal)?),recorded_at:now()};
                             connection.uncertainty=Some(format!("{}; HUMAN-EDITED relationship, statement {} (original passage is context, not support for the edited relation)",connection.uncertainty.as_deref().unwrap_or("User-reviewed relationship"),statement.id));
                             records.push((format!("topics/statements/{}.md",statement.id),Record::new("statement",&statement.id,&op,&statement)?));state.statements.insert(statement.id.clone(),statement);
+                            }else{connection.uncertainty=Some(format!("HUMAN-EDITED relationship; original passage is context, edited assertion and prior value are recorded in operation {op}"));}
                         }
                     }
                 }
-                let mut expected = saved.expected.clone();
+                let approved_ids:BTreeSet<_>=dependencies(&approved).into_iter().collect();
+                let relevant=|path:&str|approved_ids.iter().any(|id|path.ends_with(&format!("/{id}.md")))||state.claims.values().any(|claim|approved_ids.contains(&claim.id)&&path.ends_with(&format!("/{}.md",claim.revision_id)));
+                let reviewed:BTreeMap<_,_>=saved.expected.iter().filter(|(path,_)|relevant(path)).map(|(path,h)|(path.clone(),h.clone())).collect();
+                let mut expected=reviewed.clone();
                 for c in &approved {
                     match c {
                         Candidate::Topic { topic } => records.push((
@@ -1179,9 +1244,9 @@ impl WorkspaceService {
                     expected.entry(path.clone()).or_insert(None);
                 }
                 let mut stale_parent=false;
-                for (path,expected) in &saved.expected {if bytes_optional(&target_path(&ctx.root,path,false)?)?.as_deref().map(hash)!=*expected {stale_parent=true;}}
+                for (path,expected) in &reviewed {if bytes_optional(&target_path(&ctx.root,path,false)?)?.as_deref().map(hash)!=*expected {stale_parent=true;}}
                 if stale_parent {
-                    let current=saved.expected.keys().map(|p|Ok((p.clone(),bytes_optional(&target_path(&ctx.root,p,false)?)?))).collect::<WResult<BTreeMap<_,_>>>()?;
+                    let current=reviewed.keys().map(|p|Ok((p.clone(),bytes_optional(&target_path(&ctx.root,p,false)?)?))).collect::<WResult<BTreeMap<_,_>>>()?;
                     save_json(&ctx.partition.join("conflicts").join(format!("{}.json",saved.proposal.id)),&serde_json::json!({"old_bytes":saved.expected_bytes,"current_bytes":current,"staged_records":records.iter().map(|(p,r)|Ok((p.clone(),r.bytes()?))).collect::<WResult<BTreeMap<_,_>>>()?}))?;
                     return Err(error("conflict","Referenced record changed since proposal review; versions preserved"));
                 }

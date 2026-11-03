@@ -333,6 +333,7 @@ impl WorkspaceService {
                 })
                 .collect();
             for record in target.targets.iter().filter_map(|t|t.record.as_ref()) {if record.record_kind=="claim"&&let Some(id)=record.data.get("id").and_then(Value::as_str){ids.insert(id.into());}}
+            let logical:Vec<_>=state.claims.values().filter(|claim|ids.contains(&claim.revision_id)).map(|claim|claim.id.clone()).collect();ids.extend(logical);
             let target_order=state.operations.iter().position(|c|c.operation.id==target.operation.id).unwrap();
             let paths:BTreeSet<_>=target.targets.iter().map(|t|t.path.clone()).collect();
             let undone: BTreeSet<_> = state
@@ -362,7 +363,7 @@ impl WorkspaceService {
                     .as_deref()
                     .map(hash);
                 if current != Some(t.new_hash.clone()) {
-                    let restored=bytes_optional(&target_path(&ctx.root,&t.path,false)?)?.and_then(|bytes|Record::parse(&bytes).ok()).zip(Record::parse(&t.new_bytes).ok()).is_some_and(|(current,original)|current.id==original.id&&current.record_kind==original.record_kind&&current.data==original.data&&state.operations.iter().any(|c|c.operation.id==current.operation_id&&c.undo_of.is_some()));
+                    let restored=bytes_optional(&target_path(&ctx.root,&t.path,false)?)?.and_then(|bytes|Record::parse(&bytes).ok()).zip(Record::parse(&t.new_bytes).ok()).is_some_and(|(current,original)|current.id==original.id&&current.record_kind==original.record_kind&&current.data==original.data&&state.latest_operations.get(&t.path)==Some(&current.operation_id)&&state.operations.iter().any(|c|c.operation.id==current.operation_id&&c.undo_of.is_some()));
                     if !restored {return Err(error("conflict","Cannot undo an externally or subsequently changed record"));}
                 }
                 expected.insert(t.path.clone(), current);
@@ -439,7 +440,7 @@ fn commit_empty(
     apply_journal(ctx, &dir, &mut journal, None)?;
     Ok(operation)
 }
-fn topic_view(ctx: &Context, state: &State, id: &str) -> WResult<TopicView> {
+fn topic_projection(state: &State, id: &str) -> WResult<TopicView> {
     valid_id(id)?;
     let topic = state
         .topics
@@ -470,16 +471,7 @@ fn topic_view(ctx: &Context, state: &State, id: &str) -> WResult<TopicView> {
         })
         .cloned()
         .collect();
-    let mut warnings = state.warnings.clone();
-    for c in &history {
-        for evidence in &c.sources {
-            if let Evidence::Passage { source } = evidence
-                && validate_source(ctx, state, source).is_err()
-            {
-                warnings.push(format!("Stale citation: {}", source.path));
-            }
-        }
-    }
+    let warnings = state.warnings.clone();
     Ok(TopicView {
         topic,
         current_claims,
@@ -488,4 +480,19 @@ fn topic_view(ctx: &Context, state: &State, id: &str) -> WResult<TopicView> {
         history,
         warnings,
     })
+}
+
+fn topic_view(ctx: &Context, state: &State, id: &str) -> WResult<TopicView> {
+    let mut view = topic_projection(state, id)?;
+    for claim in &view.history {
+        for evidence in &claim.sources {
+            if let Evidence::Passage { source } = evidence
+                && validate_source(ctx, state, source).is_err()
+            {
+                view.warnings
+                    .push(format!("Stale citation: {}", source.path));
+            }
+        }
+    }
+    Ok(view)
 }

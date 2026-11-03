@@ -1057,6 +1057,10 @@ fn p54_fingerprint_must_distinguish_same_name_identities() {
         "OBS equal={} (informational: both Joes hash identically)",
         a.fingerprint == b.fingerprint
     );
+    assert_ne!(
+        a.fingerprint, b.fingerprint,
+        "ambiguous same-name identity graphs cannot be safely collapsed"
+    );
 }
 #[test]
 fn p55_second_real_person_same_name_can_still_be_proposed_by_model() {
@@ -1161,4 +1165,332 @@ fn p59_rule_positive_other_person_and_replacement_not_auto_accepted() {
     f.approve(&p).unwrap();
     assert_eq!(f.view(&o).unwrap().current_claims[0].value, "he/him");
     assert_eq!(f.view(&t).unwrap().current_claims.len(), 1);
+}
+
+#[test]
+fn a_distinct_same_name_person_with_a_new_citation_is_not_merged_by_shared_predicate_value() {
+    let f = F::new();
+    f.write("M/first.md", "Joe one is a lead\n");
+    let one = f.source("M/first.md");
+    let first = topic("Joe");
+    let claim = f.claim(&first, &one.citation, "lead");
+    f.accept(vec![tc(&first), cc(&claim)]);
+    f.write("M/second.md", "Joe two is a lead\n");
+    let two = f.source("M/second.md");
+    let second = topic("Joe");
+    let next = f.claim(&second, &two.citation, "lead");
+    let proposal = f
+        .model_stage(vec!["M/second.md"], vec![tc(&second), cc(&next)])
+        .unwrap();
+    assert!(
+        proposal
+            .candidates
+            .iter()
+            .any(|c| matches!(c,Candidate::Topic{topic} if topic.id==second.id))
+    );
+    assert!(
+        !proposal
+            .candidates
+            .iter()
+            .any(|c| matches!(c,Candidate::Claim{claim} if claim.subject_id==first.id))
+    );
+}
+#[test]
+fn shared_passage_and_relation_do_not_merge_a_new_person_through_a_different_endpoint() {
+    let f = F::new();
+    f.write("M/a.md", "Joe one leads A; Joe two leads B\n");
+    let source = f.source("M/a.md");
+    let first = topic("Joe");
+    let a = topic("A");
+    let b = topic("B");
+    f.accept(vec![
+        tc(&first),
+        tc(&a),
+        tc(&b),
+        Candidate::Connection {
+            connection: f.conn(&first, &a, &source.citation),
+        },
+    ]);
+    let second = topic("Joe");
+    let proposal = f
+        .model_stage(
+            vec!["M/a.md"],
+            vec![
+                tc(&second),
+                Candidate::Connection {
+                    connection: f.conn(&second, &b, &source.citation),
+                },
+            ],
+        )
+        .unwrap();
+    assert!(
+        proposal
+            .candidates
+            .iter()
+            .any(|c| matches!(c,Candidate::Topic{topic} if topic.id==second.id))
+    );
+    assert!(!proposal.candidates.iter().any(|c|matches!(c,Candidate::Connection{connection} if connection.from==Endpoint::Topic{id:first.id.clone()})));
+}
+
+#[test]
+fn approving_a_dependency_consistent_subset_ignores_changed_omitted_dependencies() {
+    let f = F::new();
+    f.write("M/a.md", "A\n");
+    f.write("M/b.md", "B\n");
+    let sa = f.source("M/a.md");
+    let sb = f.source("M/b.md");
+    let a = topic("A");
+    let b = topic("B");
+    let ca = f.claim(&a, &sa.citation, "a");
+    let cb = f.claim(&b, &sb.citation, "b");
+    let proposal = f.stage(vec![tc(&a), cc(&ca), tc(&b), cc(&cb)]).unwrap();
+    f.label(&sb.summary, Sensitivity::CloudAllowed);
+    let result = f.decide(
+        &proposal,
+        Decision::Approve {
+            candidates: vec![tc(&a), cc(&ca)],
+        },
+    );
+    assert!(
+        result.is_ok(),
+        "omitted candidate dependencies must not strand a valid human-reviewed subset"
+    );
+    assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
+}
+#[test]
+fn locator_heading_is_checked_on_source_endpoints_too() {
+    let f = F::new();
+    f.write("M/a.md", "# Real heading\nActual passage\n");
+    let source = f.source("M/a.md");
+    let a = topic("A");
+    let mut connection = f.conn(&a, &a, &source.citation);
+    let mut locator = source.citation.locator.clone();
+    locator.heading = Some("Forged endpoint heading".into());
+    connection.from = Endpoint::Source {
+        source_id: source.summary.source_id,
+        locator,
+    };
+    assert!(
+        f.model_stage(
+            vec!["M/a.md"],
+            vec![tc(&a), Candidate::Connection { connection }]
+        )
+        .is_err()
+    );
+}
+#[test]
+fn human_legacy_search_excludes_app_records_and_keeps_source_search_useful() {
+    let f = F::new();
+    f.write("M/private.md", "HumanVisibleSourceWord\n");
+    let source = f.summary("M/private.md");
+    f.label(&source, Sensitivity::LocalOnly);
+    let mut t = topic("GeneratedSecretWord");
+    t.sensitivity = Sensitivity::LocalOnly;
+    f.accept(vec![tc(&t)]);
+    let human = topics_store::TopicsService::open(f.temp.path().join("app-data")).unwrap();
+    assert!(human.search("GeneratedSecretWord").unwrap().is_empty());
+    assert_eq!(human.search("HumanVisibleSourceWord").unwrap().len(), 1);
+}
+
+#[test]
+fn recovery_conflict_invalidates_pending_dedupe_and_fresh_analysis_can_continue() {
+    let f = F::new();
+    f.write("M/a.md", "A source\n");
+    let source = f.source("M/a.md");
+    let a = topic("A");
+    let claim = f.claim(&a, &source.citation, "x");
+    let p = f.stage(vec![tc(&a), cc(&claim)]).unwrap();
+    f.service.interrupt_next_operation_after(1);
+    assert!(f.approve(&p).is_err());
+    fs::write(
+        f.root
+            .join(format!("topics/claims/{}.md", claim.revision_id)),
+        "# External conflicting draft\n",
+    )
+    .unwrap();
+    f.service.topics_list(f.req()).unwrap();
+    let old = f
+        .service
+        .proposals_list(f.req())
+        .unwrap()
+        .proposals
+        .into_iter()
+        .find(|v| v.id == p.id)
+        .unwrap();
+    assert_eq!(old.status, ProposalStatus::Conflict);
+    let b = topic("A");
+    let next = f.claim(&b, &source.citation, "x");
+    let fresh = f
+        .model_stage(vec!["M/a.md"], vec![tc(&b), cc(&next)])
+        .unwrap();
+    assert_ne!(fresh.id, p.id);
+    assert_eq!(fresh.status, ProposalStatus::Pending);
+    f.approve(&fresh).unwrap();
+    assert_eq!(f.view(&b).unwrap().current_claims.len(), 1);
+}
+
+#[test]
+fn inventory_registration_does_not_overwrite_an_untracked_record_target() {
+    let f = F::new();
+    let content = b"Synthetic source bytes\n";
+    f.write("M/a.md", content);
+    let source = f.summary("M/a.md");
+    // Synthetic loss of ownership metadata leaves an existing target requiring review.
+    for operation in f.service.history_list(f.req()).unwrap().operations {
+        fs::remove_file(
+            f.root
+                .join(format!("topics/operations/{}.md", operation.id)),
+        )
+        .unwrap();
+    }
+    fs::remove_dir_all(f.partition().join("journals")).unwrap();
+    let path = format!("topics/sources/{}.md", source.source_id);
+    let external = b"# External app record requiring review\nlocal_only\n";
+    f.write(&path, external);
+    let result = f.preview_spec(vec!["M/a.md"], vec![]);
+    assert!(result.is_err());
+    assert_eq!(fs::read(f.root.join(path)).unwrap(), external);
+    assert_eq!(fs::read(f.root.join("M/a.md")).unwrap(), content);
+}
+
+#[test]
+fn guarded_staging_can_be_revoked_after_preparation_without_publishing() {
+    use std::{
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+            mpsc,
+        },
+        time::Duration,
+    };
+    let f = F::new();
+    f.write("M/a.md", "Synthetic source for guarded publication\n");
+    let preview = f.preview(vec!["M/a.md"]);
+    let run_id = f.run(&preview);
+    let request = StageProposalRequest {
+        root_id: f.root_id.clone(),
+        scope_id: Some(preview.scope_id),
+        origin: Origin::Analysis { run_id },
+        candidates: vec![tc(&topic("Never published"))],
+    };
+    let service = WorkspaceService::open(f.temp.path().join("app-data")).unwrap();
+    let permitted = Arc::new(AtomicBool::new(true));
+    let worker_permit = permitted.clone();
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    std::thread::scope(|threads| {
+        let worker = threads.spawn(move || {
+            service.stage_proposal_guarded(request, |proposal, action| {
+                entered_tx.send(proposal.id.clone()).unwrap();
+                if release_rx.recv_timeout(Duration::from_secs(3)).is_err()
+                    || !worker_permit.load(Ordering::SeqCst)
+                {
+                    return Err(ApiError::new("cancelled", "Publication permit revoked"));
+                }
+                action()
+            })
+        });
+        let proposal_id = entered_rx.recv_timeout(Duration::from_secs(3)).unwrap();
+        let directory = f.partition().join("proposals");
+        assert!(!directory.join(format!("{proposal_id}.json")).exists());
+        let temporary = fs::read_dir(&directory)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .find(|p| p.extension().is_some_and(|ext| ext == "tmp"))
+            .unwrap();
+        let staged: serde_json::Value =
+            serde_json::from_slice(&fs::read(temporary).unwrap()).unwrap();
+        assert_eq!(staged["proposal"]["id"], proposal_id);
+        permitted.store(false, Ordering::SeqCst);
+        release_tx.send(()).unwrap();
+        assert_eq!(worker.join().unwrap().unwrap_err().code, "cancelled");
+    });
+    assert!(
+        f.service
+            .proposals_list(f.req())
+            .unwrap()
+            .proposals
+            .is_empty()
+    );
+    assert!(f.service.topics_list(f.req()).unwrap().topics.is_empty());
+    assert_eq!(
+        fs::read_dir(f.partition().join("proposals"))
+            .unwrap()
+            .count(),
+        0
+    );
+}
+#[test]
+fn guarded_success_duplicate_and_no_change_outcomes_all_use_the_publication_gate() {
+    let f = F::new();
+    f.write("M/a.md", "Synthetic source\n");
+    let preview = f.preview(vec!["M/a.md"]);
+    let topic = topic("Guarded topic");
+    let request = |run_id| StageProposalRequest {
+        root_id: f.root_id.clone(),
+        scope_id: Some(preview.scope_id.clone()),
+        origin: Origin::Analysis { run_id },
+        candidates: vec![tc(&topic)],
+    };
+    let mut callbacks = 0;
+    let first = f
+        .service
+        .stage_proposal_guarded(request(f.run(&preview)), |proposal, action| {
+            callbacks += 1;
+            assert_eq!(proposal.status, ProposalStatus::Pending);
+            action()?;
+            action()
+        })
+        .unwrap();
+    assert_eq!(callbacks, 1);
+    assert_eq!(
+        f.service.proposals_list(f.req()).unwrap().proposals.len(),
+        1
+    );
+    let error = f
+        .service
+        .stage_proposal_guarded(request(f.run(&preview)), |proposal, _| {
+            callbacks += 1;
+            assert_eq!(proposal.id, first.id);
+            Err(ApiError::new("cancelled", "Duplicate outcome revoked"))
+        })
+        .unwrap_err();
+    assert_eq!(error.code, "cancelled");
+    assert_eq!(callbacks, 2);
+    assert_eq!(
+        f.service.proposals_list(f.req()).unwrap().proposals.len(),
+        1
+    );
+    f.approve(&first).unwrap();
+    let operations = f.service.history_list(f.req()).unwrap().operations.len();
+    let before = f.service.proposals_list(f.req()).unwrap().proposals.len();
+    let error = f
+        .service
+        .stage_proposal_guarded(request(f.run(&preview)), |proposal, _| {
+            assert_eq!(proposal.status, ProposalStatus::Accepted);
+            assert!(proposal.candidates.is_empty());
+            Err(ApiError::new("cancelled", "No-change outcome revoked"))
+        })
+        .unwrap_err();
+    assert_eq!(error.code, "cancelled");
+    assert_eq!(
+        f.service.proposals_list(f.req()).unwrap().proposals.len(),
+        before
+    );
+    let mut published_ids = vec![];
+    let no_change = f
+        .service
+        .stage_proposal_guarded(request(f.run(&preview)), |proposal, action| {
+            action()?;
+            published_ids.push(proposal.id.clone());
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(published_ids, vec![no_change.id.clone()]);
+    assert!(no_change.candidates.is_empty());
+    assert!(f.approve(&no_change).unwrap().operation.is_none());
+    assert_eq!(
+        f.service.history_list(f.req()).unwrap().operations.len(),
+        operations
+    );
 }

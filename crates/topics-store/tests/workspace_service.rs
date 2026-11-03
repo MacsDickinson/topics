@@ -414,8 +414,21 @@ fn ids_collisions_are_rejected_and_same_names_never_silently_merge() {
 #[test]
 fn deleting_derived_db_and_disposable_proposals_does_not_duplicate_accepted_decisions() {
     let f = Fixture::new();
-    let t = topic("Durable fingerprint");
-    let first = f.accept(vec![Candidate::Topic { topic: t.clone() }]);
+    f.write(
+        "Meetings/one.md",
+        "# Synthetic scope\nExisting cited assertion\n",
+    );
+    let source = f.source("Meetings/one.md");
+    let topic = topic("Durable fingerprint");
+    let claim = f.claim(&topic, &source.citation, "Existing cited assertion");
+    f.accept(vec![
+        Candidate::Topic {
+            topic: topic.clone(),
+        },
+        Candidate::Claim {
+            claim: claim.clone(),
+        },
+    ]);
     let partition = fs::read_dir(f.temp.path().join("app-data/workspaces"))
         .unwrap()
         .next()
@@ -424,23 +437,41 @@ fn deleting_derived_db_and_disposable_proposals_does_not_duplicate_accepted_deci
         .path();
     fs::remove_dir_all(partition.join("proposals")).unwrap();
     fs::remove_file(f.temp.path().join("app-data/index.sqlite3")).unwrap();
-    let mut repeated = t;
-    repeated.id = id();
-    f.write("Meetings/one.md", "# Synthetic scope\n");
+    let mut repeated_topic = topic.clone();
+    repeated_topic.id = id();
+    let mut repeated_claim = claim.clone();
+    repeated_claim.id = id();
+    repeated_claim.revision_id = id();
+    repeated_claim.subject_id = repeated_topic.id.clone();
     let preview = f.preview(vec!["Meetings/one.md"]);
     let run = f.run(&preview, true).unwrap();
-    let p = f
+    let proposal = f
         .service
         .stage_proposal(StageProposalRequest {
             root_id: f.root_id.clone(),
             scope_id: Some(preview.scope_id),
             origin: Origin::Analysis { run_id: run.run_id },
-            candidates: vec![Candidate::Topic { topic: repeated }],
+            candidates: vec![
+                Candidate::Topic {
+                    topic: repeated_topic,
+                },
+                Candidate::Claim {
+                    claim: repeated_claim,
+                },
+            ],
         })
         .unwrap();
-    assert_eq!(p.status, ProposalStatus::Accepted);
-    assert_eq!(p.id, first.proposal.id);
-    assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
+    assert_eq!(proposal.status, ProposalStatus::Accepted);
+    assert!(proposal.candidates.is_empty());
+    let view = f
+        .service
+        .topic_get(TopicGetRequest {
+            root_id: f.root_id.clone(),
+            topic_id: topic.id,
+        })
+        .unwrap();
+    assert_eq!(view.current_claims.len(), 1);
+    assert_eq!(view.current_claims[0], claim);
 }
 #[test]
 fn fingerprints_preserve_accepted_endpoint_identity() {

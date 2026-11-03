@@ -112,6 +112,36 @@ pub(super) fn source_bytes(ctx: &Context, path: &str) -> WResult<Vec<u8>> {
     }
     Ok(bytes)
 }
+pub(super) fn locator_valid(text: &str, locator: &Locator) -> bool {
+    let (Ok(start), Ok(end)) = (
+        usize::try_from(locator.start_byte),
+        usize::try_from(locator.end_byte),
+    ) else {
+        return false;
+    };
+    if start >= end || text.get(start..end).is_none() {
+        return false;
+    }
+    if let Some(heading) = &locator.heading {
+        let before = text[..start]
+            .lines()
+            .rev()
+            .find(|line| line.starts_with('#'))
+            .map(|line| line.trim_start_matches('#').trim());
+        let first = if start == 0 {
+            text.lines()
+                .next()
+                .filter(|line| line.starts_with('#'))
+                .map(|line| line.trim_start_matches('#').trim())
+        } else {
+            None
+        };
+        if before.or(first) != Some(heading.as_str()) {
+            return false;
+        }
+    }
+    true
+}
 pub(super) fn validate_source(ctx: &Context, state: &State, source: &SourceRef) -> WResult<()> {
     let stale = || {
         error(
@@ -137,23 +167,8 @@ pub(super) fn validate_source(ctx: &Context, state: &State, source: &SourceRef) 
     if hash(passage.as_bytes()) != source.passage_hash || passage != source.excerpt {
         return Err(stale());
     }
-    if let Some(heading) = &source.locator.heading {
-        let heading_at = text[..start].lines().rev().find_map(|line| {
-            line.strip_prefix('#')
-                .filter(|_| line.starts_with('#'))
-                .map(|_| line.trim_start_matches('#').trim())
-        });
-        let first = if start == 0 {
-            text.lines()
-                .next()
-                .filter(|l| l.starts_with('#'))
-                .map(|l| l.trim_start_matches('#').trim())
-        } else {
-            None
-        };
-        if heading_at.or(first) != Some(heading.as_str()) {
-            return Err(stale());
-        }
+    if !locator_valid(text, &source.locator) {
+        return Err(stale());
     }
     if canonical_relative(ctx, &source.path).map_err(|_| stale())? != source.path {
         return Err(stale());
@@ -166,7 +181,7 @@ fn restricted_sources(state: &State) -> BTreeSet<Id> {
     let private: BTreeSet<_> = state
         .topics
         .values()
-        .filter(|t| t.sensitivity == Sensitivity::LocalOnly)
+        .filter(|t| topic_restricted(state, &t.id))
         .map(|t| t.id.clone())
         .collect();
     let mut sources: BTreeSet<_> = state
@@ -210,17 +225,22 @@ fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
     if state.source_integrity_unknown {
         return Sensitivity::LocalOnly;
     }
-    if let Some(label) = state.path_labels.get(path) {
-        return *label;
-    }
-    if state
-        .source_history
-        .iter()
-        .any(|s| s.hash == h && path_sensitivity(state, &s.path) == Sensitivity::LocalOnly)
-    {
+    let own = state.path_labels.get(path).copied();
+    if own == Some(Sensitivity::LocalOnly) {
         return Sensitivity::LocalOnly;
     }
-    Sensitivity::Unknown
+    if state.reviewed_paths.contains(path) {
+        return own.unwrap_or(Sensitivity::Unknown);
+    }
+    let restricted = restricted_sources(state);
+    if state.source_history.iter().any(|s| {
+        s.hash == h
+            && (path_sensitivity(state, &s.path) == Sensitivity::LocalOnly
+                || restricted.contains(&s.source_id))
+    }) {
+        return Sensitivity::LocalOnly;
+    }
+    own.unwrap_or(Sensitivity::Unknown)
 }
 
 pub(super) fn scope(ctx: &Context, id: &str) -> WResult<Scope> {
@@ -296,7 +316,7 @@ pub(super) fn topic_restricted(state: &State, id: &str) -> bool {
         return true;
     }
     let restricted = |source: &SourceRef| {
-        state.sources.get(&source.source_id).is_none()
+        !state.sources.contains_key(&source.source_id)
             || path_sensitivity(state, &source.path) == Sensitivity::LocalOnly
     };
     state
@@ -508,6 +528,10 @@ impl WorkspaceService {
                 sources.push(summary);
             }
             if !records.is_empty() {
+                let expected: BTreeMap<_, _> = records
+                    .iter()
+                    .map(|(path, _)| (path.clone(), state.hashes.get(path).cloned().flatten()))
+                    .collect();
                 commit(
                     ctx,
                     "Register previewed sources",
@@ -516,7 +540,7 @@ impl WorkspaceService {
                         dependencies: vec![],
                         tombstones: vec![],
                         undo_of: None,
-                        expected: None,
+                        expected: Some(&expected),
                         proposal: None,
                     },
                 )?;
@@ -625,8 +649,17 @@ impl WorkspaceService {
         self.with(&request.root_id,|ctx|{
         let selected=authorized(ctx,&request.scope_id,&request.run_id)?;let state=load(ctx)?;
         if state.topics.get(&request.topic_id).is_none_or(|t|t.sensitivity!=Sensitivity::CloudAllowed)||topic_restricted(&state,&request.topic_id){return Err(error("forbidden","Topic context is unavailable for this run"));}
-        let mut view=topic_view(ctx,&state,&request.topic_id)?;let allowed:BTreeSet<_>=selected.preview.sources.iter().map(|s|s.source_id.clone()).collect();
-        let eligible=|claim:&Claim|!claim.sources.is_empty()&&claim.sources.iter().all(|e|match e {Evidence::Passage{source}=>allowed.contains(&source.source_id)&&validate_source(ctx,&state,source).is_ok(),Evidence::UserStatement{statement_id}=>state.statements.get(statement_id).is_some_and(|s|s.topic_id==request.topic_id)});
+        let mut view=topic_projection(&state,&request.topic_id)?;let allowed:BTreeSet<_>=selected.preview.sources.iter().map(|s|s.source_id.clone()).collect();
+            fn scoped_claim(ctx:&Context,state:&State,claim:&Claim,allowed:&BTreeSet<Id>,topic:&str,depth:usize)->bool {
+                if depth>100||claim.sources.is_empty(){return false;}
+                let mut passage=false;
+                for evidence in &claim.sources {match evidence {
+                    Evidence::Passage{source}=>{passage=true;if !allowed.contains(&source.source_id)||validate_source(ctx,state,source).is_err(){return false;}},
+                    Evidence::UserStatement{statement_id}=>if state.statements.get(statement_id).is_none_or(|s|s.topic_id!=topic){return false;},
+                }}
+                passage||(!claim.supersedes.is_empty()&&claim.supersedes.iter().all(|id|state.claims.get(id).is_some_and(|old|scoped_claim(ctx,state,old,allowed,topic,depth+1))))
+            }
+            let eligible=|claim:&Claim|scoped_claim(ctx,&state,claim,&allowed,&request.topic_id,0);
         let mut redacted=false;
         view.current_claims.retain_mut(|claim|{
             if eligible(claim){return true;}
@@ -710,6 +743,7 @@ impl WorkspaceService {
     pub fn sources_list(&self, request: RootRequest) -> WResult<SourcesListResult> {
         self.with(&request.root_id, |ctx| {
             let state = load(ctx)?;
+            if state.source_integrity_unknown{return Err(error("conflict","Committed source mappings cannot be reconstructed; restore their snapshots before registering inventory"));}
             let op = new_id();
             let mut records = vec![];
             let mut sources = vec![];
@@ -769,6 +803,7 @@ impl WorkspaceService {
                 sources.push(source);
             }
             if !records.is_empty() {
+                let expected:BTreeMap<_,_>=records.iter().map(|(path,_)|(path.clone(),state.hashes.get(path).cloned().flatten())).collect();
                 commit(
                     ctx,
                     "Register human source inventory",
@@ -777,7 +812,7 @@ impl WorkspaceService {
                         dependencies: vec![],
                         tombstones: vec![],
                         undo_of: None,
-                        expected: None,
+                        expected: Some(&expected),
                         proposal: None,
                     },
                 )?;
@@ -843,6 +878,10 @@ impl WorkspaceService {
     /// Explicit human mapping repair. Existing citation paths/hashes never change.
     pub fn source_identity_repair(&self, request: SourceRepairRequest) -> WResult<SourceSummary> {
         self.with(&request.root_id, |ctx| {
+            let request = SourceRepairRequest {
+                path: canonical_relative(ctx, &request.path)?,
+                ..request.clone()
+            };
             valid_id(&request.source_id)?;
             let state = load(ctx)?;
             let old = state

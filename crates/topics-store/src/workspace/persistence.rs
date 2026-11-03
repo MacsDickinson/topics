@@ -212,6 +212,54 @@ pub(super) fn atomic(path: &Path, bytes: &[u8]) -> WResult<()> {
     }
     result
 }
+pub(super) struct PreparedPublication {
+    temporary: PathBuf,
+    target: PathBuf,
+    pub published: bool,
+}
+impl PreparedPublication {
+    pub fn publish(&mut self) -> WResult<()> {
+        if self.published {
+            return Ok(());
+        }
+        if self.target.exists() {
+            return Err(error("conflict", "Proposal target already exists"));
+        }
+        fs::rename(&self.temporary, &self.target).map_err(internal)?;
+        self.published = true;
+        Ok(())
+    }
+}
+impl Drop for PreparedPublication {
+    fn drop(&mut self) {
+        if !self.published {
+            let _ = fs::remove_file(&self.temporary);
+        }
+    }
+}
+pub(super) fn prepare_publication(
+    path: &Path,
+    value: &impl Serialize,
+) -> WResult<PreparedPublication> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| error("internal", "Missing proposal parent"))?;
+    fs::create_dir_all(parent).map_err(internal)?;
+    let prepared = PreparedPublication {
+        temporary: parent.join(format!(".topics-{}.tmp", new_id())),
+        target: path.into(),
+        published: false,
+    };
+    let bytes = serde_json::to_vec_pretty(value).map_err(internal)?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&prepared.temporary)
+        .map_err(internal)?;
+    file.write_all(&bytes).map_err(internal)?;
+    file.sync_all().map_err(internal)?;
+    Ok(prepared)
+}
 pub(super) fn save_json(path: &Path, value: &impl Serialize) -> WResult<()> {
     atomic(path, &serde_json::to_vec_pretty(value).map_err(internal)?)
 }
@@ -403,7 +451,8 @@ pub(super) fn json_entries(dir: &Path) -> WResult<Vec<PathBuf>> {
     paths.sort();
     Ok(paths)
 }
-pub(super) fn journals(ctx: &Context) -> WResult<(Vec<(PathBuf, Journal)>, Vec<String>)> {
+type JournalScan = (Vec<(PathBuf, Journal)>, Vec<String>);
+pub(super) fn journals(ctx: &Context) -> WResult<JournalScan> {
     let base = ctx.partition.join("journals");
     let mut out = vec![];
     let mut warnings = vec![];
@@ -445,7 +494,10 @@ pub(super) fn recover(ctx: &Context) -> WResult<()> {
             // A durable marker already committed these bytes. Never replay an old
             // journal over a subsequent write, deletion, or external conflict.
             if Record::parse(&bytes).is_ok_and(|r| {
-                r.operation_id == journal.commit.operation.id && r.record_kind == "operation"
+                r.operation_id == journal.commit.operation.id
+                    && r.record_kind == "operation"
+                    && serde_json::from_value::<Commit>(r.data)
+                        .is_ok_and(|c| json_value(c).ok() == json_value(&journal.commit).ok())
             }) {
                 journal.status = "committed".into();
                 save_json(&dir.join("journal.json"), &journal)?;
@@ -475,19 +527,22 @@ pub(super) struct State {
     pub hashes: BTreeMap<String, Option<Hash>>,
     pub conflicts: BTreeSet<String>,
     pub path_labels: BTreeMap<String, Sensitivity>,
+    pub reviewed_paths: BTreeSet<String>,
     pub source_history: Vec<SourceSummary>,
     pub source_integrity_unknown: bool,
     pub latest_operations: BTreeMap<String, Id>,
 }
 pub(super) fn next_sequence(ctx: &Context) -> WResult<u64> {
-    Ok(load(ctx)?
+    load(ctx)?
         .operations
         .iter()
         .map(|c| c.sequence)
         .max()
         .unwrap_or(0)
-        + 1)
+        .checked_add(1)
+        .ok_or_else(|| error("conflict", "Operation sequence exhausted"))
 }
+
 pub(super) fn undone(state: &State, id: &str) -> bool {
     state
         .operations
@@ -569,6 +624,26 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             }
         }
     }
+    let mut marker_conflicts = BTreeSet::new();
+    for (_, journal) in &journals {
+        if journal.status != "committed" {
+            continue;
+        }
+        let id = &journal.commit.operation.id;
+        let mismatch = state
+            .operations
+            .iter()
+            .find(|c| &c.operation.id == id)
+            .is_none_or(|c| json_value(c).ok() != json_value(&journal.commit).ok());
+        if mismatch {
+            state.operations.retain(|c| &c.operation.id != id);
+            state.operations.push(journal.commit.clone());
+            marker_conflicts.insert(id.clone());
+            state.warnings.push(format!(
+                "Committed operation marker missing or changed: {id}"
+            ));
+        }
+    }
     state.operations.sort_by_key(|c| {
         (
             c.sequence,
@@ -591,6 +666,9 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
                 && let Some(r) = payload(ctx, target, &commit.operation.id, &journals)
                 && let Ok(source) = serde_json::from_value::<SourceSummary>(r.data)
             {
+                if commit.operation.description == "Set sensitivity" {
+                    state.reviewed_paths.insert(source.path.clone());
+                }
                 state
                     .path_labels
                     .insert(source.path.clone(), source.sensitivity);
@@ -615,7 +693,8 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
         if tombstones.get(id).is_some_and(|t| *t >= order) {
             continue;
         }
-        let integrity = current_hash.as_ref() == Some(&target.new_hash);
+        let integrity = current_hash.as_ref() == Some(&target.new_hash)
+            && !marker_conflicts.contains(&commit.operation.id);
         if !integrity {
             state.conflicts.insert(path.clone());
             state.warnings.push(format!(
@@ -665,6 +744,9 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             state
                 .warnings
                 .push(format!("Record payload identity mismatch: {path}"));
+            if kind == "source" {
+                state.source_integrity_unknown = true;
+            }
             continue;
         }
         macro_rules! insert {
@@ -688,6 +770,25 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             }
             "source" => {
                 insert!(sources, SourceSummary);
+                if state.sources.get(id).is_none_or(|source| {
+                    relative(&source.path).is_err()
+                        || source
+                            .path
+                            .split('/')
+                            .next()
+                            .is_some_and(|p| p.eq_ignore_ascii_case("topics"))
+                        || source.hash.len() != 64
+                        || !source
+                            .hash
+                            .bytes()
+                            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+                        || validate_date_range(&source.date, &None).is_err()
+                }) {
+                    state.source_integrity_unknown = true;
+                    state
+                        .warnings
+                        .push("Malformed committed source mapping requires recovery".into());
+                }
                 if !integrity && let Some(source) = state.sources.get_mut(id) {
                     source.sensitivity = Sensitivity::LocalOnly;
                     state
