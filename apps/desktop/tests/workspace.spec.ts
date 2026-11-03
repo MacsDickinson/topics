@@ -175,6 +175,11 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
   await expect(
     page.getByText('Your correction', { exact: false }),
   ).toBeVisible();
+  await expect(
+    page.getByText('The launch is Tuesday; Monday was a mistake.', {
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.getByText('Revision history (1)', { exact: true }).click();
   await expect(
     page.getByText('launch: Monday', { exact: false }),
@@ -468,4 +473,84 @@ test('stale scope, runtime errors and malformed events stay actionable without a
     0,
   );
   expect(await page.evaluate(() => (window as any).topics)).toEqual([]);
+});
+
+test('an older list refresh cannot overwrite newer workspace data', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.defer.workspace_topics_list = true;
+    w.showProposal();
+    w.emitRun(1, { kind: 'completed' });
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => typeof (window as any).defer.workspace_topics_list.resolve,
+      ),
+    )
+    .toBe('function');
+  await page.evaluate(
+    ({ topic }) => {
+      const w = window as any;
+      w.oldTopicsResolve = w.defer.workspace_topics_list.resolve;
+      delete w.defer.workspace_topics_list;
+      w.topics = [topic];
+    },
+    { topic },
+  );
+  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page
+    .getByLabel('Topic name', { exact: true })
+    .fill('Fresh pending topic');
+  await page.getByRole('button', { name: 'Create proposal' }).click();
+  await expect(page.getByLabel('Topic name', { exact: true })).toHaveValue(
+    'Fresh pending topic',
+  );
+  await page.evaluate(() => (window as any).oldTopicsResolve({ topics: [] }));
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Ledger', exact: true }),
+  ).toBeVisible();
+});
+
+test('keyboard search works from topics and narrow screens keep controls reachable', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await page.setViewportSize({ width: 600, height: 700 });
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.keyboard.press('Meta+k');
+  await expect(
+    page.getByRole('searchbox', { name: 'Search notes' }),
+  ).toBeFocused();
+  await preview(page);
+  await expect(
+    page.getByLabel('Allow these unknown-sensitivity notes for this run'),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: 'evidence/workspace-narrow.png',
+    fullPage: true,
+  });
+});
+
+test('failed cancellation remains retryable and ignores late output until stop is confirmed', async ({ page }) => {
+  await workspaceFixture(page); await start(page);
+  await page.evaluate(() => { (window as any).failures.workspace_run_cancel = { code: 'internal', message: 'Run cancellation could not be confirmed.', details: null }; });
+  await page.getByRole('button', { name: 'Stop run' }).click();
+  await expect(page.getByRole('alert')).toContainText('could not be confirmed');
+  await expect(page.getByRole('button', { name: 'Stop run' })).toBeEnabled();
+  await page.evaluate(() => { const w = window as any; w.emitRun(1, { kind: 'text_delta', text: 'LATE AFTER STOP REQUEST' }); delete w.failures.workspace_run_cancel; });
+  await expect(page.getByText('LATE AFTER STOP REQUEST', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Stop run' }).click();
+  await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
+  await expect(page.getByText('Run stopped. No model changes were accepted.', { exact: true })).toBeVisible();
 });

@@ -11,12 +11,19 @@ const sessionEnvironment = {
   XDG_DATA_HOME: process.env.TOPICS_TEST_XDG_DATA,
 };
 assertNativeEnvironment(sessionEnvironment, process.env.TOPICS_TEST_SANDBOX);
+const live = process.env.TOPICS_TEST_LIVE === '1';
 const session =
   process.env.TOPICS_TEST_STARTUP === '1'
     ? process.env.TOPICS_APP_DATA_DIR
       ? 'relative'
       : 'empty'
-    : 'normal';
+    : live
+      ? process.env.TOPICS_TEST_LIVE_RESTART === '1'
+        ? 'live-restart'
+        : 'live'
+      : process.env.TOPICS_TEST_WORKSPACE === '1'
+        ? 'workspace'
+        : 'normal';
 const outputDir = resolve('evidence/native-diagnostics', session);
 mkdirSync(outputDir, { recursive: true });
 // Deliberately no full environment dump: credentials may be present in CI.
@@ -44,13 +51,7 @@ const appEnvironment = {
 export const config = {
   outputDir,
   runner: 'local',
-  specs: [
-    process.env.TOPICS_TEST_STARTUP === '1'
-      ? './tests/native/startup.ts'
-      : process.env.TOPICS_TEST_WORKSPACE === '1'
-        ? './tests/native/workspace.ts'
-        : './tests/native/search.ts',
-  ],
+  specs: [live ? (process.env.TOPICS_TEST_LIVE_RESTART === '1' ? './tests/native/live-restart.ts' : './tests/native/live-workspace.ts') : process.env.TOPICS_TEST_STARTUP === '1' ? './tests/native/startup.ts' : process.env.TOPICS_TEST_WORKSPACE === '1' ? './tests/native/workspace.ts' : './tests/native/search.ts'],
   maxInstances: 1,
   capabilities: [
     { browserName: 'tauri', 'tauri:options': { application: appBinaryPath } },
@@ -67,10 +68,11 @@ export const config = {
       },
     ],
   ],
+  afterTest: async (_test: unknown, _context: unknown, result: {passed: boolean}) => { if (!result.passed) { const { browser } = await import('@wdio/globals'); await browser.saveScreenshot(resolve(`evidence/native-${session}-failure.png`)).catch(() => undefined); } },
   framework: 'mocha',
   reporters: ['spec'],
   logLevel: 'warn',
   waitforTimeout: 10000,
   connectionRetryCount: 0,
-  mochaOpts: { timeout: 30000 },
+  mochaOpts: { timeout: live ? 420000 : 30000 },
 };

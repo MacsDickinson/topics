@@ -3,11 +3,13 @@ import { endpointLabel } from './ProposalEditor';
 import type { Sensitivity, Topic, TopicView } from './workspace-types';
 export function TopicDetail({
   view,
+  rootId,
   topics,
   busy,
   sensitivity,
 }: {
   view: TopicView;
+  rootId: string;
   topics: Topic[];
   busy: boolean;
   sensitivity: (s: Sensitivity) => void;
@@ -61,7 +63,7 @@ export function TopicDetail({
               <p>{c.value}</p>
             </div>
             {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-            <Evidence sources={c.sources} />
+            <Evidence sources={c.sources} rootId={rootId} />
           </article>
         ))}
       </section>
@@ -116,7 +118,7 @@ export function TopicDetail({
                 : ' · Earlier revision'}
             </p>
             {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-            <Evidence sources={c.sources} />
+            <Evidence sources={c.sources} rootId={rootId} />
           </article>
         ))}
       </details>

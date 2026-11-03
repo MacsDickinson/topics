@@ -16,7 +16,7 @@ export const topic = {
   topic_kind: 'project',
   name: 'Ledger',
   aliases: [],
-  sensitivity: 'unknown',
+  sensitivity: 'cloud_allowed',
 };
 export const source = {
   source_id: ids.source,
@@ -177,6 +177,13 @@ export async function workspaceFixture(
               return { proposals: w.proposals };
             case 'workspace_topics_list':
               return { topics: w.topics };
+            case 'workspace_statement_get':
+              return {
+                id: request.statement_id,
+                topic_id: ids.topic,
+                text: 'The launch is Tuesday; Monday was a mistake.',
+                recorded_at: '2026-11-03T00:00:00Z',
+              };
             case 'workspace_topic_get':
               return {
                 topic:

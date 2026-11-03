@@ -61,6 +61,7 @@ function App() {
   const rootRef = useRef<RootRef | null>(null);
   const epoch = useRef(0),
     detailSeq = useRef(0),
+    refreshSeq = useRef(0),
     scopeSeq = useRef(0);
   const [screen, setScreen] = useState<Screen>('search');
   const [settings, setSettings] = useState(false),
@@ -107,6 +108,7 @@ function App() {
     invalidateScope();
   };
   async function refresh(selected: RootRef, generation = epoch.current) {
+    const sequence = ++refreshSeq.current;
     const results = await Promise.allSettled([
       ipc<{ topics: Topic[] }>('workspace_topics_list', {
         root_id: selected.root_id,
@@ -118,7 +120,11 @@ function App() {
         root_id: selected.root_id,
       }),
     ]);
-    if (!current(generation, selected.root_id)) return;
+    if (
+      !current(generation, selected.root_id) ||
+      sequence !== refreshSeq.current
+    )
+      return;
     if (results[0].status === 'fulfilled') setTopics(results[0].value.topics);
     if (results[1].status === 'fulfilled')
       setProposals(
@@ -266,21 +272,20 @@ function App() {
     }
   }
   async function stop() {
-    const active = runRef.current;
+    const active = runRef.current || run;
     if (!active) return;
     const generation = epoch.current;
-    runRef.current = null;
-    pendingStart.current = false;
-    earlyEvents.current = [];
-    setRun(null);
-    setNotice('Run stopped. No model changes were accepted.');
+    // Close events immediately, but keep a retry action until IPC confirms stop.
+    runRef.current = null; pendingStart.current = false; earlyEvents.current = [];
+    setError(null); setNotice('Stopping run…');
     try {
-      await ipc('workspace_run_cancel', {
-        root_id: active.root,
-        run_id: active.id,
-      });
+      const result = await ipc<{cancelled:boolean}>('workspace_run_cancel', { root_id: active.root, run_id: active.id });
+      if (!current(generation, active.root)) return;
+      setRun(null);
+      setNotice(result.cancelled ? 'Run stopped. No model changes were accepted.' : 'Run is no longer active. Review Inbox for any completed proposals.');
+      if (!result.cancelled && rootRef.current) await refresh(rootRef.current, generation);
     } catch (e) {
-      if (current(generation)) report(e);
+      if (current(generation, active.root)) { setNotice('Cancellation was not confirmed. Retry Stop run or change notes folder.'); report(e); }
     }
   }
   async function changeRoot() {
@@ -289,7 +294,7 @@ function App() {
     setError(null);
     setBootError(null);
     const generation = ++epoch.current;
-    const active = runRef.current;
+    const active = runRef.current || run;
     runRef.current = null;
     pendingStart.current = false;
     earlyEvents.current = [];
@@ -299,6 +304,10 @@ function App() {
     rootRef.current = null;
     setRoot(null);
     setTopics([]);
+    setSpec(emptySpec);
+    setName('');
+    setKind('thread');
+    setManualSensitivity('unknown');
     setProposals([]);
     setOperations([]);
     clearTopic();
@@ -341,7 +350,7 @@ function App() {
     const chatFiles = topic
       ? [
           ...new Set([
-            ...topic.current_claims.flatMap((c) =>
+            ...[...topic.current_claims, ...topic.history].flatMap((c) =>
               c.sources.flatMap((s) =>
                 s.kind === 'passage' ? [s.source.path] : [],
               ),
@@ -624,7 +633,7 @@ function App() {
             <div className={`runtime ${runtime.available ? 'ready' : ''}`}>
               <p>
                 {runtime.available
-                  ? `Codex ${runtime.version || ''} ready`
+                  ? `Codex ${runtime.version || ''} installed`
                   : runtime.message}
               </p>
               {!runtime.available && (
@@ -817,6 +826,7 @@ function App() {
                   ) : topic ? (
                     <>
                       <TopicDetail
+                        rootId={root!.root_id}
                         view={topic}
                         topics={topics}
                         busy={busy}
@@ -842,7 +852,7 @@ function App() {
                           disabled={
                             busy ||
                             !!run ||
-                            topic.topic.sensitivity === 'local_only'
+                            topic.topic.sensitivity !== 'cloud_allowed'
                           }
                           onClick={() => void getPreview(true)}
                         >
@@ -864,17 +874,18 @@ function App() {
                               busy ||
                               !!run ||
                               !runtime?.available ||
-                              topic.topic.sensitivity === 'local_only'
+                              topic.topic.sensitivity !== 'cloud_allowed'
                             }
                             onClick={() => void start(true)}
                           >
                             Send message
                           </button>
                         </div>
-                        {topic.topic.sensitivity === 'local_only' && (
+                        {topic.topic.sensitivity !== 'cloud_allowed' && (
                           <p className="notice">
-                            This topic is local-only. Its context cannot be sent
-                            to Codex.
+                            {topic.topic.sensitivity === 'local_only'
+                              ? 'This topic is local-only. Its context cannot be sent to Codex.'
+                              : 'Set this topic to Cloud allowed before chatting. Local-only sources remain excluded.'}
                           </p>
                         )}
                       </section>

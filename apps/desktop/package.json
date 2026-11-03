@@ -11,7 +11,9 @@
     "build": "tsc --noEmit && vite build",
     "test": "playwright test",
     "tauri": "tauri",
-    "test:native": "node scripts/native-smoke.mjs"
+    "test:native": "node scripts/native-smoke.mjs",
+    "test:native:workspace": "node scripts/native-smoke.mjs --workspace",
+    "test:native:live": "node scripts/native-live-smoke.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",

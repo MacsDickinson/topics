@@ -5,7 +5,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::Manager;
+mod runtime_path;
+mod workspace;
 use topics_store::{SearchResult, TopicsService, WatchHandle, application_data_dir};
+use workspace::*;
 
 struct StoreSession {
     service: TopicsService,
@@ -59,6 +62,10 @@ async fn search_notes(
 }
 
 fn main() {
+    // Minimal MCP proxy dispatch happens before GUI, state or root discovery.
+    if std::env::args().any(|argument| argument == "--topics-mcp-proxy") {
+        std::process::exit(topics_runtime::run_stdio_proxy());
+    }
     let builder = tauri::Builder::default();
     #[cfg(all(debug_assertions, feature = "native-test"))]
     let builder = builder
@@ -69,13 +76,34 @@ fn main() {
             // Keep resolver failures in managed state so the window remains usable.
             // A search presents the original error; never fall back to personal data.
             let app_data = application_data_dir().map_err(|error| error.to_string());
+            app.manage(WorkspaceState::new(app_data.clone()));
             app.manage(SearchState {
                 app_data,
                 session: Arc::new(Mutex::new(None)),
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![search_notes])
+        .invoke_handler(tauri::generate_handler![
+            search_notes,
+            workspace_root_get,
+            workspace_root_set,
+            workspace_scope_preview,
+            workspace_sensitivity_set,
+            workspace_analysis_start,
+            workspace_run_cancel,
+            workspace_proposals_list,
+            workspace_proposal_decide,
+            workspace_topics_list,
+            workspace_topic_get,
+            workspace_statement_get,
+            workspace_chat_start,
+            workspace_history_list,
+            workspace_undo,
+            workspace_runtime_status,
+            workspace_manual_propose,
+            workspace_sources_list,
+            workspace_source_get
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run Topics desktop");
 }

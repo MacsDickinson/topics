@@ -104,6 +104,12 @@ export type Proposal = {
   fingerprint: string;
   created_at: string;
 };
+export type UserStatement = {
+  id: Id;
+  topic_id: Id;
+  text: string;
+  recorded_at: string;
+};
 export type TopicView = {
   topic: Topic;
   current_claims: Claim[];

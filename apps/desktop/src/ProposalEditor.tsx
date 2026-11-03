@@ -138,11 +138,23 @@ export function ProposalEditor({
                     }
                   />
                 </label>
+                <label>Topic sensitivity<select value={candidate.topic.sensitivity} onChange={e => update(index, { ...candidate, topic: { ...candidate.topic, sensitivity: e.target.value as Topic['sensitivity'] } })}><option value="unknown">Unknown</option><option value="cloud_allowed">Cloud allowed</option><option value="local_only">Local-only</option></select></label>
               </>
             )}
             {(candidate.kind === 'claim' ||
               candidate.kind === 'correction') && (
               <>
+                {(() => {
+                  const original = proposal.candidates[index];
+                  return (original.kind === 'claim' ||
+                    original.kind === 'correction') &&
+                    (original.claim.value !== candidate.claim.value ||
+                      original.claim.predicate !== candidate.claim.predicate ||
+                      original.claim.uncertainty !==
+                        candidate.claim.uncertainty) ? (
+                    <p className="badge">Your edit</p>
+                  ) : null;
+                })()}
                 <p className="subject">
                   {knownTopics.find((t) => t.id === candidate.claim.subject_id)
                     ?.name || 'Topic'}{' '}
@@ -271,7 +283,10 @@ export function ProposalEditor({
                     </p>
                   </>
                 )}
-                <Evidence sources={candidate.claim.sources} />
+                <Evidence
+                  sources={candidate.claim.sources}
+                  rootId={proposal.root_id}
+                />
               </>
             )}
             {candidate.kind === 'connection' && (

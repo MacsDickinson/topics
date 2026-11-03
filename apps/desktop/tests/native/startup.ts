@@ -6,8 +6,16 @@ describe('invalid app-data startup configuration', () => {
     const search = await $('input[type="search"]');
     await search.waitForDisplayed();
     await search.setValue('ledger');
-    await expect($('[role="alert"]')).toHaveText(expect.stringContaining('TOPICS_APP_DATA_DIR must be a non-empty absolute path'));
+    await expect($('[role="alert"]')).toHaveText(
+      expect.stringContaining(
+        'TOPICS_APP_DATA_DIR must be a non-empty absolute path',
+      ),
+    );
     await expect($('[role="status"]')).not.toHaveText('No matches');
-    await browser.saveScreenshot(resolve(`evidence/native-startup-${process.env.TOPICS_APP_DATA_DIR ? 'relative' : 'empty'}.png`));
+    await browser.saveScreenshot(
+      resolve(
+        `evidence/native-startup-${process.env.TOPICS_APP_DATA_DIR ? 'relative' : 'empty'}.png`,
+      ),
+    );
   });
 });

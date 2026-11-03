@@ -1,23 +1,46 @@
-# Topics desktop
+# Topics desktop workspace
 
-Bare Phase 0 search shell. React displays the response from `search_notes({ query: string })`, a Tauri command returning `Array<{ title: string; path: string; snippet: string }>`. Errors reject the invocation; they are displayed separately from empty results. Rust opens `topics_store::TopicsService` through the shared `application_data_dir()` config resolver, indexes on the first search, retains its watcher and executes searches off the UI thread. The frontend never reads note files.
+React/TypeScript presentation over the real Rust `WorkspaceService` and installed Codex runtime, packaged with Tauri 2. Notes remain Markdown; every model change stays a proposal until explicit human approval. Search from Phase 0 remains available, including Cmd+K.
 
-## Local runtime
+The sidebar opens Topics, Search, Inbox, History and Sources. Choose or create an absolute notes folder in the app. Sources can be read locally and labelled unknown, cloud allowed or local-only. Analyse explicit files/folders with optional inclusive dates, review included paths and exclusions, and confirm unknown sources for each run. Local-only sources never become eligible through confirmation. The inbox supports edited candidate subsets, rejection, cited passages and uncertainty. Topic detail shows accepted heads, source evidence, earlier revisions and natural-language correction chat; the human-only statement lookup displays the exact recorded user correction. History exposes undo and dependency conflicts. Missing or incompatible Codex leaves source browsing, manual topic proposals and review useful.
 
-Node 24.22.2 LTS is pinned as a project dependency and in `.node-version`. The existing system Node may bootstrap `npm ci`; subsequent npm scripts put `node_modules/.bin/node` first in PATH. No global runtime changes are required.
+## IPC and runtime boundary
+
+`src/workspace-types.ts` mirrors `topics_core::workspace`; canonical Rust values are imported rather than redeclared. All `workspace_*` calls use `{request: ...}` and reject typed `ApiError`. The legacy Phase 0 `search_notes({query})` remains compatible. Rust blocking service work runs off the WebView thread.
+
+`src-tauri/src/workspace.rs` exposes root, scope, source inventory/read, sensitivity, manual proposal, analysis/chat, proposal decision, topic, persisted statement, history/undo and runtime-status commands. Source inventory/read and statement reads are human-only. The runtime host offers only `scope_sources` and validation-only `propose_changes`; it has no approval or arbitrary filesystem tool. A successful terminal turn alone calls the core staging service, which rechecks scope and dependencies. Only the human decision command applies accepted changes.
+
+The runtime emits `workspace_run_event` with canonical root/run IDs, monotonic sequence and event; the shell forwards it without wrapping again. React discards wrong-root/run, duplicate, malformed, late and closed-run events, including events received before a start response. Root changes close the old event gate, cancel runtime and core capabilities, clear topic/proposal/consent state and reject stale reads. Cancellation errors remain retryable. The Rust lifecycle gate serializes start/cancel/root changes. App-level capabilities are revoked on every terminal path.
+
+The packaged desktop executable doubles as the scoped MCP proxy: exact `--topics-mcp-proxy` dispatch occurs before Tauri, application data or root discovery. Production never enables native test plugins or a fake provider. `TOPICS_CODEX_PATH` can select an absolute installed executable; Finder discovery checks only known executable metadata (`~/.local/bin/codex`, Homebrew paths), then PATH. Codex owns its own sign-in; Topics does not read credentials or implement login.
+
+## Local development
+
+Node 24.22.2 is pinned in `.node-version` and as a local dependency. Use `npm ci`, then project-local Node (npm scripts include `node_modules/.bin` automatically). Do not change the global Node installation.
 
 ```sh
-cd apps/desktop
 npm ci
-./node_modules/.bin/node --version
-npm exec playwright install chromium
 npm test
 npm run build
-npm run tauri dev
 ```
 
-Playwright substitutes only Tauri's transport in the browser harness. Native WebdriverIO tests must use the debug app and real store; they must never substitute IPC. Test fixtures and config/index directories are temporary and synthetic. See `../../docs/phase-0-desktop-evidence.md` for red/green results and native smoke invocation.
+Every app launch/test must use synthetic notes and an absolute isolated `TOPICS_APP_DATA_DIR`; do not launch against personal configured roots or the repository notes symlink. Native runners create and remove their own synthetic fixture trees, use a pre-created synthetic HOME, and use a nonpersistent WebKit store. Production app configuration stays persistent.
 
-The full repository check invokes `bash scripts/check-desktop.sh`, including the required native macOS smoke. Run it in a macOS graphical session; unsupported hosts fail explicitly. Production builds use no `native-test` feature, test config overlay, or `VITE_NATIVE_TEST` environment variable.
+```sh
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native:workspace
+```
 
-To configure notes, run `cargo run -p topics-cli -- use /absolute/path/to/notes` from the repository root, then launch the desktop. The CLI and desktop share the same app config; `TOPICS_APP_DATA_DIR` can override their app data directory with an absolute path. The native smoke sets that override to its own temporary directory.
+The first native suite retains Phase 0 real search/independent CLI root changes/watcher coverage. The workspace suite exercises fresh root creation, actual source preview/inspection/labels, unavailable runtime, manual proposal staging/review/approval, topic browsing and undo. Proxy entry and invalid app-data startup checks run alongside them. Embedded WebDriver does not implement the default action for option clicks; `tests/native/interaction.ts` performs DOM selection plus the change event while preserving React and every real IPC/service call.
+
+Genuine installed-runtime testing is a separate explicit opt-in, authorized only for the fictional fixture:
+
+```sh
+TOPICS_NATIVE_LIVE=1 TOPICS_CODEX_PATH=/absolute/installed/codex \
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 \
+npm run test:native:live
+```
+
+Only an ephemeral wrapper delegates the unmodified installed runtime to its existing HOME/subscription. GUI, WebKit, notes and Topics app data remain synthetic. The harness never reads credentials/config or prints account metadata. It tests real discovery and correction, fresh-process restart and derived-index rebuild with stable accepted IDs and source-byte checks; timeouts are bounded. This opt-in incurs actual provider requests. It is never silently substituted with scripted model output.
+
+Browser transport fixtures are confined to tests and do not establish native/runtime readiness. RED, GREEN, selected screenshots and remaining limits are recorded in `evidence/workspace-progress.md` and adjacent logs. Root workspace/lockfile integration and cross-provider review remain coordinator-owned.
