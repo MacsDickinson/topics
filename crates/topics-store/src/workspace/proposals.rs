@@ -739,18 +739,13 @@ fn remap(candidates: &mut [Candidate], mapping: &BTreeMap<Id, Id>) -> WResult<()
     }
     Ok(())
 }
-fn prepared_candidates(
-    ctx: &Context,
+fn normalize_model_candidates(
     state: &State,
-    request: &StageProposalRequest,
-    selected: Option<&BTreeSet<Id>>,
+    candidates: &[Candidate],
+    origin: &Origin,
+    normalize_sensitivity: bool,
 ) -> WResult<Vec<Candidate>> {
-    let mut candidates = request.candidates.clone();
-    if matches!(request.origin, Origin::Manual) {
-        taint(state, &mut candidates);
-        validate(ctx, state, &candidates, selected, false)?;
-        return Ok(candidates);
-    }
+    let mut candidates = candidates.to_vec();
     let mut mapping = BTreeMap::new();
     let mut ambiguous = BTreeMap::<Id, (String, Vec<Id>)>::new();
     for candidate in &candidates {
@@ -847,7 +842,8 @@ fn prepared_candidates(
     remap(&mut candidates, &mapping)?;
     candidates.retain(|c|!matches!(c,Candidate::Topic{topic} if mapping.values().any(|id|id==&topic.id)||ambiguous.get(&topic.id).is_some_and(|(_,ids)|!ids.contains(&topic.id))));
     for candidate in &mut candidates {
-        if let Candidate::Topic { topic } = candidate
+        if normalize_sensitivity
+            && let Candidate::Topic { topic } = candidate
             && topic.sensitivity == Sensitivity::CloudAllowed
         {
             topic.sensitivity = Sensitivity::Unknown;
@@ -856,7 +852,7 @@ fn prepared_candidates(
     let mut prepared = vec![];
     for candidate in candidates {
         let mut ambiguity = None;
-        if !matches!(request.origin, Origin::Chat { .. }) {
+        if !matches!(origin, Origin::Chat { .. }) {
             for id in dependencies(std::slice::from_ref(&candidate)) {
                 if let Some(a) = ambiguous.get(&id) {
                     ambiguity = Some(a.clone());
@@ -915,6 +911,22 @@ fn prepared_candidates(
     });
     remap(&mut prepared, &duplicates)?;
     prepared.retain(|candidate|!matches!(candidate,Candidate::Connection{connection} if state.connections.values().any(|old|old.relation==connection.relation&&endpoint_identity(state,&old.from)==endpoint_identity(state,&connection.from)&&endpoint_identity(state,&old.to)==endpoint_identity(state,&connection.to)&&old.valid_from==connection.valid_from&&old.valid_to==connection.valid_to)));
+    Ok(prepared)
+}
+fn prepared_candidates(
+    ctx: &Context,
+    state: &State,
+    request: &StageProposalRequest,
+    selected: Option<&BTreeSet<Id>>,
+) -> WResult<Vec<Candidate>> {
+    let mut candidates = request.candidates.clone();
+    if matches!(request.origin, Origin::Manual) {
+        taint(state, &mut candidates);
+        validate(ctx, state, &candidates, selected, false)?;
+        return Ok(candidates);
+    }
+    let mut prepared =
+        normalize_model_candidates(state, &request.candidates, &request.origin, true)?;
     // Known echoes and suppression are successful no-change outcomes.
     if prepared.is_empty() {
         return Ok(prepared);
@@ -1251,6 +1263,10 @@ impl WorkspaceService {
                     return Err(error("conflict","Referenced record changed since proposal review; versions preserved"));
                 }
                 validate(ctx, &state, candidates, None, true)?;
+                if !matches!(saved.proposal.origin,Origin::Manual) {
+                    let current=normalize_model_candidates(&state,candidates,&saved.proposal.origin,false)?;
+                    if fingerprint(&current)?!=fingerprint(candidates)? {return Err(error("conflict","Current identities, assertions or correction rules changed; refresh analysis before approval"));}
+                }
                 let operation = commit(ctx,"Approve reviewed proposal",records,CommitIntent{dependencies:dependencies(&approved),tombstones:vec![],undo_of:None,expected:Some(&expected),proposal:Some(CommittedDecision{proposal_id:saved.proposal.id.clone(),fingerprint:saved.proposal.fingerprint.clone(),decision:request.decision.clone(),applied_candidates:approved.clone(),proposed_candidates:saved.proposal.candidates.clone()})})?;
                 saved.operation = Some(operation);
                 saved.proposal.candidates=approved;

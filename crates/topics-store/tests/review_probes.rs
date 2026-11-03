@@ -1557,3 +1557,68 @@ fn different_temporal_assertions_do_not_prove_that_same_name_people_are_the_same
             .any(|c| matches!(c, Candidate::Connection { .. }))
     );
 }
+
+#[test]
+fn concurrently_staged_analysis_proposals_cannot_duplicate_an_assertion_at_approval() {
+    let f = F::new();
+    f.write("M/a.md", "A has facts x and y\n");
+    let source = f.source("M/a.md");
+    let a = topic("A");
+    f.accept(vec![tc(&a)]);
+    let x = f.claim(&a, &source.citation, "x");
+    let first = f.model_stage(vec!["M/a.md"], vec![cc(&x)]).unwrap();
+    let second_x = f.claim(&a, &source.citation, "x");
+    let y = f.claim(&a, &source.citation, "y");
+    let second = f
+        .model_stage(vec!["M/a.md"], vec![cc(&second_x), cc(&y)])
+        .unwrap();
+    f.approve(&first).unwrap();
+    assert_eq!(f.approve(&second).unwrap_err().code, "conflict");
+    assert_eq!(f.view(&a).unwrap().current_claims.len(), 1);
+    let fresh = f
+        .model_stage(vec!["M/a.md"], vec![cc(&second_x), cc(&y)])
+        .unwrap();
+    assert_eq!(fresh.candidates.len(), 1);
+    f.approve(&fresh).unwrap();
+    assert_eq!(f.view(&a).unwrap().current_claims.len(), 2);
+}
+#[test]
+fn correction_rules_cannot_be_bypassed_by_a_proposal_staged_before_the_identity_was_accepted() {
+    let f = F::new();
+    f.write("M/a.md", "Alex he/him and team Ledger\n");
+    let source = f.source("M/a.md");
+    let a = topic("Alex");
+    let old = f.claim(&a, &source.citation, "he/him");
+    let first = f
+        .model_stage(vec!["M/a.md"], vec![tc(&a), cc(&old)])
+        .unwrap();
+    let b = topic("Alex");
+    let repeated = f.claim(&b, &source.citation, "he/him");
+    let mut team = f.claim(&b, &source.citation, "Ledger");
+    team.predicate = "team".into();
+    let second = f
+        .model_stage(vec!["M/a.md"], vec![tc(&b), cc(&repeated), cc(&team)])
+        .unwrap();
+    f.approve(&first).unwrap();
+    let (corrected, rule) = f.correct(&a, &old, "they/them");
+    f.accept(vec![Candidate::Correction {
+        claim: corrected,
+        rule,
+    }]);
+    assert_eq!(f.approve(&second).unwrap_err().code, "conflict");
+    assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
+    assert_eq!(f.view(&a).unwrap().current_claims[0].value, "they/them");
+    let fresh = f
+        .model_stage(vec!["M/a.md"], vec![tc(&b), cc(&repeated), cc(&team)])
+        .unwrap();
+    assert_eq!(fresh.candidates.len(), 1);
+    f.approve(&fresh).unwrap();
+    assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
+    assert!(
+        f.view(&a)
+            .unwrap()
+            .current_claims
+            .iter()
+            .all(|c| c.value != "he/him")
+    );
+}
