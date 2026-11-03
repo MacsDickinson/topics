@@ -1,0 +1,22 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.45s
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-4b0894cc99f5dcf9)
+
+running 1 test
+test review_overlapping_root_and_appdata_never_create_directories ... FAILED
+
+failures:
+
+---- review_overlapping_root_and_appdata_never_create_directories stdout ----
+
+thread 'review_overlapping_root_and_appdata_never_create_directories' (3388777) panicked at crates/topics-runtime/tests/scripted_runtime.rs:262:31:
+assertion failed: bad.analysis_start(request.clone(), host.clone(), Arc::new(|_| {})).is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    review_overlapping_root_and_appdata_never_create_directories
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p topics-runtime --test scripted_runtime`

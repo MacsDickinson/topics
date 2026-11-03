@@ -1,0 +1,26 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.20s
+     Running tests/review_privacy.rs (target/debug/deps/review_privacy-11f023f56ee95509)
+
+running 4 tests
+test returned_non_ephemeral_thread_cannot_transmit ... ok
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... ok
+test canonical_uuid_aliases_and_missing_nullable_candidates_are_rejected ... ok
+test native_probe_capture_and_wait_are_bounded ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-c52e01b2cbdfd276)
+
+running 8 tests
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test review_staging_panic_emits_one_error_and_runtime_remains_usable ... ok
+test review_cancel_stalled_host_has_bounded_terminal_and_releases_run_slot ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+

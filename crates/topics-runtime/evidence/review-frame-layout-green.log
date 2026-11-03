@@ -1,0 +1,29 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.32s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-0f94067722352290)
+
+running 9 tests
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-4b0894cc99f5dcf9)
+
+running 6 tests
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.41s
+

@@ -1,0 +1,80 @@
+{
+  "source_commit": "6ff1e1ca3b30fc8b914720681fcf5fe62e95f856",
+  "catalog_sha256": "63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672",
+  "scope": "specialist supplied synthetic offline probes; production SDK/live checks separate",
+  "probes": {
+    "direct_dynamic_negative": {
+      "capture_sha256": "758af3fe67919be450c8985f3d97d7303cb01bbdf5f7d4622066f7cf3deb4e68",
+      "actual_tool_names": [
+        "topics.propose_changes",
+        "topics.scope_sources"
+      ],
+      "callback_methods": [
+        "item/tool/call",
+        "item/tool/call"
+      ],
+      "output_count": 20,
+      "unsupported_output_count": 18
+    },
+    "disabled_mcp_direct_dynamic": {
+      "capture_sha256": "c59061e7b9db93e712683f9fb32d955764bfdd92f3f575c532918b4722eee971",
+      "actual_tool_names": [
+        "topics.propose_changes",
+        "topics.scope_sources"
+      ],
+      "callback_methods": [],
+      "output_count": 1,
+      "unsupported_output_count": 1
+    },
+    "same_mcp_forwarding": {
+      "capture_sha256": "074176f655c472e2adb87bdf18f960a9323991af30504b2eef829fe958e7764f",
+      "actual_tool_names": [
+        "topics.propose_changes",
+        "topics.scope_sources"
+      ],
+      "callback_methods": [
+        "item/tool/call",
+        "item/tool/call"
+      ],
+      "output_count": 2,
+      "unsupported_output_count": 0
+    }
+  },
+  "live-summary": {
+    "codex_version": "0.166.0",
+    "catalog_sha256": "63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672",
+    "provider_calls_authorized": "tiny synthetic existing subscription via unmodified runtime",
+    "credential_or_header_capture": false,
+    "existing_chatgpt_auth": true,
+    "inherited_mcp_disabled_count": 2,
+    "thread_checks_passed": true,
+    "tool_names": [
+      "scope_sources",
+      "propose_changes"
+    ],
+    "tool_call_count": 2,
+    "unexpected_server_requests": [],
+    "turn_status": "completed",
+    "error_classification": [],
+    "success": true
+  },
+  "live-canonical-summary": {
+    "codex_version": "0.166.0",
+    "catalog_sha256": "63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672",
+    "provider_calls_authorized": "tiny synthetic existing subscription via unmodified runtime",
+    "credential_or_header_capture": false,
+    "inference_endpoint": "https://chatgpt.com/backend-api/codex",
+    "existing_chatgpt_auth": true,
+    "inherited_mcp_disabled_count": 2,
+    "thread_checks_passed": true,
+    "tool_names": [
+      "scope_sources",
+      "propose_changes"
+    ],
+    "tool_call_count": 2,
+    "unexpected_server_requests": [],
+    "turn_status": "completed",
+    "error_classification": [],
+    "success": true
+  }
+}

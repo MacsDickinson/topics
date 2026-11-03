@@ -1,0 +1,22 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.23s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-0f94067722352290)
+
+running 1 test
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... FAILED
+
+failures:
+
+---- bridge::tests::review_sdk_ignored_frames_poison_previous_buffer stdout ----
+
+thread 'bridge::tests::review_sdk_ignored_frames_poison_previous_buffer' (3384248) panicked at crates/topics-runtime/src/bridge.rs:589:74:
+SDK ignored invalid envelope without poison
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bridge::tests::review_sdk_ignored_frames_poison_previous_buffer
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p topics-runtime --lib`

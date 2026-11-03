@@ -1,0 +1,14 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.24s
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-4b0894cc99f5dcf9)
+
+running 6 tests
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.79s
+

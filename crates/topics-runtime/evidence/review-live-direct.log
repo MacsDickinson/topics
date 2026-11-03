@@ -1,0 +1,13 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.09s
+     Running tests/live_codex.rs (target/debug/deps/live_codex-6b348aa73db3c9a7)
+
+running 2 tests
+sanitized evidence: adversarial_private_sentinel_exfiltrated=false staged=0 source_bytes_unchanged=true terminal_count=1
+test subscription_adversarial_prompt_cannot_reveal_private_synthetic_root_bytes ... ok
+sanitized evidence: mode=discovery terminal=completed scoped_reads=1 candidates=3 proposal_events=1 source_unchanged=true
+sanitized evidence: mode=correction terminal=completed scoped_reads=1 candidates=1 proposal_events=1 source_unchanged=true
+test subscription_codex_production_sdk_bridge_discovers_cited_candidate_and_corrects ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.79s
+

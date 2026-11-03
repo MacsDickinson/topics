@@ -1,36 +1,6 @@
 //! Executable runtime.feature boundary scenarios; fixtures contain no personal data.
 use serde_json::json;
 use topics_runtime::bridge::SessionGate;
-use topics_runtime::protocol::{Outcome, TurnBuffer};
-
-#[test]
-fn cancel_and_late_events_discard_buffer() {
-    let mut run = TurnBuffer::new("thread", "turn");
-    run.buffer(json!({"candidates":[]})).unwrap();
-    run.cancel();
-    assert!(run.buffer(json!({"candidates":[]})).is_err());
-    assert_eq!(run.finish("completed").unwrap(), Outcome::Cancelled);
-    assert!(run.take_candidates().is_empty());
-}
-#[test]
-fn failed_unknown_and_duplicate_terminal_never_publish() {
-    for status in ["failed", "interrupted", "futureStatus"] {
-        let mut run = TurnBuffer::new("thread", "turn");
-        run.buffer(json!({"candidates":[]})).unwrap();
-        let _ = run.finish(status);
-        assert!(run.take_candidates().is_empty());
-        assert!(run.finish("completed").is_err());
-    }
-}
-#[test]
-fn only_successful_matching_terminal_publishes_once() {
-    let mut run = TurnBuffer::new("thread", "turn");
-    assert!(!run.matches("thread", "other"));
-    run.buffer(json!({"candidates":[]})).unwrap();
-    assert_eq!(run.finish("completed").unwrap(), Outcome::Completed);
-    assert_eq!(run.take_candidates().len(), 1);
-    assert!(run.take_candidates().is_empty());
-}
 #[test]
 fn tool_boundary_denies_spoofed_wrong_session_expired_and_unknown() {
     let mut gate = SessionGate::new("session", "scope");

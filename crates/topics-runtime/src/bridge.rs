@@ -78,6 +78,9 @@ pub fn parse_candidates(args: &Value) -> Result<Vec<Candidate>, String> {
     if args.as_object().is_none_or(|o| o.len() != 1) {
         return Err("invalid_candidate_schema".into());
     }
+    let schema: Value = serde_json::from_str(include_str!("candidate.schema.json")).unwrap();
+    required_fields(&schema, args, &schema)?;
+    canonical_references(args, None)?;
     let candidates: Vec<Candidate> = serde_json::from_value(args["candidates"].clone())
         .map_err(|_| "invalid_candidate_schema")?;
     if candidates.is_empty() || candidates.len() > 64 {
@@ -99,14 +102,166 @@ pub fn parse_candidates(args: &Value) -> Result<Vec<Candidate>, String> {
             Candidate::UnresolvedIdentity { .. } => None,
         };
         if let Some(id) = id
-            && (uuid::Uuid::parse_str(id).is_err() || !ids.insert(id))
+            && (uuid::Uuid::parse_str(id).is_err()
+                || !ids.insert(uuid::Uuid::parse_str(id).map_err(|_| "invalid_uuid")?))
         {
             return Err("invalid_or_duplicate_provisional_id".into());
         }
     }
     Ok(candidates)
 }
-fn poison(state: &Arc<Mutex<RunState>>) {
+
+fn required_fields(schema: &Value, value: &Value, root: &Value) -> Result<(), String> {
+    if let Some(reference) = schema["$ref"].as_str() {
+        return required_fields(
+            &root["$defs"][reference.trim_start_matches("#/$defs/")],
+            value,
+            root,
+        );
+    }
+    if let Some(options) = schema["oneOf"].as_array() {
+        let choice = options
+            .iter()
+            .find(|option| option["properties"]["kind"]["const"] == value["kind"])
+            .ok_or("unknown_kind")?;
+        return required_fields(choice, value, root);
+    }
+    if let Some(options) = schema["anyOf"].as_array() {
+        if value.is_null() {
+            return Ok(());
+        }
+        return required_fields(&options[0], value, root);
+    }
+    if let Some(required) = schema["required"].as_array() {
+        for key in required {
+            if value.get(key.as_str().ok_or("schema")?).is_none() {
+                return Err("missing_required_nullable".into());
+            }
+        }
+    }
+    if let Some(properties) = schema["properties"].as_object() {
+        for (key, child) in properties {
+            if let Some(value) = value.get(key) {
+                required_fields(child, value, root)?;
+            }
+        }
+    }
+    if let Some(items) = value.as_array() {
+        for value in items {
+            required_fields(&schema["items"], value, root)?;
+        }
+    }
+    Ok(())
+}
+fn canonical_references(value: &Value, key: Option<&str>) -> Result<(), String> {
+    match value {
+        Value::Object(object) => {
+            for (key, value) in object {
+                canonical_references(value, Some(key))?;
+            }
+        }
+        Value::Array(items) => {
+            for value in items {
+                canonical_references(value, key)?;
+            }
+        }
+        Value::String(id)
+            if key.is_some_and(|key| {
+                key == "id" || key.ends_with("_id") || key == "supersedes" || key == "candidates"
+            }) =>
+        {
+            if !crate::canonical_id(id) {
+                return Err("noncanonical_uuid".into());
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+/// Strict envelope/handshake guard before SDK decoding, which otherwise drops
+/// malformed messages. Only a parsed standard request/notification is forwarded.
+fn validate_mcp_frame(value: &Value, phase: u8) -> Result<u8, ()> {
+    let object = value.as_object().ok_or(())?;
+    if value["jsonrpc"] != "2.0"
+        || object
+            .keys()
+            .any(|key| !["jsonrpc", "id", "method", "params"].contains(&key.as_str()))
+    {
+        return Err(());
+    }
+    let method = value["method"].as_str().ok_or(())?;
+    let notification = method.starts_with("notifications/");
+    if notification {
+        if object.contains_key("id") {
+            return Err(());
+        }
+    } else if !value
+        .get("id")
+        .is_some_and(|id| id.is_string() || id.as_i64().is_some())
+    {
+        return Err(());
+    }
+    if value.get("params").is_some_and(|p| !p.is_object())
+        || value
+            .get("params")
+            .and_then(|p| p.get("_meta"))
+            .is_some_and(|m| !m.is_object())
+    {
+        return Err(());
+    }
+    let decoded: ClientJsonRpcMessage = serde_json::from_value(value.clone()).map_err(|_| ())?;
+    if notification && !matches!(decoded, JsonRpcMessage::Notification(_))
+        || !notification && !matches!(decoded, JsonRpcMessage::Request(_))
+    {
+        return Err(());
+    }
+    match (phase, method) {
+        (0, "initialize")
+            if value["params"]["protocolVersion"] == "2025-06-18"
+                && value["params"]["capabilities"].is_object()
+                && value["params"]["clientInfo"]["name"].is_string()
+                && value["params"]["clientInfo"]["version"].is_string() =>
+        {
+            Ok(1)
+        }
+        (1, "notifications/initialized")
+            if value
+                .get("params")
+                .is_none_or(|p| p.as_object().is_some_and(|o| o.is_empty())) =>
+        {
+            Ok(2)
+        }
+        (2, "notifications/cancelled")
+            if value["params"]
+                .get("requestId")
+                .is_some_and(|id| id.is_string() || id.as_i64().is_some())
+                && value["params"].get("reason").is_none_or(Value::is_string) =>
+        {
+            Ok(2)
+        }
+        (2, "tools/call")
+            if value["params"]["name"].is_string() && value["params"]["arguments"].is_object() =>
+        {
+            Ok(2)
+        }
+        (2, "tools/list" | "resources/list" | "resources/templates/list" | "prompts/list")
+            if value["params"]
+                .get("cursor")
+                .is_none_or(|value| value.is_null() || value.is_string()) =>
+        {
+            Ok(2)
+        }
+        (2, "ping")
+            if value
+                .get("params")
+                .is_none_or(|p| p.as_object().is_some_and(|o| o.is_empty())) =>
+        {
+            Ok(2)
+        }
+        _ => Err(()),
+    }
+}
+pub(crate) fn poison(state: &Arc<Mutex<RunState>>) {
     if let Ok(mut state) = state.lock() {
         state.failed = true;
         state.pending.clear();
@@ -121,7 +276,7 @@ pub fn tools() -> Vec<Tool> {
     for definition in &mut definitions {
         definition.annotations = Some(
             ToolAnnotations::new()
-                .read_only(true)
+                .read_only(definition.name == "scope_sources")
                 .destructive(false)
                 .open_world(false),
         );
@@ -153,7 +308,7 @@ impl ServerHandler for TopicsMcp {
     async fn call_tool(
         &self,
         request: CallToolRequestParams,
-        _: RequestContext<RoleServer>,
+        context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
         let result = async {
             let args = Value::Object(request.arguments.unwrap_or_default());
@@ -168,14 +323,17 @@ impl ServerHandler for TopicsMcp {
                 }
                 state.calls += 1;
             }
+            static HOST_CALLS:std::sync::OnceLock<Arc<tokio::sync::Semaphore>>=std::sync::OnceLock::new();
+            let permit=HOST_CALLS.get_or_init(||Arc::new(tokio::sync::Semaphore::new(8))).clone().try_acquire_owned().map_err(|_|denied())?;
             let host = self.host.clone();
             let name = request.name.to_string();
-            let input = args.clone();
-            let mut response = tokio::time::timeout(
+            let input=if request.name=="propose_changes"{let mut combined=self.state.lock().map_err(|_|denied())?.pending.clone();combined.extend(parse_candidates(&args).map_err(|_|denied())?);let input=json!({"candidates":combined});parse_candidates(&input).map_err(|_|denied())?;input}else{args.clone()};
+            let response_future=tokio::time::timeout(
                 Duration::from_secs(5),
-                tokio::task::spawn_blocking(move || host.call(&name, input)),
+                tokio::task::spawn_blocking(move || {let _permit=permit;host.call(&name,input)}),
             )
-            .await
+            ;
+            let mut response=tokio::select!{_=context.ct.cancelled()=>{return Err(denied());},response=response_future=>response}
             .map_err(|_| denied())?
             .map_err(|_| denied())?
             .map_err(|_| denied())?;
@@ -187,7 +345,7 @@ impl ServerHandler for TopicsMcp {
                 );
             }
             let mut state = self.state.lock().map_err(|_| denied())?;
-            if state.cancelled || state.terminal || state.failed {
+            if state.cancelled || state.terminal || state.failed || context.ct.is_cancelled() {
                 return Err(denied());
             }
             if response.to_string().len() > MAX_FRAME / 2 {
@@ -198,6 +356,8 @@ impl ServerHandler for TopicsMcp {
                 if state.pending.len() + candidates.len() > 64 {
                     return Err(denied());
                 }
+                let mut combined=state.pending.clone();combined.extend(candidates.clone());
+                parse_candidates(&json!({"candidates":combined})).map_err(|_|denied())?;
                 state.pending.extend(candidates);
                 Ok(CallToolResult::success(vec![ContentBlock::text(
                     "Validated and buffered for review after successful completion",
@@ -251,6 +411,7 @@ impl Bridge {
             tokio::pin!(deadline);
             let mut connections = tokio::task::JoinSet::new();
             let mut attempts = 0;
+            let mut window = Instant::now();
             let mut authenticated = 0;
             let mut nonces = std::collections::HashSet::new();
             loop {
@@ -260,13 +421,18 @@ impl Bridge {
                     Some(_)=connections.join_next(), if !connections.is_empty()=>continue,
                     stream=listener.accept()=>match stream {Ok((stream,_))=>stream,Err(_)=>break},
                 };
+                if window.elapsed() > Duration::from_secs(1) {
+                    attempts = 0;
+                    window = Instant::now();
+                }
                 attempts += 1;
                 if attempts > 24 {
-                    break;
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                    continue;
                 }
                 let mut reader = BufReader::new(stream);
                 let line = tokio::time::timeout(
-                    Duration::from_secs(2),
+                    Duration::from_millis(200),
                     crate::transport::read_frame(&mut reader, 4096),
                 )
                 .await
@@ -303,6 +469,7 @@ impl Bridge {
                     let upload = async {
                         let mut read = BufReader::new(read);
                         let mut bytes = 0;
+                        let mut phase = 0;
                         loop {
                             let frame =
                                 match crate::transport::read_frame(&mut read, MAX_FRAME).await {
@@ -315,29 +482,17 @@ impl Bridge {
                                     }
                                 };
                             bytes += frame.len();
-                            let valid =
-                                serde_json::from_slice::<Value>(&frame)
-                                    .ok()
-                                    .is_some_and(|v| {
-                                        v["jsonrpc"] == "2.0"
-                                            && matches!(
-                                                v["method"].as_str(),
-                                                Some(
-                                                    "initialize"
-                                                        | "ping"
-                                                        | "tools/list"
-                                                        | "tools/call"
-                                                        | "notifications/initialized"
-                                                        | "notifications/cancelled"
-                                                        | "resources/list"
-                                                        | "resources/templates/list"
-                                                        | "prompts/list"
-                                                )
-                                            )
-                                            && (v["method"] != "tools/call"
-                                                || (v["params"]["name"].is_string()
-                                                    && v["params"]["arguments"].is_object()))
-                                    });
+                            let valid = serde_json::from_slice::<Value>(&frame)
+                                .ok()
+                                .and_then(|value| {
+                                    let next = validate_mcp_frame(&value, phase).ok()?;
+                                    if value["method"] == "notifications/cancelled" {
+                                        poison(&state);
+                                    }
+                                    phase = next;
+                                    Some(())
+                                })
+                                .is_some();
                             if !valid || bytes > crate::protocol::MAX_OUTPUT {
                                 poison(&state);
                                 return;
@@ -423,7 +578,11 @@ mod tests {
                 }
             }
         }
-        fn commit_candidates(&self, _: Vec<Candidate>) -> WorkspaceResult<Vec<String>> {
+        fn commit_candidates(
+            &self,
+            _: Vec<Candidate>,
+            _: crate::CommitPermit,
+        ) -> WorkspaceResult<()> {
             panic!("MCP may not stage, approve or apply")
         }
     }
@@ -436,6 +595,8 @@ mod tests {
             seq: 0,
             terminal_emitted: false,
             failed: false,
+            commit: None,
+            publication_emitted: false,
         }))
     }
     async fn send(stream: &mut BufReader<TcpStream>, value: Value) -> Value {
@@ -517,8 +678,21 @@ mod tests {
         assert!(result.get("error").is_some());
         assert!(state.lock().unwrap().pending.is_empty());
         let endpoint = bridge.endpoint.clone();
+        let bootstrap = json!({"session":bridge.session,"token":bridge.token,"nonce":uuid::Uuid::new_v4().to_string()});
         bridge.close().await;
-        assert!(TcpStream::connect(endpoint).await.is_err());
+        if let Ok(socket) = TcpStream::connect(endpoint).await {
+            let mut reader = BufReader::new(socket);
+            let _ = reader
+                .get_mut()
+                .write_all(format!("{bootstrap}\n").as_bytes())
+                .await;
+            let reply = tokio::time::timeout(
+                Duration::from_millis(200),
+                crate::transport::read_frame(&mut reader, 16),
+            )
+            .await;
+            assert!(!matches!(reply,Ok(Ok(frame)) if frame==b"ok\n"));
+        }
     }
     #[tokio::test]
     async fn wrong_session_token_expired_and_replay_cannot_open_sdk_session() {
@@ -577,6 +751,44 @@ mod tests {
             assert!(state.lock().unwrap().failed);
             assert!(state.lock().unwrap().pending.is_empty());
             bridge.close().await;
+        }
+    }
+    #[tokio::test]
+    async fn review_sdk_ignored_frames_poison_previous_buffer() {
+        let cases = [
+            json!({"jsonrpc":"2.0","method":"tools/call","params":{"name":"read_file","arguments":{}}}),
+            json!({"jsonrpc":"2.0","id":null,"method":"tools/call","params":{"name":"read_file","arguments":{}}}),
+            json!({"jsonrpc":"2.0","id":{},"method":"ping"}),
+            json!({"jsonrpc":"2.0","id":1.5,"method":"ping"}),
+            json!({"jsonrpc":"2.0","id":8,"method":"tools/list","params":{"_meta":4}}),
+            json!({"jsonrpc":"2.0","id":8,"method":"tools/list","params":[]}),
+            json!({"jsonrpc":"2.0","id":8,"method":"ping","result":{}}),
+            json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{}}),
+        ];
+        for value in cases {
+            let state = state();
+            let bridge = Bridge::start("session", "scope", Arc::new(Host), state.clone())
+                .await
+                .unwrap();
+            let mut stream = initialized(&bridge).await;
+            state.lock().unwrap().pending = vec![Candidate::Topic {
+                topic: topics_core::workspace::Topic {
+                    id: "10000000-0000-4000-8000-000000000001".into(),
+                    topic_kind: topics_core::workspace::TopicKind::Person,
+                    name: "Synthetic".into(),
+                    aliases: vec![],
+                    sensitivity: topics_core::workspace::Sensitivity::CloudAllowed,
+                },
+            }];
+            stream
+                .get_mut()
+                .write_all(format!("{value}\n").as_bytes())
+                .await
+                .unwrap();
+            tokio::time::sleep(Duration::from_millis(40)).await;
+            let failed = state.lock().unwrap().failed;
+            bridge.close().await;
+            assert!(failed, "SDK ignored invalid envelope without poison");
         }
     }
 }

@@ -55,6 +55,7 @@ pub(crate) struct Process {
     pub queued: VecDeque<Value>,
     pub thread: Option<String>,
     pub turn: Option<String>,
+    pub callbacks_allowed: bool,
 }
 impl Process {
     pub fn spawn(mut command: Command) -> WorkspaceResult<Self> {
@@ -98,6 +99,7 @@ impl Process {
             queued: VecDeque::new(),
             thread: None,
             turn: None,
+            callbacks_allowed: false,
         })
     }
     pub async fn send(&mut self, value: Value) -> WorkspaceResult<()> {
@@ -142,6 +144,14 @@ impl Process {
             ));
         }
         if value.get("id").is_some() && value.get("method").is_some() {
+            if self.callbacks_allowed
+                && value["method"] == "item/tool/call"
+                && value
+                    .get("id")
+                    .is_some_and(|id| id.is_string() || id.as_i64().is_some())
+            {
+                return Ok(value);
+            }
             self.send(json!({"id":value["id"],"error":{"code":-32601,"message":"Topics denies runtime-initiated requests"}})).await?;
             return Err(error(
                 "forbidden",
@@ -157,6 +167,13 @@ impl Process {
             .await?;
         loop {
             let frame = self.next().await?;
+            if frame.get("method").is_some() && frame.get("id").is_some() {
+                if self.queued.len() >= 256 {
+                    return Err(error("runtime_unavailable", "Excessive callback queue"));
+                }
+                self.queued.push_back(frame);
+                continue;
+            }
             if frame.get("id") == Some(&json!(id)) {
                 if frame.get("error").is_some() {
                     return Err(error(
@@ -187,6 +204,7 @@ impl Process {
         self.send(json!({"method":"initialized","params":{}})).await
     }
     pub async fn interrupt_and_wait(&mut self) {
+        self.callbacks_allowed = false;
         let (Some(thread), Some(turn)) = (self.thread.clone(), self.turn.clone()) else {
             return;
         };

@@ -1,0 +1,45 @@
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-core)
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.05s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c80774858c720e19)
+
+running 9 tests
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests/config_override_native.rs (target/debug/deps/config_override_native-f899d4780f831014)
+
+running 1 test
+test installed_runtime_force_disables_notify_skills_and_telemetry_before_any_turn ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/review_privacy.rs (target/debug/deps/review_privacy-11f023f56ee95509)
+
+running 2 tests
+test returned_non_ephemeral_thread_cannot_transmit ... ok
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-c52e01b2cbdfd276)
+
+running 6 tests
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.69s
+

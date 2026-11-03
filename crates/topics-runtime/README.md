@@ -1,122 +1,163 @@
-# Topics installed runtime
+# Pinned Topics runtime
 
-`topics-runtime` owns Codex process lifetime, pinned app-server NDJSON, the fixed
-app-hosted MCP surface and the sandboxed stdio proxy. It has no store dependency,
-filesystem tool, proposal approval or apply API. Canonical domain and event values
-come from `topics-core::workspace`.
+This crate owns installed Codex process lifetime, exact selected-scope tool
+transport, the app-hosted official MCP SDK, and native containment. Canonical
+values come from `topics-core::workspace`; there is no store dependency, raw
+filesystem model tool, approval tool or apply tool.
 
-The desktop may use its own executable as `RuntimeConfig.proxy_path`. Before
-starting Tauri or reading root settings it dispatches `--topics-mcp-proxy` to
-`topics_runtime::run_stdio_proxy()` and exits with that returned status. The
-standalone `topics-mcp-proxy` binary calls the same function.
+## Effective model tools
 
-## Host adapter
+Codex **0.166.0** is pinned. Its ordinary MCP configuration adds generic resource
+handlers, and default model metadata forces Code Mode with additional built-ins;
+disabling namespaces alone does not remove handlers. The earlier native-MCP
+launch is superseded and is not approved for real-note use.
+
+The implemented launch uses the supported startup `model_catalog_json` override,
+pinned to the complete `gpt-6.1-sol` catalog entry and digest. It selects direct
+mode, disables patch/shell/experimental native tools and agents, and disables all
+Codex-internal MCP servers individually. `thread/start.dynamicTools` contains only
+namespace `topics` with `scope_sources` and `propose_changes`. Their exact schemas
+are fetched with the official **rmcp 3.8.0 client** from the **same authenticated,
+scoped app-hosted rmcp server**. `item/tool/call` is only a transport adapter into
+that MCP client; it never calls HostTools or storage directly. Unknown names,
+namespace, thread/turn/call identity, errors, cancellation and drift fail closed.
+No parallel data authority or alternate proposal path exists.
+
+Specialist source/actual offline capture demonstrated exactly two tools and 18
+forced forbidden calls rejected as unsupported, including hidden MCP resource
+helpers. Its existing-auth live probe demonstrated subscription acceptance. The
+production runtime tests additionally exercise the actual SDK client/server,
+cited discovery and persisted-statement correction. Offline capture is not a
+separately captured subscription request inventory or universal adversarial proof.
+
+## Host API and guarded staging
+
+```rust
+pub trait HostTools: Send + Sync + 'static {
+    fn call(&self, tool: &str, arguments: serde_json::Value)
+        -> WorkspaceResult<serde_json::Value>;
+    fn commit_candidates(&self, candidates: Vec<Candidate>, permit: CommitPermit)
+        -> WorkspaceResult<()>;
+}
+```
 
 `Runtime::new(RuntimeConfig { codex_path, proxy_path, app_data })` exposes
-`status() -> RuntimeStatusResult`, `analysis_start` and `chat_start` with
+`status() -> RuntimeStatusResult`, `analysis_start` / `chat_start` taking
 `(RunRequest, Arc<dyn HostTools>, EventSink) -> WorkspaceResult<String>`, and
-`cancel(root_id, run_id) -> bool`. `RunRequest` contains `root_id`, `run_id`,
-`scope_id`, absolute `notes_root`, and bounded authorized `prompt`. The core
-service assigns all three IDs. `EventSink` receives canonical `WorkspaceRunEvent`
-with increasing sequence and one terminal event. Event delivery runs separately
-from state locks. Cancelling must also invalidate the store run capability.
+`cancel(root_id, run_id) -> bool`. `RunRequest` contains core-assigned canonical
+UUID `root_id`, `run_id`, `scope_id`, absolute `notes_root`, and bounded authorized
+`prompt`. `EventSink` receives canonical `WorkspaceRunEvent`, increasing sequence
+and exactly one terminal event.
 
-`HostTools::call(tool, arguments)` accepts only `scope_sources` or
-`propose_changes`. The adapter captures immutable root/scope/run identity and uses
-the same scope/revision/sensitivity checked core service as the UI. It must reject
-unselected and local-only sources/topics, including evidence, derived references,
-chat context and stale revisions. `propose_changes` validates only, without
-publishing anything. `commit_candidates` revalidates the active run and stages a
-pending proposal only after a successful matching terminal model turn. It never
-approves or applies. Runtime serializes this call against cancellation. A host
-implementation that stages from `call` violates the interface contract.
+The host captures immutable root/scope/run identity. `scope_sources` uses the
+same scope/revision/sensitivity service as UI. `propose_changes` validates only,
+including the combined buffered provisional candidate set, without staging.
+Every read, source/topic/derived reference, citation, error and proposal must deny
+unselected/local-only content and stale revisions. Chat persists the user
+statement first and uses only bounded authorized current claims/rules/citations;
+runtime never infers a correction with string heuristics.
 
-Chat prompt construction belongs to the trusted host: persist the user statement
-first and include only the authorized topic/current claims/rules/citations and
-that statement, subject to the same scope and sensitivity checks. Runtime does
-not infer corrections using string matching.
+After successful terminal model completion only, runtime calls
+`commit_candidates` on a bounded detached preparation worker. Production desktop
+must call the core's guarded staging helper:
 
-## Isolation and lifecycle
-
-Every run checks exactly `codex-cli 0.166.0`. It initializes without a `jsonrpc`
-field, sends `initialized`, and calls `account/read` with refresh disabled. Only
-an existing ChatGPT account is accepted; there is no login, credential reading,
-auth refresh or API-key fallback. Codex owns its installed authentication.
-
-On macOS the parent canonicalizes the root and launches `/usr/bin/sandbox-exec`
-with a static Scheme profile and a separate `-D TOPICS_ROOT=<canonical root>`
-argument. It denies file-read-data and all file writes below that root. Preflight
-runs exact-profile sentinel checks in temporary synthetic directories, including
-canonical and symlink aliases, quoted Unicode paths and an allowed sibling. It
-never reads live root bytes to preflight. Other operating systems fail analysis
-closed while the rest of the app remains useful.
-
-This is a path boundary: pre-existing hardlinks and other copies outside the root
-are not protected. Metadata is not hidden. This does not claim universal machine
-confidentiality or protection from a malicious same-user process reading another
-process's environment/memory. The per-run bootstrap capability is inherited in
-three explicitly forwarded environment variables, never argv or diagnostics;
-proxy connections authenticate a fresh UUID nonce and run token before MCP.
-Repeated bootstrap nonces, other sessions, wrong/expired tokens and expired
-endpoints are denied. There are at most eight authenticated connections and 24
-connection attempts per run. All connections use the same captured host scope.
-The endpoint and SDK services are closed on completion, error or cancellation.
-
-Multiple connections are necessary for pinned Codex: its unfiltered
-`mcpServerStatus/list` opens a separate discovery client even with `threadId`;
-only `threadId` plus `serverName` reuses a thread connection. This behavior was
-verified against the official rust-v0.166.0 `mcp_processor.rs`. We retain complete
-paginated unfiltered inventory rather than ignoring a failed catalog probe.
-
-The runtime first reads inherited MCP *names* without logging config, stops the
-process, and disables each name before enabling Topics. Names must be a safe
-single CLI key segment; a reserved `topics` collision or unusual name fails
-closed with remediation. Codex CLI splits dotted override keys literally, so
-quoted key segments are not safe quoting. Empty `mcp_servers={}` is not used.
-The disabled features are shell_tool, unified_exec, hooks, plugins, apps,
-view_image, browser_use, computer_use and multi_agent; web_search is disabled.
-The effective config, complete inventory and exact two tool schemas are checked
-before authorized prompt bytes. Threads are ephemeral, approval never,
-read-only/network false, with empty environments and instruction sources in an
-empty app-owned cwd. Configuration/account/root changes require relaunch and
-reauthorization; host checks protect every read and stage from stale capabilities.
-
-MCP uses official `rmcp = 3.8.0`, advertising protocol 2025-06-18 and exactly
-`scope_sources {scope_id}` and `propose_changes {candidates}`. The SDK runs in the
-parent, outside the root denial. The child forwards bounded frames only. Errors
-from the host are replaced by generic denials; no source bytes or capabilities
-are logged. Desktop logging should keep SDK transport tracing disabled because
-protocol library diagnostics can contain malformed peer input.
-
-App-server and MCP frames are limited to 512 KiB, model/bridge output to 2 MiB,
-tool responses and prompt to 256 KiB, candidates to 64 and calls to 64. Host calls
-have a five-second deadline; process requests 40 seconds; execution 150 seconds;
-bootstrap/endpoint lifetime 180 seconds. Interrupt acknowledgement is followed by
-a terminal wait or a bounded kill. Pipes are drained and children reaped. Malformed,
-unknown, wrong-ID, failed, cancelled and late messages cannot stage candidates. An authenticated invalid or denied tool call poisons the entire run and discards earlier buffered candidates.
-
-## Evidence and commands
-
-`cargo test -p topics-runtime` runs deterministic protocol, authenticated SDK,
-full fake-process cancellation/isolation and native macOS sentinel tests. The
-native tests are `cfg(target_os="macos")`; no skipped native test is reported as
-proof on Linux. A non-macOS analysis reports confinement unavailable.
-
-Explicit native acceptance uses only synthetic temporary notes/app-data and the
-installed runtime's existing subscription. It never accesses personal notes:
-
-```
-cargo test -p topics-runtime --test schema_pin --features native-live-tests -- --nocapture
-cargo test -p topics-runtime --test live_codex --features native-live-tests -- --nocapture
-cargo fmt -p topics-runtime --check
-cargo clippy -p topics-runtime --all-targets -- -D warnings
+```rust
+service.stage_proposal_guarded(request, |proposal, action| {
+    permit.publish(vec![proposal.id.clone()], action)
+}).map(|_| ())
 ```
 
-The committed schema projection checks required fields, property shapes and
-reachable enums for 16 pinned methods/results/notifications against the installed
-generator. The live test requires an actual cited discovery proposal and a
-correction citing a persisted user statement; a successful empty model turn does
-not pass. `evidence/` records RED and sanitized results, not raw transcripts,
-account data, configuration values or source content.
+`CommitPermit::publish(ids, action)` is deadline-bound and revocable. The action
+must be the **core-provided final short publication action**, after validation,
+blocking preparation and temp write/flush. It must contain no arbitrary host
+callbacks or preparation. Cancellation/timeout revoke before a late publication;
+if publication already linearized, cancellation returns false and published IDs
+produce proposal/completed even if the host then hangs, panics or errors. Runtime
+holds no state lock during arbitrary host code. The final atomic OS rename cannot
+be universally preempted; the brief publication action is the explicit
+linearization point, not a claim that arbitrary filesystem I/O can be cancelled.
+Core remains independent of runtime types.
 
-Final scenario mapping, API signatures, RED provenance and limits: [evidence/REPORT.md](evidence/REPORT.md).
+The desktop also invalidates core capabilities on cancel/error/root switch and
+must not hold a core/service lock while calling Runtime cancellation. No runtime
+method approves or applies proposals. A host that stages from `call`, ignores the
+permit, or places arbitrary blocking code inside `publish` violates this API.
+
+## Privacy and confinement
+
+Before selected bytes, exact effective config pins the native ChatGPT subscription
+endpoint `https://chatgpt.com/backend-api/codex` and ChatGPT service base, provider
+`openai`, and account type `chatgpt`. It forces `notify=[]`, inherited skills and
+agent instructions off, empty developer instructions, zero project-doc bytes,
+history off, telemetry exporters off and content logging false, empty compact
+prompt and local thread store. Custom provider maps, selected profiles, prompt
+files and extra endpoint/telemetry settings are rejected. Child API/endpoint/OTEL
+environment overrides are removed without reading values; no global env/config
+is changed, and no login, token IO/copy, deliberate refresh or API-key fallback
+exists. All inherited feature names are disabled, and effective enabled/unknown
+features fail closed. All Codex MCP entries must be disabled with empty inventory.
+
+The returned thread must be ephemeral, empty instruction/workspace roots,
+read-only/network false, approval never, pinned model, and empty app-owned cwd.
+Canonical notes root, prospective app data and cwd must be disjoint in both
+ancestor directions **before any directory/file write**, then checked again after
+setup. UUID aliases and missing required nullable Candidate fields are rejected.
+
+On macOS, a static parameterized sandbox profile denies file-read-data and file
+writes beneath the canonical notes root, and literal unlink/rename of **each
+ancestor**. Untrusted paths are separate `-D` argv values, never Scheme text.
+Bounded synthetic preflight checks canonical/symlink reads, overwrite/create,
+ancestor `mv` and `RENAME_SWAP`, quoted Unicode paths and allowed sibling
+read/write. Probe fixtures must be outside the selected root and on its same
+filesystem; unsupported volumes fail closed. No live note bytes are probed.
+
+This path boundary does not protect pre-existing outside-root hardlinks/copies or
+hide metadata. It is not universal machine confidentiality or protection against
+a malicious same-user process reading memory/environment. The loopback bootstrap
+capability authenticates a run; its client-chosen nonce only rejects exact
+bootstrap replay, not a stolen-token holder minting a fresh nonce, and provides
+no separate cryptographic server proof. Endpoint lifetime is bounded; unauthenticated
+connection rate limits do not abort authenticated clients. SDK tracing remains
+disabled in the app logger to avoid malformed-input diagnostics.
+
+## SDK/lifecycle bounds and tests
+
+The parent SDK is outside the notes denial. In-app calls use its official client;
+the separately tested minimal stdio proxy remains the shared external transport
+entry point. Desktop may dispatch `--topics-mcp-proxy` before Tauri/root startup
+to `run_stdio_proxy() -> i32` and exit. Proxy EOF/deadline shutdown does not wait
+for Tokio's uncancellable stdin reader. The in-app route no longer gives its
+capability to the Codex child environment.
+
+Frames: 512 KiB; host responses/prompt: 256 KiB; stream output: 2 MiB; calls and
+candidates: 64; SDK host call timeout: 5s; callback timeout: 6s; staging preparation:
+5s; execution: 150s; endpoint: 180s. Stalled read/preparation callbacks are detached
+with process-wide bounded worker permits; they cannot publish after revocation.
+Strict MCP envelope, SDK decode and handshake checks precede rmcp, which otherwise
+ignores malformed frames. Client cancellation poisons/discards the buffer. Child
+process-group termination supplements pipe/endpoint teardown; Codex can place a
+proxy in another group, so proxy lifetime relies on tested EOF/endpoint shutdown,
+not an unsupported claim that one group kill reaches every descendant.
+
+```
+CARGO_INCREMENTAL=0 cargo fmt -p topics-runtime --check
+CARGO_INCREMENTAL=0 cargo clippy -p topics-runtime --all-targets --all-features -- -D warnings
+CARGO_INCREMENTAL=0 cargo test -p topics-runtime
+CARGO_INCREMENTAL=0 cargo test -p topics-runtime --test live_codex --test schema_pin --features native-live-tests -- --nocapture
+```
+
+All fixtures are synthetic temp roots/app-data. Native checks are macOS-only;
+normal Linux tests do not claim native confinement proof. Live tests require an
+actual scoped tool read and proposals, and adversarial tests require a successful
+model baseline before denial proof; an unavailable runtime cannot pass them.
+The real store adapter, guarded core helper and desktop native flow are separate
+manager integration/review gates. Historical evidence in `evidence/REPORT.md` is
+superseded where the Opus review and remediation report say so.
+
+Catalog provenance: upstream OpenAI Codex commit
+`6ff1e1ca3b30fc8b914720681fcf5fe62e95f856`,
+`codex-rs/models-manager/models.json`, complete gpt-6.1-sol entry with only
+`tool_mode`, `multi_agent_version`, `apply_patch_tool_type`,
+`experimental_supported_tools` and `shell_type` changed as documented above.
+SHA256 `63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672`.
+The upstream Apache-2.0 license is retained in `CODEX-CATALOG-LICENSE.txt`.
