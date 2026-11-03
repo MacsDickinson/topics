@@ -1,0 +1,9 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.67s
+     Running tests/config_override_native.rs (target/debug/deps/config_override_native-f3471371e1f225c7)
+
+running 1 test
+test installed_runtime_force_disables_notify_skills_and_telemetry_before_any_turn ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+

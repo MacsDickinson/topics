@@ -143,7 +143,7 @@ not an unsupported claim that one group kill reaches every descendant.
 CARGO_INCREMENTAL=0 cargo fmt -p topics-runtime --check
 CARGO_INCREMENTAL=0 cargo clippy -p topics-runtime --all-targets --all-features -- -D warnings
 CARGO_INCREMENTAL=0 cargo test -p topics-runtime
-CARGO_INCREMENTAL=0 cargo test -p topics-runtime --test live_codex --test schema_pin --features native-live-tests -- --nocapture
+CARGO_INCREMENTAL=0 cargo test -p topics-runtime --test live_codex --test schema_pin --test config_override_native --features native-live-tests -- --nocapture
 ```
 
 All fixtures are synthetic temp roots/app-data. Native checks are macOS-only;
@@ -161,3 +161,5 @@ Catalog provenance: upstream OpenAI Codex commit
 `experimental_supported_tools` and `shell_type` changed as documented above.
 SHA256 `63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672`.
 The upstream Apache-2.0 license is retained in `CODEX-CATALOG-LICENSE.txt`.
+
+Review findings, exact final test counts and remaining integration gates: [evidence/REVIEW-REMEDIATION.md](evidence/REVIEW-REMEDIATION.md).

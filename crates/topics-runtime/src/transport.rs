@@ -230,8 +230,9 @@ impl Process {
     pub async fn stop(mut self) {
         #[cfg(unix)]
         if let Some(pid) = self.child.id().and_then(|id| i32::try_from(id).ok()) {
-            // Each child starts a fresh process group. This reaches inherited
-            // proxy descendants without targeting the IDE/parent process group.
+            // Terminate this child group, never the IDE group. Codex may place
+            // descendants in separate groups; endpoint/pipe EOF, not this signal,
+            // is the separately tested proxy shutdown mechanism.
             unsafe {
                 libc::kill(-pid, libc::SIGKILL);
             }

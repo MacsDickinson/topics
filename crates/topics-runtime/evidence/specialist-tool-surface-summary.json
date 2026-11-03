@@ -14,7 +14,12 @@
         "item/tool/call"
       ],
       "output_count": 20,
-      "unsupported_output_count": 18
+      "unsupported_output_count": 18,
+      "developer_context_checks": {
+        "skills_block_present": false,
+        "multi_agent_role_present": false,
+        "synthetic_inherited_skill_present": false
+      }
     },
     "disabled_mcp_direct_dynamic": {
       "capture_sha256": "c59061e7b9db93e712683f9fb32d955764bfdd92f3f575c532918b4722eee971",
@@ -37,7 +42,12 @@
         "item/tool/call"
       ],
       "output_count": 2,
-      "unsupported_output_count": 0
+      "unsupported_output_count": 0,
+      "developer_context_checks": {
+        "skills_block_present": false,
+        "multi_agent_role_present": false,
+        "synthetic_inherited_skill_present": false
+      }
     }
   },
   "live-summary": {

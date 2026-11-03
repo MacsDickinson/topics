@@ -297,7 +297,7 @@ impl Runtime {
                 result=tokio::time::timeout(Duration::from_secs(150),execution)=>result.unwrap_or_else(|_|Err(runtime_error("Model run timed out; buffered proposals discarded"))),
                 _=stopped.changed()=>Err(error("cancelled","Run cancelled; buffered proposals discarded")),
             };
-            if let Some(permit)=state.lock().unwrap().commit.clone(){if result.is_err(){permit.revoke();}}
+            if let Some(permit)=state.lock().unwrap().commit.clone() && result.is_err(){permit.revoke();}
             if finish_publication(request,&state,&events){result=Ok(());}
             if *stopped.borrow() { bridge.gate.lock().unwrap().close();process.interrupt_and_wait().await; }
             // Capability is revoked before process teardown and before terminal.
@@ -336,6 +336,19 @@ impl Runtime {
             "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
             "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
             "OTEL_EXPORTER_OTLP_HEADERS",
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "ALL_PROXY",
+            "http_proxy",
+            "https_proxy",
+            "all_proxy",
+            "OPENAI_API_BASE",
+            "OPENAI_API_HOST",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "REQUESTS_CA_BUNDLE",
+            "CURL_CA_BUNDLE",
+            "NODE_EXTRA_CA_CERTS",
         ] {
             cmd.env_remove(variable);
         }

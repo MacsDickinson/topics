@@ -168,11 +168,9 @@ fn canonical_references(value: &Value, key: Option<&str>) -> Result<(), String> 
         Value::String(id)
             if key.is_some_and(|key| {
                 key == "id" || key.ends_with("_id") || key == "supersedes" || key == "candidates"
-            }) =>
+            }) && !crate::canonical_id(id) =>
         {
-            if !crate::canonical_id(id) {
-                return Err("noncanonical_uuid".into());
-            }
+            return Err("noncanonical_uuid".into());
         }
         _ => {}
     }
@@ -263,6 +261,9 @@ fn validate_mcp_frame(value: &Value, phase: u8) -> Result<u8, ()> {
 }
 pub(crate) fn poison(state: &Arc<Mutex<RunState>>) {
     if let Ok(mut state) = state.lock() {
+        if state.terminal || state.commit.as_ref().is_some_and(|permit| !permit.revoke()) {
+            return;
+        }
         state.failed = true;
         state.pending.clear();
     }
@@ -790,5 +791,143 @@ mod tests {
             bridge.close().await;
             assert!(failed, "SDK ignored invalid envelope without poison");
         }
+    }
+    #[test]
+    fn review_full_strict_envelope_and_handshake_cases() {
+        let malformed = [
+            json!({"jsonrpc":"2.0","id":[],"method":"ping"}),
+            json!({"jsonrpc":"2.0","id":null,"method":"tools/call","params":{"name":"scope_sources","arguments":{}}}),
+            json!({"jsonrpc":"2.0","method":"tools/call","params":{"name":"scope_sources","arguments":{}}}),
+            json!({"jsonrpc":"2.0","id":8,"method":"tools/list","params":{"cursor":4}}),
+            json!({"jsonrpc":"2.0","id":8,"method":"initialize","params":{"protocolVersion":7,"capabilities":{},"clientInfo":{"name":"x","version":"1"}}}),
+            json!({"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":{}}}),
+            json!({"jsonrpc":"2.0","method":"notifications/initialized","params":{"unexpected":true}}),
+        ];
+        for value in malformed {
+            let phase = match value["method"].as_str() {
+                Some("initialize") => 0,
+                Some("notifications/initialized") => 1,
+                _ => 2,
+            };
+            assert!(validate_mcp_frame(&value, phase).is_err());
+        }
+        let call = json!({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"scope_sources","arguments":{"scope_id":"scope"}}});
+        assert!(validate_mcp_frame(&call, 0).is_err());
+        assert!(validate_mcp_frame(&call, 1).is_err());
+        assert!(validate_mcp_frame(&call, 2).is_ok());
+    }
+    #[tokio::test]
+    async fn review_preinitialize_second_connection_poison_is_shared() {
+        let state = state();
+        let bridge = Bridge::start("session", "scope", Arc::new(Host), state.clone())
+            .await
+            .unwrap();
+        let _first = initialized(&bridge).await;
+        let mut second = connect(&bridge, "session", &bridge.token).await;
+        assert_eq!(
+            crate::transport::read_frame(&mut second, 16).await.unwrap(),
+            b"ok\n"
+        );
+        second.get_mut().write_all(b"{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"scope_sources\",\"arguments\":{\"scope_id\":\"scope\"}}}\n").await.unwrap();
+        assert!(
+            crate::transport::read_frame(&mut second, MAX_FRAME)
+                .await
+                .is_err()
+        );
+        assert!(state.lock().unwrap().failed);
+        bridge.close().await;
+    }
+    #[tokio::test]
+    async fn review_unauthenticated_rate_limit_does_not_abort_authorized_session() {
+        let state = state();
+        let bridge = Bridge::start("session", "scope", Arc::new(Host), state.clone())
+            .await
+            .unwrap();
+        let mut first = initialized(&bridge).await;
+        for _ in 0..30 {
+            let mut bad = connect(&bridge, "wrong", "wrong").await;
+            assert!(crate::transport::read_frame(&mut bad, 16).await.is_err());
+        }
+        let result=send(&mut first,json!({"jsonrpc":"2.0","id":30,"method":"tools/call","params":{"name":"scope_sources","arguments":{"scope_id":"scope"}}})).await;
+        assert!(result.get("error").is_none());
+        assert!(!state.lock().unwrap().failed);
+        bridge.close().await;
+    }
+    struct CancellableHost {
+        started: Arc<std::sync::atomic::AtomicBool>,
+        release: Mutex<std::sync::mpsc::Receiver<()>>,
+    }
+    impl HostTools for CancellableHost {
+        fn call(&self, _: &str, _: Value) -> WorkspaceResult<Value> {
+            self.started
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+            let _ = self
+                .release
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(2));
+            Ok(json!({"validated":true}))
+        }
+        fn commit_candidates(
+            &self,
+            _: Vec<Candidate>,
+            _: crate::CommitPermit,
+        ) -> WorkspaceResult<()> {
+            panic!("MCP must never publish")
+        }
+    }
+    #[tokio::test]
+    async fn review_cancelled_inflight_mcp_request_cannot_buffer() {
+        let started = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (tx, rx) = std::sync::mpsc::channel();
+        let state = state();
+        let bridge = Bridge::start(
+            "session",
+            "scope",
+            Arc::new(CancellableHost {
+                started: started.clone(),
+                release: Mutex::new(rx),
+            }),
+            state.clone(),
+        )
+        .await
+        .unwrap();
+        let mut stream = initialized(&bridge).await;
+        let request = json!({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"propose_changes","arguments":{"candidates":[{"kind":"topic","topic":{"id":"10000000-0000-4000-8000-000000000001","topic_kind":"person","name":"Synthetic","aliases":[],"sensitivity":"cloud_allowed"}}]}}});
+        stream
+            .get_mut()
+            .write_all(format!("{request}\n").as_bytes())
+            .await
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while !started.load(std::sync::atomic::Ordering::SeqCst) {
+            assert!(Instant::now() < deadline);
+            tokio::time::sleep(Duration::from_millis(2)).await;
+        }
+        stream.get_mut().write_all(b"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":8}}\n").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        tx.send(()).unwrap();
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        assert!(state.lock().unwrap().failed);
+        assert!(state.lock().unwrap().pending.is_empty());
+        bridge.close().await;
+    }
+    #[test]
+    fn authenticated_poison_revokes_unpublished_preparation() {
+        let state = state();
+        let permit = crate::CommitPermit::new(Duration::from_secs(1));
+        state.lock().unwrap().commit = Some(permit.clone());
+        poison(&state);
+        let mut calls = 0;
+        assert!(
+            permit
+                .publish(vec![uuid::Uuid::new_v4().to_string()], &mut || {
+                    calls += 1;
+                    Ok(())
+                })
+                .is_err()
+        );
+        assert_eq!(calls, 0);
+        assert!(state.lock().unwrap().failed);
     }
 }

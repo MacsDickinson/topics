@@ -1,3 +1,5 @@
+> Historical a612725 evidence: security/API conclusions below are superseded by [REVIEW-REMEDIATION.md](REVIEW-REMEDIATION.md), including the direct two-tool route and guarded staging seam.
+
 # Runtime implementation evidence
 
 Baseline: `f3e1ed0` and the approved-in-progress feature contract. Canonical core

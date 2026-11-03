@@ -177,6 +177,14 @@ pub fn validate_privacy(c: &Value) -> Result<(), String> {
             return Err(format!("inherited_{field}_unsupported"));
         }
     }
+    for (key, value) in c.as_object().ok_or("invalid_effective_config")? {
+        if (key.ends_with("_url") || key.contains("endpoint"))
+            && !["openai_base_url", "chatgpt_base_url"].contains(&key.as_str())
+            && !value.is_null()
+        {
+            return Err("unexpected_custom_destination".into());
+        }
+    }
     if c.get("model_providers")
         .is_some_and(|v| !v.is_null() && v.as_object().is_none_or(|o| !o.is_empty()))
     {

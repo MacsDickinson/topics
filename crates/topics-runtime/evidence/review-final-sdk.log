@@ -1,0 +1,22 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.61s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c80774858c720e19)
+
+running 14 tests
+test bridge::tests::review_full_strict_envelope_and_handshake_cases ... ok
+test bridge::tests::review_preinitialize_second_connection_poison_is_shared ... ok
+test commit::tests::published_result_cannot_be_revoked_or_overwritten ... ok
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+test bridge::tests::review_cancelled_inflight_mcp_request_cannot_buffer ... ok
+test bridge::tests::review_unauthenticated_rate_limit_does_not_abort_authorized_session ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+

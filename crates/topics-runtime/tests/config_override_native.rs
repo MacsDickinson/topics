@@ -1,5 +1,5 @@
 //! No model requests or auth reads: app-server reads only a throwaway config.
-#![cfg(target_os = "macos")]
+#![cfg(all(target_os = "macos", feature = "native-live-tests"))]
 #[test]
 fn installed_runtime_force_disables_notify_skills_and_telemetry_before_any_turn() {
     use std::{
@@ -18,13 +18,18 @@ fn installed_runtime_force_disables_notify_skills_and_telemetry_before_any_turn(
     std::fs::write(ch.join("config.toml"),"notify=[\"/usr/bin/false\"]\n[skills]\ninclude_instructions=true\n[otel]\nlog_user_prompt=true\nexporter=\"statsig\"\n").unwrap();
     let mut cmd = topics_runtime::isolation::command(
         &root.canonicalize().unwrap(),
-        std::path::Path::new("/Users/macs/.local/bin/codex"),
+        &std::path::PathBuf::from(
+            std::env::var_os("TOPICS_TEST_CODEX").unwrap_or_else(|| "codex".into()),
+        ),
     );
     cmd.current_dir(&cwd)
         .env_clear()
         .env("HOME", &home)
         .env("CODEX_HOME", &ch)
-        .env("PATH", "/usr/bin:/bin");
+        .env(
+            "PATH",
+            std::env::var_os("PATH").unwrap_or_else(|| "/usr/bin:/bin".into()),
+        );
     for f in topics_runtime::protocol::DISABLED {
         cmd.args(["--disable", *f]);
     }

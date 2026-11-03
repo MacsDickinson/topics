@@ -1,0 +1,97 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.72s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c80774858c720e19)
+
+running 15 tests
+test bridge::tests::authenticated_poison_revokes_unpublished_preparation ... ok
+test bridge::tests::review_full_strict_envelope_and_handshake_cases ... ok
+test commit::tests::published_result_cannot_be_revoked_or_overwritten ... ok
+test bridge::tests::review_preinitialize_second_connection_poison_is_shared ... ok
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+test bridge::tests::review_cancelled_inflight_mcp_request_cannot_buffer ... ok
+test bridge::tests::review_unauthenticated_rate_limit_does_not_abort_authorized_session ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running unittests src/bin/topics-mcp-proxy.rs (target/debug/deps/topics_mcp_proxy-8b030e38fa1759ab)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance.rs (target/debug/deps/acceptance-8607839c041b216c)
+
+running 5 tests
+test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... ok
+test missing_event_identity_cannot_be_mistaken_for_current_run ... ok
+test unknown_effective_tool_surface_blocks_selected_bytes ... ok
+test malformed_model_output_and_authority_fields_are_rejected ... ok
+test native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+     Running tests/config_override_native.rs (target/debug/deps/config_override_native-f899d4780f831014)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/live_codex.rs (target/debug/deps/live_codex-5272762274b73322)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/proxy_lifecycle.rs (target/debug/deps/proxy_lifecycle-dd11cd7f61646956)
+
+running 1 test
+test proxy_exits_after_authenticated_parent_disconnect_with_open_stdin ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/review_privacy.rs (target/debug/deps/review_privacy-11f023f56ee95509)
+
+running 4 tests
+test returned_non_ephemeral_thread_cannot_transmit ... ok
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... ok
+test canonical_uuid_aliases_and_missing_nullable_candidates_are_rejected ... ok
+test native_probe_capture_and_wait_are_bounded ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.05s
+
+     Running tests/schema_pin.rs (target/debug/deps/schema_pin-0251b326acc310da)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-c52e01b2cbdfd276)
+
+running 10 tests
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test review_published_outcome_survives_host_stall_and_error ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test review_cancel_stalled_host_has_bounded_terminal_and_releases_run_slot ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test review_staging_panic_emits_one_error_and_runtime_remains_usable ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+test review_cancel_and_timeout_revoke_late_prepared_publication ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.53s
+
+   Doc-tests topics_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
