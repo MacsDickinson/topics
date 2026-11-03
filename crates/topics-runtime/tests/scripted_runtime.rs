@@ -68,6 +68,18 @@ for line in sys.stdin:
   send({{'jsonrpc':'2.0','method':'notifications/initialized'}})
   send({{'jsonrpc':'2.0','id':2,'method':'tools/call','params':{{'name':'propose_changes','arguments':{{'candidates':[{{'kind':'topic','topic':{{'id':'10000000-0000-4000-8000-000000000001','topic_kind':'person','name':'Synthetic Alex','aliases':[],'sensitivity':'cloud_allowed'}}}}]}}}}}});reply=json.loads(f.readline());assert 'error' not in reply
   emit({{'method':'item/agentMessage/delta','params':{{'threadId':thread,'turnId':turn,'itemId':'message','delta':'buffered'}}}})
+  if mode=='invalid_after_buffer':
+   send({{'jsonrpc':'2.0','id':4,'method':'tools/call','params':{{'name':'read_file','arguments':{{'path':'private.md'}}}}}});assert 'error' in json.loads(f.readline())
+   emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':'completed'}}}}}});continue
+  if mode=='malformed':print('broken frame',flush=True);sys.exit()
+  if mode=='exit':sys.exit()
+  if mode in ['unknown','failed','complete']:
+   status={{'unknown':'futureStatus','failed':'failed','complete':'completed'}}[mode]
+   emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':status}}}}}})
+   if mode=='complete':emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':'completed'}}}}}})
+   continue
+  if mode=='wrong_turn':emit({{'method':'item/agentMessage/delta','params':{{'threadId':thread,'turnId':'other','itemId':'late','delta':'late'}}}});continue
+
  elif m=='turn/interrupt':
   result(i,{{}})
   send({{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{{'name':'propose_changes','arguments':{{'candidates':[{{'kind':'topic','topic':{{'id':'10000000-0000-4000-8000-000000000002','topic_kind':'person','name':'Late','aliases':[],'sensitivity':'cloud_allowed'}}}}]}}}}}});reply=json.loads(f.readline());assert 'error' in reply
@@ -149,4 +161,95 @@ fn cancellation_after_buffer_and_late_completed_cannot_stage() {
     assert_eq!(*host.stages.lock().unwrap(), 0);
     assert_eq!(*host.calls.lock().unwrap(), 1);
     assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
+}
+
+#[test]
+fn malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates() {
+    for mode in [
+        "invalid_after_buffer",
+        "malformed",
+        "unknown",
+        "failed",
+        "exit",
+        "wrong_turn",
+    ] {
+        let (_temp, rt, request, host) = fixture(mode);
+        let (tx, rx) = mpsc::channel();
+        rt.analysis_start(
+            request,
+            host.clone(),
+            Arc::new(move |e| {
+                tx.send(e).unwrap();
+            }),
+        )
+        .unwrap();
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+            RunEvent::TextDelta { .. }
+        ));
+        let terminal = rx.recv_timeout(Duration::from_secs(15)).unwrap();
+        assert!(
+            matches!(terminal.event, RunEvent::Error { .. }),
+            "{mode}: {terminal:?}"
+        );
+        assert_eq!(*host.stages.lock().unwrap(), 0, "{mode}");
+        assert!(rx.recv_timeout(Duration::from_millis(30)).is_err());
+    }
+}
+#[test]
+fn duplicate_terminal_stages_once_and_closes_run() {
+    let (_temp, rt, request, host) = fixture("complete");
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request.clone(),
+        host.clone(),
+        Arc::new(move |e| {
+            tx.send(e).unwrap();
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+        RunEvent::TextDelta { .. }
+    ));
+    assert!(matches!(
+        rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+        RunEvent::Proposal { .. }
+    ));
+    assert!(matches!(
+        rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+        RunEvent::Completed
+    ));
+    assert_eq!(*host.stages.lock().unwrap(), 1);
+    assert!(!rt.cancel(&request.root_id, &request.run_id));
+    assert!(rx.recv_timeout(Duration::from_millis(50)).is_err());
+}
+
+#[test]
+fn wrong_pinned_version_is_actionable_and_sends_no_bytes() {
+    let (temp, rt, request, host) = fixture("rogue");
+    let script = temp.path().join("codex-fixture");
+    let text = std::fs::read_to_string(&script)
+        .unwrap()
+        .replace("codex-cli 0.166.0", "codex-cli 0.165.0");
+    std::fs::write(script, text).unwrap();
+    let status = rt.status();
+    assert!(!status.available);
+    assert!(status.message.contains("0.166.0"));
+    assert!(status.message.contains("0.165.0"));
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request,
+        host.clone(),
+        Arc::new(move |e| {
+            tx.send(e).unwrap();
+        }),
+    )
+    .unwrap();
+    assert!(matches!(
+        rx.recv_timeout(Duration::from_secs(10)).unwrap().event,
+        RunEvent::Error { .. }
+    ));
+    assert_eq!(*host.calls.lock().unwrap(), 0);
+    assert!(!temp.path().join("model-sent.marker").exists());
 }

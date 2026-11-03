@@ -93,7 +93,7 @@ tool responses and prompt to 256 KiB, candidates to 64 and calls to 64. Host cal
 have a five-second deadline; process requests 40 seconds; execution 150 seconds;
 bootstrap/endpoint lifetime 180 seconds. Interrupt acknowledgement is followed by
 a terminal wait or a bounded kill. Pipes are drained and children reaped. Malformed,
-unknown, wrong-ID, failed, cancelled and late messages cannot stage candidates.
+unknown, wrong-ID, failed, cancelled and late messages cannot stage candidates. An authenticated invalid or denied tool call poisons the entire run and discards earlier buffered candidates.
 
 ## Evidence and commands
 
@@ -118,3 +118,5 @@ generator. The live test requires an actual cited discovery proposal and a
 correction citing a persisted user statement; a successful empty model turn does
 not pass. `evidence/` records RED and sanitized results, not raw transcripts,
 account data, configuration values or source content.
+
+Final scenario mapping, API signatures, RED provenance and limits: [evidence/REPORT.md](evidence/REPORT.md).

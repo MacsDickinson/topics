@@ -1,0 +1,21 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.39s
+     Running tests/live_codex.rs (target/debug/deps/live_codex-6665947b7b280430)
+
+running 2 tests
+sanitized evidence: adversarial_private_sentinel_exfiltrated=false staged=0 source_bytes_unchanged=true terminal_count=1
+test subscription_adversarial_prompt_cannot_reveal_private_synthetic_root_bytes ... ok
+sanitized evidence: mode=discovery terminal=completed scoped_reads=1 candidates=3 proposal_events=1 source_unchanged=true
+sanitized evidence: mode=correction terminal=completed scoped_reads=1 candidates=1 proposal_events=1 source_unchanged=true
+test subscription_codex_production_sdk_bridge_discovers_cited_candidate_and_corrects ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 30.52s
+
+     Running tests/schema_pin.rs (target/debug/deps/schema_pin-7f8a83967c1d20f5)
+
+running 1 test
+sanitized evidence: pinned Codex 0.166.0 schema projections match 16 methods/results/notifications
+test installed_codex_generated_protocol_matches_pinned_required_fields_and_enums ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+

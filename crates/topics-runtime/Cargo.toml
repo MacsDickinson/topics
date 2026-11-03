@@ -13,6 +13,7 @@ serde.workspace = true
 serde_json.workspace = true
 rmcp = { version = "=3.8.0", features = ["server", "transport-async-rw"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "io-std", "time", "sync", "net"] }
+libc = "0.2"
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]

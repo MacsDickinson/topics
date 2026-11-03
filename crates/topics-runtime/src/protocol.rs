@@ -149,6 +149,8 @@ pub fn validate_inventory(value: &Value) -> Result<(), String> {
                         .is_none_or(|tool| {
                             serde_json::to_value(tool).unwrap()["inputSchema"]
                                 != definition["inputSchema"]
+                                || serde_json::to_value(tool).unwrap()["annotations"]
+                                    != definition["annotations"]
                         })
                 {
                     return Err("invalid_tool_schema".into());
@@ -209,4 +211,25 @@ pub fn validate_thread(value: &Value, cwd: &std::path::Path) -> Result<String, S
         .filter(|s| !s.is_empty())
         .map(str::to_owned)
         .ok_or("missing_thread_id".into())
+}
+
+/// Required identity fields are checked, not merely optional if present.
+pub fn validate_event_context(frame: &Value, thread: &str, turn: &str) -> Result<(), String> {
+    let method = frame["method"].as_str().ok_or("missing_method")?;
+    let p = &frame["params"];
+    if method.starts_with("item/") || method == "turn/moderationMetadata" {
+        if p["threadId"] != thread || p["turnId"] != turn {
+            return Err("wrong_or_missing_event_identity".into());
+        }
+    } else if method.starts_with("turn/") {
+        if p["threadId"] != thread {
+            return Err("wrong_or_missing_thread_identity".into());
+        }
+        if matches!(method, "turn/started" | "turn/completed") && p["turn"]["id"] != turn {
+            return Err("wrong_or_missing_turn_identity".into());
+        }
+    } else if p.get("threadId").is_some_and(|id| id != thread) {
+        return Err("wrong_thread_identity".into());
+    }
+    Ok(())
 }

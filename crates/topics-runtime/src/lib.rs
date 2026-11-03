@@ -46,6 +46,7 @@ pub(crate) struct RunState {
     pending: Vec<Candidate>,
     seq: u64,
     terminal_emitted: bool,
+    failed: bool,
 }
 struct Active {
     root: String,
@@ -82,9 +83,15 @@ impl Runtime {
                     "Install the Topics MCP proxy alongside the application",
                 ));
             }
-            let rt = tokio::runtime::Runtime::new()
-                .map_err(|_| runtime_error("Cannot initialize runtime"))?;
-            rt.block_on(check_version(&self.config.codex_path))
+            // Safe when a synchronous Tauri command is called from an async host.
+            let path = self.config.codex_path.clone();
+            std::thread::spawn(move || {
+                let rt = tokio::runtime::Runtime::new()
+                    .map_err(|_| runtime_error("Cannot initialize runtime"))?;
+                rt.block_on(check_version(&path))
+            })
+            .join()
+            .map_err(|_| runtime_error("Runtime version check failed"))?
         })();
         match result {Ok(())=>RuntimeStatusResult{available:true,version:Some(CODEX_VERSION.into()),message:"Pinned Codex installed; sign-in, tools and confinement are verified before each run".into()},Err(e)=>RuntimeStatusResult{available:false,version:None,message:e.message}}
     }
@@ -102,7 +109,9 @@ impl Runtime {
                 ));
             }
         }
-        if !self.config.app_data.is_absolute()
+        if self.config.codex_path.to_str().is_none()
+            || self.config.proxy_path.to_str().is_none()
+            || !self.config.app_data.is_absolute()
             || !request.notes_root.is_absolute()
             || request.prompt.len() > protocol::MAX_FRAME / 2
         {
@@ -128,6 +137,7 @@ impl Runtime {
             pending: vec![],
             seq: 0,
             terminal_emitted: false,
+            failed: false,
         }));
         let (stop, stopped) = watch::channel(false);
         active.insert(
@@ -218,6 +228,19 @@ impl Runtime {
     ) -> WorkspaceResult<()> {
         check_version(&self.config.codex_path).await?;
         let root = isolation::preflight(&request.notes_root).map_err(runtime_error)?;
+        std::fs::create_dir_all(&self.config.app_data)
+            .map_err(|_| runtime_error("Cannot create application data directory"))?;
+        if self
+            .config
+            .app_data
+            .canonicalize()
+            .map_err(|_| runtime_error("Application data directory unavailable"))?
+            .starts_with(&root)
+        {
+            return Err(runtime_error(
+                "Application data must be outside the selected notes root",
+            ));
+        }
         if !self.config.proxy_path.is_file() {
             return Err(runtime_error(
                 "Topics MCP proxy is missing; reinstall the app",
@@ -240,11 +263,15 @@ impl Runtime {
         let result=async {
             // First process reads effective server NAMES only, never logs config.
             let mut discover=Process::spawn(self.command(&root,&cwd,&[],None))?;
-            let discovered=async {discover.initialize().await?;let value=discover.request("config/read",json!({"cwd":cwd,"includeLayers":false})).await?;
+            let discovery=async {discover.initialize().await?;let value=discover.request("config/read",json!({"cwd":cwd,"includeLayers":false})).await?;
                 let names=value["config"]["mcp_servers"].as_object().map(|m|m.keys().cloned().collect::<Vec<_>>()).ok_or_else(||runtime_error("Codex configuration schema changed"))?;
                 if names.iter().any(|name|name=="topics" || name.is_empty() || !name.bytes().all(|b|b.is_ascii_alphanumeric() || b==b'_' || b==b'-')) { return Err(runtime_error("Inherited MCP server name cannot be safely disabled; rename it in Codex configuration and retry")); }
                 if names.len()>64{return Err(runtime_error("Too many inherited MCP servers"));}Ok(names)
-            }.await;
+            };
+            let discovered=tokio::select! {
+                result=tokio::time::timeout(Duration::from_secs(15),discovery)=>result.unwrap_or_else(|_|Err(runtime_error("Runtime configuration discovery timed out"))),
+                _=stopped.changed()=>Err(error("cancelled","Run cancelled during startup")),
+            };
             discover.stop().await;let inherited=discovered?;
             let bridge=bridge::Bridge::start(&request.run_id,&request.scope_id,host.clone(),state.clone()).await?;
             let process=Process::spawn(self.command(&root,&cwd,&inherited,Some(&bridge)));
@@ -254,7 +281,7 @@ impl Runtime {
                 result=tokio::time::timeout(Duration::from_secs(150),execution)=>result.unwrap_or_else(|_|Err(runtime_error("Model run timed out; buffered proposals discarded"))),
                 _=stopped.changed()=>Err(error("cancelled","Run cancelled; buffered proposals discarded")),
             };
-            if *stopped.borrow() { process.interrupt_and_wait().await; }
+            if *stopped.borrow() { bridge.gate.lock().unwrap().close();process.interrupt_and_wait().await; }
             // Capability is revoked before process teardown and before terminal.
             bridge.close().await;process.stop().await;
             result
@@ -288,6 +315,7 @@ impl Runtime {
             ));
             for setting in [
                 "mcp_servers.topics.enabled=true",
+                "mcp_servers.topics.default_tools_approval_mode=\"auto\"",
                 "mcp_servers.topics.args=[\"--topics-mcp-proxy\"]",
                 "mcp_servers.topics.env_vars=[\"TOPICS_MCP_ENDPOINT\",\"TOPICS_MCP_SESSION\",\"TOPICS_MCP_TOKEN\"]",
                 "mcp_servers.topics.startup_timeout_sec=15",
@@ -319,7 +347,7 @@ impl Runtime {
             .await?;
         if account["account"]["type"] != "chatgpt" {
             return Err(runtime_error(
-                "Codex is signed out; sign in separately with the installed Codex app, then retry",
+                "Existing ChatGPT sign-in required; API-key or other accounts are unsupported. Sign in separately with the installed Codex app, then retry",
             ));
         }
         let config = process
@@ -381,6 +409,8 @@ impl Runtime {
                 process.next().await?
             };
             check_notification(&frame)?;
+            protocol::validate_event_context(&frame, &thread_id, &turn_id)
+                .map_err(runtime_error)?;
             let p = &frame["params"];
 
             let method = frame["method"].as_str().unwrap_or("");
@@ -436,6 +466,13 @@ impl Runtime {
                             "interrupted" => "Model turn interrupted; proposals discarded",
                             _ => "Unknown model turn status; update required",
                         }));
+                    }
+                    if s.failed {
+                        s.pending.clear();
+                        return Err(error(
+                            "forbidden",
+                            "Invalid or denied model tool request; all candidates discarded",
+                        ));
                     }
                     let pending = std::mem::take(&mut s.pending);
                     if !pending.is_empty() {
@@ -525,25 +562,74 @@ fn emit(request: &RunRequest, state: &mut RunState, sink: &EventSink, event: Run
     });
 }
 async fn check_version(path: &Path) -> WorkspaceResult<()> {
+    use tokio::io::AsyncReadExt;
     let mut cmd = tokio::process::Command::new(path);
-    cmd.arg("--version").kill_on_drop(true);
-    let output = tokio::time::timeout(Duration::from_secs(5), cmd.output())
-        .await
-        .map_err(|_| runtime_error("Codex version check timed out"))?
-        .map_err(|_| {
-            runtime_error(
-                "Codex unavailable; install codex-cli 0.166.0 and configure its executable",
-            )
-        })?;
-    let installed = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    if !output.status.success() || installed != format!("codex-cli {CODEX_VERSION}") {
+    cmd.arg("--version")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true);
+    let mut child = cmd.spawn().map_err(|_| {
+        runtime_error("Codex unavailable; install codex-cli 0.166.0 and configure its executable")
+    })?;
+    let result = tokio::time::timeout(Duration::from_secs(5), async {
+        let mut bytes = Vec::new();
+        child
+            .stdout
+            .take()
+            .unwrap()
+            .take(1024)
+            .read_to_end(&mut bytes)
+            .await
+            .map_err(|_| runtime_error("Cannot read Codex version"))?;
+        if bytes.len() >= 1024 {
+            return Err(runtime_error("Codex version response exceeds bounds"));
+        }
+        let status = child
+            .wait()
+            .await
+            .map_err(|_| runtime_error("Cannot check Codex version"))?;
+        Ok((status, bytes))
+    })
+    .await;
+    let (status, bytes) = match result {
+        Ok(Ok(v)) => v,
+        other => {
+            let _ = child.start_kill();
+            let _ = child.wait().await;
+            return Err(match other {
+                Ok(Err(e)) => e,
+                _ => runtime_error("Codex version check timed out"),
+            });
+        }
+    };
+    let installed = String::from_utf8_lossy(&bytes).trim().to_owned();
+    if !status.success() || installed != format!("codex-cli {CODEX_VERSION}") {
+        let display = installed
+            .strip_prefix("codex-cli ")
+            .filter(|s| s.len() <= 32 && s.bytes().all(|b| b.is_ascii_digit() || b == b'.'))
+            .unwrap_or("unverified");
         return Err(runtime_error(format!(
-            "Required codex-cli {CODEX_VERSION}; installed version differs or could not be verified. Install the pinned version and retry."
+            "Required codex-cli {CODEX_VERSION}; installed {display}. Install the pinned version and retry."
         )));
     }
     Ok(())
 }
 fn validate_item(item: &Value) -> WorkspaceResult<()> {
+    if item["id"].as_str().is_none_or(str::is_empty) {
+        return Err(runtime_error("Missing item identity"));
+    }
+    if item["type"] == "mcpToolCall"
+        && !matches!(
+            item["status"].as_str(),
+            Some("inProgress" | "completed" | "failed")
+        )
+    {
+        return Err(runtime_error("Unknown MCP call status"));
+    }
+    if item["type"] == "mcpToolCall" && item["status"] == "failed" {
+        return Err(runtime_error("Model tool failed; all candidates discarded"));
+    }
     match item["type"].as_str() {
         Some("agentMessage" | "userMessage" | "reasoning" | "plan") => Ok(()),
         Some("mcpToolCall")
@@ -565,6 +651,17 @@ pub(crate) fn check_notification(frame: &Value) -> WorkspaceResult<()> {
     let method = frame["method"]
         .as_str()
         .ok_or_else(|| runtime_error("Unknown Codex frame"))?;
+    if method == "thread/status/changed"
+        && !matches!(
+            frame["params"]["status"]["type"].as_str(),
+            Some("idle" | "active" | "notLoaded")
+        )
+    {
+        return Err(runtime_error("Unknown or failed thread status"));
+    }
+    if method == "turn/started" && frame["params"]["turn"]["status"] != "inProgress" {
+        return Err(runtime_error("Unexpected started-turn status"));
+    }
     match method {
         "thread/started"
         | "thread/status/changed"
@@ -595,13 +692,8 @@ pub(crate) fn check_notification(frame: &Value) -> WorkspaceResult<()> {
             Ok(())
         }
         "remoteControl/status/changed" if frame["params"]["status"] == "disabled" => Ok(()),
-        _ => Err(runtime_error(format!(
-            "Unexpected runtime event ({}) or configuration change; run discarded",
-            method
-                .chars()
-                .filter(|c| c.is_ascii_alphanumeric() || *c == '/')
-                .take(80)
-                .collect::<String>()
-        ))),
+        _ => Err(runtime_error(
+            "Unexpected runtime event or configuration change; run discarded",
+        )),
     }
 }

@@ -1,9 +1,10 @@
    Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.00s
-     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c7bbe7ae3eff4175)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.24s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-0f94067722352290)
 
-running 7 tests
+running 8 tests
 test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
 test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
 test transport::tests::output_frame_and_no_newline_are_bounded ... ok
 test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
@@ -11,40 +12,57 @@ test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
 test transport::tests::stderr_is_drained_and_children_reaped ... ok
 test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
 
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
 
-     Running unittests src/bin/topics-mcp-proxy.rs (target/debug/deps/topics_mcp_proxy-e7c34a4594fffd7a)
+     Running unittests src/bin/topics-mcp-proxy.rs (target/debug/deps/topics_mcp_proxy-571e1cff5faf18d3)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance.rs (target/debug/deps/acceptance-70b520fe78dd3dcb)
+     Running tests/acceptance.rs (target/debug/deps/acceptance-235c4efdd73b16c3)
 
-running 7 tests
+running 8 tests
 test cancel_and_late_events_discard_buffer ... ok
 test failed_unknown_and_duplicate_terminal_never_publish ... ok
-test malformed_model_output_and_authority_fields_are_rejected ... ok
 test only_successful_matching_terminal_publishes_once ... ok
-test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... ok
+test missing_event_identity_cannot_be_mistaken_for_current_run ... ok
 test unknown_effective_tool_surface_blocks_selected_bytes ... ok
+test malformed_model_output_and_authority_fields_are_rejected ... ok
+test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... ok
 test native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed ... ok
 
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 
-     Running tests/live_codex.rs (target/debug/deps/live_codex-633ecd3d167c4b5a)
+     Running tests/live_codex.rs (target/debug/deps/live_codex-173f36fdee6af2a8)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-c18ee9fd55c41491)
+     Running tests/proxy_lifecycle.rs (target/debug/deps/proxy_lifecycle-7ab065840c908e9c)
 
-running 2 tests
+running 1 test
+test proxy_exits_after_authenticated_parent_disconnect_with_open_stdin ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests/schema_pin.rs (target/debug/deps/schema_pin-876a11efe69232db)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-4b0894cc99f5dcf9)
+
+running 5 tests
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
 test unexpected_tools_block_real_run_before_selected_bytes ... ok
 test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.58s
 
    Doc-tests topics_runtime
 

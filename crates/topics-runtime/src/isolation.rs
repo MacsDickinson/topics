@@ -1,7 +1,9 @@
 //! Path-scoped macOS denial. This does not protect hardlinks/copies outside the root.
+#[cfg(target_os = "macos")]
+use std::process::Output;
 use std::{
     path::{Path, PathBuf},
-    process::{Command, Output},
+    process::Command,
 };
 pub const PROFILE: &str = "(version 1)(allow default)(deny file-read-data(subpath(param \"TOPICS_ROOT\")))(deny file-write*(subpath(param \"TOPICS_ROOT\")))";
 #[cfg(target_os = "macos")]
@@ -33,13 +35,16 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
     let canonical = root
         .canonicalize()
         .map_err(|_| "Selected notes root is unavailable; select it again".to_string())?;
+    if canonical.to_str().is_none() {
+        return Err("Selected root must have a valid UTF-8 path".into());
+    }
     if !canonical.is_dir() {
         return Err("Selected root must be a directory".into());
     }
     let base = std::env::temp_dir().join(format!("topics-confinement-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&base).map_err(|_| "Cannot create sandbox fixture".to_string())?;
     let result = (|| {
-        let protected = base.join("root ' ü");
+        let protected = base.join("root ' \" ü (parameter)");
         std::fs::create_dir(&protected).map_err(|_| "fixture".to_string())?;
         let protected = protected
             .canonicalize()
@@ -50,12 +55,37 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         symlink(&protected, &alias).map_err(|_| "fixture".to_string())?;
         let sibling = base.join("allowed");
         std::fs::write(&sibling, b"allowed sibling").map_err(|_| "fixture".to_string())?;
-        for path in [sentinel, alias.join("sentinel")] {
+        for path in [sentinel.clone(), alias.join("sentinel")] {
             if probe(&protected, "/bin/cat", &[path.as_os_str()])?
                 .status
                 .success()
             {
                 return Err("OS read confinement failed; analysis blocked".into());
+            }
+        }
+        for path in [&sentinel, &alias.join("sentinel")] {
+            use std::io::Write;
+            let mut child = command(&protected, Path::new("/usr/bin/tee"))
+                .arg(path)
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .map_err(|_| "Cannot launch write confinement check".to_string())?;
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(b"forbidden overwrite")
+                .map_err(|_| "Write confinement probe failed".to_string())?;
+            if child
+                .wait()
+                .map_err(|_| "Write confinement probe failed".to_string())?
+                .success()
+                || std::fs::read(&sentinel).map_err(|_| "fixture".to_string())?
+                    != b"synthetic sentinel"
+            {
+                return Err("OS overwrite confinement failed; analysis blocked".into());
             }
         }
         for path in [protected.join("new"), alias.join("new")] {
@@ -70,6 +100,14 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         let allowed = probe(&protected, "/bin/cat", &[sibling.as_os_str()])?;
         if !allowed.status.success() || allowed.stdout != b"allowed sibling" {
             return Err("OS sandbox unsupported; analysis blocked".into());
+        }
+        let allowed_write = base.join("allowed-created");
+        if !probe(&protected, "/usr/bin/touch", &[allowed_write.as_os_str()])?
+            .status
+            .success()
+            || !allowed_write.is_file()
+        {
+            return Err("OS sibling write preflight failed".into());
         }
         if !probe(&canonical, "/usr/bin/true", &[])?.status.success() {
             return Err("Selected root sandbox launch failed".into());

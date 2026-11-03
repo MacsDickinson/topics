@@ -120,3 +120,21 @@ fn unknown_effective_tool_surface_blocks_selected_bytes() {
         .is_err()
     );
 }
+
+#[test]
+fn missing_event_identity_cannot_be_mistaken_for_current_run() {
+    for frame in [
+        json!({"method":"item/agentMessage/delta","params":{"turnId":"turn","delta":"late"}}),
+        json!({"method":"turn/completed","params":{"threadId":"thread","turn":{"id":"old"}}}),
+    ] {
+        assert!(
+            topics_runtime::protocol::validate_event_context(&frame, "thread", "turn").is_err()
+        );
+    }
+}
+#[cfg(not(target_os = "macos"))]
+#[test]
+fn unsupported_os_cannot_enable_analysis() {
+    let temp = tempfile::tempdir().unwrap();
+    assert!(topics_runtime::isolation::preflight(temp.path()).is_err());
+}

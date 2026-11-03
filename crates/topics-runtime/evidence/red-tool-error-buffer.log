@@ -1,0 +1,25 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.48s
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-4b0894cc99f5dcf9)
+
+running 1 test
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... FAILED
+
+failures:
+
+---- malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates stdout ----
+
+thread 'malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates' (3243978) panicked at crates/topics-runtime/tests/scripted_runtime.rs:184:9:
+invalid_after_buffer: WorkspaceRunEvent { root_id: "3f68e1cf-3d5a-407c-8230-d656190445b6", run_id: "26edd098-9a81-4e5b-8db4-e0f292abb6fd", seq: 2, event: Proposal { proposal_id: "ca3f3dd8-f194-4ee2-83d3-0545056f36d1" } }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread '<unnamed>' (3243979) panicked at crates/topics-runtime/tests/scripted_runtime.rs:175:28:
+called `Result::unwrap()` on an `Err` value: SendError { .. }
+
+
+failures:
+    malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.56s
+
+error: test failed, to rerun pass `-p topics-runtime --test scripted_runtime`

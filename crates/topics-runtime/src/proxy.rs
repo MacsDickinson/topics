@@ -8,9 +8,12 @@ pub fn run_stdio_proxy() -> i32 {
     let Ok(rt) = tokio::runtime::Runtime::new() else {
         return 1;
     };
-    match rt
-        .block_on(async { tokio::time::timeout(std::time::Duration::from_secs(180), run()).await })
-    {
+    let result = rt
+        .block_on(async { tokio::time::timeout(std::time::Duration::from_secs(180), run()).await });
+    // Tokio stdin uses a blocking reader that cannot be cancelled. Never wait
+    // for that reader when the authenticated endpoint or deadline closes.
+    rt.shutdown_background();
+    match result {
         Ok(Some(())) => 0,
         _ => 1,
     }

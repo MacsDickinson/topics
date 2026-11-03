@@ -20,8 +20,12 @@ pub async fn read_frame<R: AsyncBufRead + Unpin>(
         let available = reader.fill_buf().await?;
         if available.is_empty() {
             return Err(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "runtime exited",
+                if line.is_empty() {
+                    std::io::ErrorKind::UnexpectedEof
+                } else {
+                    std::io::ErrorKind::InvalidData
+                },
+                "runtime exited or returned a truncated frame",
             ));
         }
         let count = available
@@ -59,6 +63,8 @@ impl Process {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
+        #[cfg(unix)]
+        command.process_group(0);
         let mut child = command.spawn().map_err(|_| {
             error(
                 "runtime_unavailable",
@@ -204,6 +210,14 @@ impl Process {
         let _ = tokio::time::timeout(Duration::from_secs(3), wait).await;
     }
     pub async fn stop(mut self) {
+        #[cfg(unix)]
+        if let Some(pid) = self.child.id().and_then(|id| i32::try_from(id).ok()) {
+            // Each child starts a fresh process group. This reaches inherited
+            // proxy descendants without targeting the IDE/parent process group.
+            unsafe {
+                libc::kill(-pid, libc::SIGKILL);
+            }
+        }
         let _ = self.child.start_kill();
         let _ = tokio::time::timeout(Duration::from_secs(3), self.child.wait()).await;
         self.stderr.abort();
@@ -222,7 +236,7 @@ mod tests {
     #[tokio::test]
     async fn interleaved_notification_keeps_request_id_and_no_jsonrpc() {
         let mut p = fake(
-            "import sys,json\nr=json.loads(sys.stdin.readline());assert 'jsonrpc' not in r\nprint(json.dumps({'method':'thread/status/changed','params':{}}))\nprint(json.dumps({'id':r['id'],'result':{'ok':True}}))",
+            "import sys,json\nr=json.loads(sys.stdin.readline());assert 'jsonrpc' not in r\nprint(json.dumps({'method':'thread/status/changed','params':{'status':{'type':'idle'},'threadId':'thread'}}))\nprint(json.dumps({'id':r['id'],'result':{'ok':True}}))",
         );
         assert_eq!(p.request("x", json!({})).await.unwrap(), json!({"ok":true}));
         assert_eq!(p.queued.len(), 1);
