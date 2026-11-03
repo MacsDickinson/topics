@@ -1,0 +1,109 @@
+    Updating crates.io index
+     Locking 6 packages to latest compatible versions
+      Adding pastey v0.2.3
+      Adding rmcp v3.8.0
+      Adding rmcp-macros v3.8.0
+      Adding schemars_derive v1.2.3
+      Adding serde_derive_internals v0.30.0
+      Adding signal-hook-registry v1.4.8
+ Downloading crates ...
+  Downloaded serde_derive_internals v0.30.0
+  Downloaded pastey v0.2.3
+  Downloaded schemars_derive v1.2.3
+  Downloaded tokio-util v0.7.20
+  Downloaded rmcp-macros v3.8.0
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-sink v0.3.34
+   Compiling futures-core v0.3.34
+   Compiling autocfg v1.5.1
+   Compiling memchr v2.8.3
+   Compiling serde v1.0.229
+   Compiling num-traits v0.2.19
+   Compiling strsim v0.11.1
+   Compiling itoa v1.0.18
+   Compiling getrandom v0.4.3
+   Compiling ident_case v1.0.1
+   Compiling futures-channel v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling errno v0.3.14
+   Compiling once_cell v1.21.4
+   Compiling slab v0.4.12
+   Compiling cfg-if v1.0.5
+   Compiling syn v3.0.9
+   Compiling serde_json v1.0.154
+   Compiling ref-cast v1.0.27
+   Compiling futures-task v0.3.34
+   Compiling syn v2.0.119
+   Compiling signal-hook-registry v1.4.8
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling thiserror v2.0.21
+   Compiling bytes v1.12.1
+   Compiling tracing-core v0.1.36
+   Compiling hashbrown v0.17.1
+   Compiling rustix v1.1.6
+   Compiling equivalent v1.0.3
+   Compiling dyn-clone v1.0.20
+   Compiling rmcp v3.8.0
+   Compiling indexmap v2.14.2
+   Compiling uuid v1.29.0
+   Compiling bitflags v2.13.2
+   Compiling pastey v0.2.3
+   Compiling base64 v0.23.1
+   Compiling fastrand v2.5.0
+   Compiling darling_core v0.24.1
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_derive v1.0.229
+   Compiling futures-macro v0.3.34
+   Compiling tokio-macros v2.7.2
+   Compiling ref-cast-impl v1.0.27
+   Compiling schemars_derive v1.2.3
+   Compiling thiserror-impl v2.0.21
+   Compiling tracing-attributes v0.1.31
+   Compiling futures-util v0.3.34
+   Compiling tokio v1.54.1
+   Compiling tempfile v3.27.0
+   Compiling tracing v0.1.44
+   Compiling darling_macro v0.24.1
+   Compiling darling v0.24.1
+   Compiling rmcp-macros v3.8.0
+   Compiling chrono v0.4.45
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-core)
+   Compiling futures-executor v0.3.34
+   Compiling futures v0.3.34
+   Compiling schemars v1.2.3
+   Compiling tokio-util v0.7.20
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+error[E0432]: unresolved import `topics_runtime::protocol`
+ --> crates/topics-runtime/tests/acceptance.rs:3:21
+  |
+3 | use topics_runtime::protocol::{TurnBuffer, Outcome};
+  |                     ^^^^^^^^ could not find `protocol` in `topics_runtime`
+
+error[E0432]: unresolved import `topics_runtime::bridge`
+ --> crates/topics-runtime/tests/acceptance.rs:4:21
+  |
+4 | use topics_runtime::bridge::SessionGate;
+  |                     ^^^^^^ could not find `bridge` in `topics_runtime`
+
+error[E0433]: cannot find `isolation` in `topics_runtime`
+  --> crates/topics-runtime/tests/acceptance.rs:62:21
+   |
+62 |     topics_runtime::isolation::preflight(&protected).unwrap();
+   |                     ^^^^^^^^^ could not find `isolation` in `topics_runtime`
+
+error[E0433]: cannot find `protocol` in `topics_runtime`
+  --> crates/topics-runtime/tests/acceptance.rs:66:29
+   |
+66 |     assert!(topics_runtime::protocol::validate_inventory(&json!({"data":[{"name":"unexpected","status":"ready","tools":{}}],"nextCur...
+   |                             ^^^^^^^^ could not find `protocol` in `topics_runtime`
+
+Some errors have detailed explanations: E0432, E0433.
+For more information about an error, try `rustc --explain E0432`.
+error: could not compile `topics-runtime` (test "acceptance") due to 4 previous errors
