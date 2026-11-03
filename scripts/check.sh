@@ -12,7 +12,8 @@ fi
 cargo fmt --all --check
 cargo clippy "${scope[@]}" --all-targets -- -D warnings
 cargo test "${scope[@]}"
-cargo run --locked -p topics-bdd -- --tags 'not @ui'
+cargo run --locked -p topics-bdd --bin topics-bdd -- --tags 'not @ui'
+cargo run --locked -p topics-bdd --bin workspace-bdd
 if [[ "${1:-}" != "--core-only" ]]; then
   bash scripts/check-desktop.sh
 fi
