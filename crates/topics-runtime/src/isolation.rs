@@ -29,58 +29,174 @@ pub fn command(root: &Path, executable: &Path) -> Command {
 pub fn command(_: &Path, executable: &Path) -> Command {
     Command::new(executable)
 }
-/// Bound process lifetime AND captured output. Never retain native error paths.
-pub fn bounded_probe(mut command: Command, input: &[u8]) -> Result<Output, String> {
+// Five seconds includes cold executable/interpreter startup, stdin, output and exit.
+// Hosted macOS exceeded the old 2s bound; preflight additionally has a 30s budget.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+/// Bound process lifetime AND pipe I/O. Never retain native error paths.
+pub fn bounded_probe(command: Command, input: &[u8]) -> Result<Output, String> {
+    #[cfg(unix)]
+    {
+        bounded_probe_with_timeout(command, input, PROBE_TIMEOUT)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (command, input);
+        Err("Native probe confinement requires Unix process controls".into())
+    }
+}
+#[cfg(unix)]
+fn nonblocking(fd: std::os::fd::RawFd) -> std::io::Result<()> {
+    // Owned child pipe descriptors only; preserve existing descriptor flags.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+    if flags < 0 || unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) } < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
+}
+#[cfg(unix)]
+fn drain_probe(reader: &mut impl Read, captured: &mut Vec<u8>) -> std::io::Result<bool> {
+    // Limit work per poll even if a producer continuously fills the pipe.
+    for _ in 0..8 {
+        let mut bytes = [0; 4096];
+        match reader.read(&mut bytes) {
+            Ok(0) => return Ok(true),
+            Ok(count) => captured.extend_from_slice(&bytes[..count.min(8192 - captured.len())]),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => return Ok(false),
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(false)
+}
+#[cfg(unix)]
+fn stop_probe(child: &mut std::process::Child) {
+    // Each helper has its own process group, including ordinary inherited-pipe children.
+    unsafe {
+        libc::kill(-(child.id() as i32), libc::SIGKILL);
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+}
+#[cfg(unix)]
+fn bounded_probe_with_timeout(
+    mut command: Command,
+    input: &[u8],
+    timeout: Duration,
+) -> Result<Output, String> {
+    use std::os::{fd::AsRawFd, unix::process::CommandExt};
+    if input.len() > 4096 {
+        return Err("Native probe input too large".into());
+    }
+    let deadline = Instant::now() + timeout;
     crate::environment::apply(&mut command).map_err(|error| error.message)?;
     command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::piped())
+        .process_group(0);
+    if Instant::now() >= deadline {
+        return Err(
+            "Native confinement probe exceeded deadline before launch; analysis remains blocked"
+                .into(),
+        );
+    }
     let mut child = command
         .spawn()
         .map_err(|_| "Cannot launch native confinement probe".to_owned())?;
-    let stdout = child.stdout.take().unwrap();
-    let stderr = child.stderr.take().unwrap();
-    let out = std::thread::spawn(move || {
-        let mut bytes = vec![];
-        let _ = stdout.take(8192).read_to_end(&mut bytes);
-        bytes
-    });
-    let err = std::thread::spawn(move || {
-        let mut bytes = vec![];
-        let _ = stderr.take(8192).read_to_end(&mut bytes);
-        bytes
-    });
-    if input.len() > 4096 {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err("Native probe input too large".into());
+    let mut stdin = child.stdin.take();
+    let mut stdout = child.stdout.take().unwrap();
+    let mut stderr = child.stderr.take().unwrap();
+    let setup = (|| {
+        nonblocking(stdin.as_ref().unwrap().as_raw_fd())?;
+        nonblocking(stdout.as_raw_fd())?;
+        nonblocking(stderr.as_raw_fd())
+    })();
+    if setup.is_err() {
+        stop_probe(&mut child);
+        return Err("Cannot bound native probe pipe I/O".into());
     }
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(input);
-    }
-    let deadline = Instant::now() + Duration::from_secs(2);
-    let status = loop {
+    let mut written = 0;
+    let mut out = vec![];
+    let mut err = vec![];
+    let mut out_eof = false;
+    let mut err_eof = false;
+    loop {
+        if Instant::now() >= deadline {
+            stop_probe(&mut child);
+            return Err("Native confinement probe exceeded deadline; analysis remains blocked, retry when the host is responsive".into());
+        }
+        let io = (|| -> std::io::Result<()> {
+            if written == input.len() {
+                stdin.take();
+            }
+            if let Some(pipe) = &mut stdin {
+                match pipe.write(&input[written..]) {
+                    Ok(count) => written += count,
+                    Err(error)
+                        if [
+                            std::io::ErrorKind::WouldBlock,
+                            std::io::ErrorKind::Interrupted,
+                        ]
+                        .contains(&error.kind()) => {}
+                    Err(error) => return Err(error),
+                }
+                if written == input.len() {
+                    stdin.take();
+                }
+            }
+            if !out_eof {
+                out_eof = drain_probe(&mut stdout, &mut out)?;
+            }
+            if !err_eof {
+                err_eof = drain_probe(&mut stderr, &mut err)?;
+            }
+            Ok(())
+        })();
+        if io.is_err() {
+            stop_probe(&mut child);
+            return Err(
+                "Native confinement probe pipe I/O failed; analysis remains blocked".into(),
+            );
+        }
         match child.try_wait() {
-            Ok(Some(status)) => break Ok(status),
-            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(5)),
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break Err("Native confinement probe exceeded deadline".to_owned());
+            Ok(Some(status)) if out_eof && err_eof && stdin.is_none() => {
+                return Ok(Output {
+                    status,
+                    stdout: out,
+                    stderr: err,
+                });
+            }
+            Ok(_) => {}
+            Err(_) => {
+                stop_probe(&mut child);
+                return Err("Cannot observe native probe exit; analysis remains blocked".into());
             }
         }
-    };
-    let stdout = out.join().unwrap_or_default();
-    let stderr = err.join().unwrap_or_default();
-    Ok(Output {
-        status: status?,
-        stdout,
-        stderr,
-    })
+        std::thread::sleep(
+            Duration::from_millis(5).min(deadline.saturating_duration_since(Instant::now())),
+        );
+    }
+}
+#[cfg(target_os = "macos")]
+struct ProbeBudget {
+    deadline: Instant,
+}
+#[cfg(target_os = "macos")]
+impl ProbeBudget {
+    fn run(&self, command: Command, input: &[u8], label: &str) -> Result<Output, String> {
+        let remaining = self.deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(
+                "Native preflight exceeded aggregate budget; analysis remains blocked".into(),
+            );
+        }
+        bounded_probe_with_timeout(command, input, remaining.min(PROBE_TIMEOUT))
+            .map_err(|error| format!("{label}: {error}"))
+    }
 }
 #[cfg(target_os = "macos")]
 fn probe(
+    budget: &ProbeBudget,
     root: &Path,
     exe: &str,
     args: &[&std::ffi::OsStr],
@@ -88,7 +204,7 @@ fn probe(
 ) -> Result<Output, String> {
     let mut cmd = command(root, Path::new(exe));
     cmd.args(args);
-    bounded_probe(cmd, input)
+    budget.run(cmd, input, exe)
 }
 
 #[cfg(any(target_os = "macos", all(test, unix)))]
@@ -148,6 +264,7 @@ print(json.dumps({'result':r,'errno':ctypes.get_errno()}))
 "#;
 #[cfg(target_os = "macos")]
 fn syscall_probe(
+    budget: &ProbeBudget,
     root: Option<&Path>,
     mode: &str,
     source: &Path,
@@ -162,11 +279,14 @@ fn syscall_probe(
         .args(["-I", "-c", SYSCALL_PROBE, mode])
         .arg(source)
         .arg(destination);
-    bounded_probe(command, b"")
+    budget.run(command, b"", mode)
 }
 #[cfg(target_os = "macos")]
 pub fn preflight(root: &Path) -> Result<PathBuf, String> {
     use std::os::unix::{fs::MetadataExt, fs::symlink};
+    let budget = ProbeBudget {
+        deadline: Instant::now() + Duration::from_secs(30),
+    };
     let canonical = root
         .canonicalize()
         .map_err(|_| "Selected root is unavailable".to_owned())?;
@@ -201,13 +321,14 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         let alias = base.join("alias");
         symlink(&protected, &alias).map_err(|_| "fixture")?;
         for path in [sentinel.clone(), alias.join("sentinel")] {
-            if probe(&protected, "/bin/cat", &[path.as_os_str()], b"")?
+            if probe(&budget, &protected, "/bin/cat", &[path.as_os_str()], b"")?
                 .status
                 .success()
             {
                 return Err("OS read confinement failed".into());
             }
             if probe(
+                &budget,
                 &protected,
                 "/usr/bin/tee",
                 &[path.as_os_str()],
@@ -221,9 +342,15 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
             }
         }
         for path in [protected.join("new"), alias.join("new")] {
-            if probe(&protected, "/usr/bin/touch", &[path.as_os_str()], b"")?
-                .status
-                .success()
+            if probe(
+                &budget,
+                &protected,
+                "/usr/bin/touch",
+                &[path.as_os_str()],
+                b"",
+            )?
+            .status
+            .success()
                 || path.exists()
             {
                 return Err("OS creation confinement failed".into());
@@ -234,7 +361,13 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         std::fs::create_dir(&positive_a).map_err(|_| "fixture")?;
         std::fs::create_dir(&positive_b).map_err(|_| "fixture")?;
         std::fs::write(positive_a.join("marker"), b"positive swap").map_err(|_| "fixture")?;
-        require_success(syscall_probe(None, "swap", &positive_a, &positive_b)?)?;
+        require_success(syscall_probe(
+            &budget,
+            None,
+            "swap",
+            &positive_a,
+            &positive_b,
+        )?)?;
         if !positive_b.join("marker").is_file() {
             return Err(
                 "Native swap positive control did not perform the operation; analysis blocked"
@@ -246,7 +379,13 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         std::fs::write(clone_source.join("marker"), b"positive clone").map_err(|_| "fixture")?;
         for mode in ["clonefile", "fclonefileat"] {
             let positive = base.join(format!("positive-{mode}"));
-            require_success(syscall_probe(None, mode, &clone_source, &positive)?)?;
+            require_success(syscall_probe(
+                &budget,
+                None,
+                mode,
+                &clone_source,
+                &positive,
+            )?)?;
             if std::fs::read(positive.join("marker"))
                 .map_err(|_| "Clone positive control did not create expected bytes")?
                 != b"positive clone"
@@ -255,6 +394,7 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
             }
             let allowed = base.join(format!("sibling-{mode}"));
             require_success(syscall_probe(
+                &budget,
                 Some(&protected),
                 mode,
                 &clone_source,
@@ -263,6 +403,7 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
             for (index, ancestor) in [&parent, &grandparent].into_iter().enumerate() {
                 let destination = base.join(format!("denied-{mode}-{index}"));
                 require_denial(syscall_probe(
+                    &budget,
                     Some(&protected),
                     mode,
                     ancestor,
@@ -276,6 +417,7 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         for ancestor in [&parent, &grandparent] {
             let moved = base.join("renamed");
             if probe(
+                &budget,
                 &protected,
                 "/bin/mv",
                 &[ancestor.as_os_str(), moved.as_os_str()],
@@ -289,7 +431,13 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
             }
             let swap = base.join("swap");
             std::fs::create_dir(&swap).map_err(|_| "fixture")?;
-            require_denial(syscall_probe(Some(&protected), "swap", ancestor, &swap)?)?;
+            require_denial(syscall_probe(
+                &budget,
+                Some(&protected),
+                "swap",
+                ancestor,
+                &swap,
+            )?)?;
             if !sentinel.exists() {
                 return Err("Ancestor swap changed the protected fixture; analysis blocked".into());
             }
@@ -297,19 +445,25 @@ pub fn preflight(root: &Path) -> Result<PathBuf, String> {
         }
         let sibling = base.join("allowed");
         std::fs::write(&sibling, b"allowed sibling").map_err(|_| "fixture")?;
-        let out = probe(&protected, "/bin/cat", &[sibling.as_os_str()], b"")?;
+        let out = probe(&budget, &protected, "/bin/cat", &[sibling.as_os_str()], b"")?;
         if !out.status.success() || out.stdout != b"allowed sibling" {
             return Err("OS sibling read preflight failed".into());
         }
         let created = base.join("allowed-created");
-        if !probe(&protected, "/usr/bin/touch", &[created.as_os_str()], b"")?
-            .status
-            .success()
+        if !probe(
+            &budget,
+            &protected,
+            "/usr/bin/touch",
+            &[created.as_os_str()],
+            b"",
+        )?
+        .status
+        .success()
             || !created.is_file()
         {
             return Err("OS sibling write preflight failed".into());
         }
-        if !probe(&canonical, "/usr/bin/true", &[], b"")?
+        if !probe(&budget, &canonical, "/usr/bin/true", &[], b"")?
             .status
             .success()
         {
@@ -332,6 +486,99 @@ pub fn preflight(_: &Path) -> Result<PathBuf, String> {
 mod tests {
     use super::*;
     use std::os::unix::process::ExitStatusExt;
+    fn assert_probe_reaped(path: &Path) {
+        let pid: i32 = std::fs::read_to_string(path)
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap();
+        assert_eq!(
+            unsafe { libc::waitpid(pid, std::ptr::null_mut(), libc::WNOHANG) },
+            -1
+        );
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ECHILD)
+        );
+        assert_eq!(unsafe { libc::kill(pid, 0) }, -1);
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ESRCH)
+        );
+    }
+    #[test]
+    fn timed_out_probe_is_killed_and_reaped() {
+        let temp = tempfile::tempdir().unwrap();
+        let pid = temp.path().join("pid");
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", "echo $$ > \"$1\"; exec /bin/sleep 30", "probe"])
+            .arg(&pid);
+        let started = Instant::now();
+        let error = bounded_probe_with_timeout(command, &[b'x'; 4096], Duration::from_millis(500))
+            .unwrap_err();
+        assert!(error.contains("exceeded deadline"));
+        assert!(started.elapsed() < Duration::from_secs(2));
+        assert_probe_reaped(&pid);
+    }
+    #[test]
+    fn inherited_output_pipe_cannot_outlive_probe_deadline() {
+        let temp = tempfile::tempdir().unwrap();
+        let pid = temp.path().join("pid");
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", "echo $$ > \"$1\"; /bin/sleep 30 & exit 0", "probe"])
+            .arg(&pid);
+        let started = Instant::now();
+        let error =
+            bounded_probe_with_timeout(command, b"", Duration::from_millis(500)).unwrap_err();
+        assert!(error.contains("exceeded deadline"));
+        assert!(started.elapsed() < Duration::from_secs(2));
+        assert_probe_reaped(&pid);
+    }
+    #[test]
+    fn oversized_input_is_rejected_before_spawn_and_bounded_input_round_trips() {
+        let temp = tempfile::tempdir().unwrap();
+        let marker = temp.path().join("must-not-create");
+        let mut command = Command::new("/usr/bin/touch");
+        command.arg(&marker);
+        assert!(bounded_probe(command, &[b'x'; 4097]).is_err());
+        assert!(!marker.exists());
+        let output = bounded_probe(Command::new("/bin/cat"), &[b'x'; 4096]).unwrap();
+        assert!(output.status.success());
+        assert_eq!(output.stdout, &[b'x'; 4096]);
+    }
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn aggregate_budget_does_not_spawn_after_expiry_and_limits_next_helper() {
+        let temp = tempfile::tempdir().unwrap();
+        let marker = temp.path().join("must-not-create");
+        let budget = ProbeBudget {
+            deadline: Instant::now() - Duration::from_secs(1),
+        };
+        let mut command = Command::new("/usr/bin/touch");
+        command.arg(&marker);
+        assert!(
+            budget
+                .run(command, b"", "synthetic")
+                .unwrap_err()
+                .contains("aggregate budget")
+        );
+        assert!(!marker.exists());
+        let budget = ProbeBudget {
+            deadline: Instant::now() + Duration::from_millis(500),
+        };
+        let mut command = Command::new("/bin/sleep");
+        command.arg("30");
+        let started = Instant::now();
+        assert!(
+            budget
+                .run(command, b"", "synthetic")
+                .unwrap_err()
+                .contains("synthetic: Native confinement probe exceeded deadline")
+        );
+        assert!(started.elapsed() < Duration::from_secs(2));
+    }
     #[test]
     fn healthy_probe_can_finish_after_the_former_two_second_startup_cutoff() {
         let mut command = Command::new("/bin/sh");

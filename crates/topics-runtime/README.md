@@ -118,7 +118,11 @@ ancestor `mv`, `RENAME_SWAP`, `clonefile` and `fclonefileat`, quoted Unicode
 paths and allowed sibling reads/writes/clones. Syscall helpers require actual
 successful unsandboxed positive controls and permission-specific denials; missing
 helpers or unsupported operations cannot count as confinement. Probe fixtures must be outside the selected root and on its same
-filesystem; unsupported volumes fail closed. No live note bytes are probed.
+filesystem; unsupported volumes fail closed. No live note bytes are probed. Each helper has a five-second deadline including
+startup and nonblocking pipe I/O, within a shared 30-second preflight budget.
+Timeout rejects analysis, kills the owned helper process group and reaps the
+direct child; reader threads cannot outlive the deadline. Startup timing and
+cleanup regressions are recorded in [evidence/NATIVE-PROBE-DEADLINES.md](evidence/NATIVE-PROBE-DEADLINES.md).
 
 This path boundary does not protect pre-existing outside-root hardlinks/copies or
 hide metadata. It is not universal machine confidentiality or protection against

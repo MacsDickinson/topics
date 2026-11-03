@@ -74,5 +74,5 @@ fn native_probe_capture_and_wait_are_bounded() {
     let mut wait = std::process::Command::new("python3");
     wait.args(["-I", "-c", "import time;time.sleep(10)"]);
     assert!(topics_runtime::isolation::bounded_probe(wait, b"").is_err());
-    assert!(start.elapsed() < std::time::Duration::from_secs(3));
+    assert!(start.elapsed() < std::time::Duration::from_secs(6));
 }

@@ -1,0 +1,14 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.18s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c80774858c720e19)
+
+running 6 tests
+test isolation::tests::helper_failures_cannot_masquerade_as_permission_denial ... ok
+test isolation::tests::oversized_input_is_rejected_before_spawn_and_bounded_input_round_trips ... ok
+test isolation::tests::aggregate_budget_does_not_spawn_after_expiry_and_limits_next_helper ... ok
+test isolation::tests::inherited_output_pipe_cannot_outlive_probe_deadline ... ok
+test isolation::tests::timed_out_probe_is_killed_and_reaped ... ok
+test isolation::tests::healthy_probe_can_finish_after_the_former_two_second_startup_cutoff ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 2.22s
+

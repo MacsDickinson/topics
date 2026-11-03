@@ -1,0 +1,7 @@
+{
+  "all_preflight_controls_unchanged_except_budget_arguments": true,
+  "normalization": "remove whitespace, added budget declaration/arguments and rustfmt optional trailing call commas",
+  "profile_and_ancestor_rules_byte_identical": true,
+  "normalized_controls_sha256": "0e36dfb22da57c283b93a838f96f75e43cb3a86dc41205e608a2b40db69bc324",
+  "selected_bytes_ordering": "Runtime::run still calls isolation::preflight before bridge, thread and turn creation"
+}
