@@ -51,7 +51,17 @@ const appEnvironment = {
 export const config = {
   outputDir,
   runner: 'local',
-  specs: [live ? (process.env.TOPICS_TEST_LIVE_RESTART === '1' ? './tests/native/live-restart.ts' : './tests/native/live-workspace.ts') : process.env.TOPICS_TEST_STARTUP === '1' ? './tests/native/startup.ts' : process.env.TOPICS_TEST_WORKSPACE === '1' ? './tests/native/workspace.ts' : './tests/native/search.ts'],
+  specs: [
+    live
+      ? process.env.TOPICS_TEST_LIVE_RESTART === '1'
+        ? './tests/native/live-restart.ts'
+        : './tests/native/live-workspace.ts'
+      : process.env.TOPICS_TEST_STARTUP === '1'
+        ? './tests/native/startup.ts'
+        : process.env.TOPICS_TEST_WORKSPACE === '1'
+          ? './tests/native/workspace.ts'
+          : './tests/native/search.ts',
+  ],
   maxInstances: 1,
   capabilities: [
     { browserName: 'tauri', 'tauri:options': { application: appBinaryPath } },
@@ -68,7 +78,18 @@ export const config = {
       },
     ],
   ],
-  afterTest: async (_test: unknown, _context: unknown, result: {passed: boolean}) => { if (!result.passed) { const { browser } = await import('@wdio/globals'); await browser.saveScreenshot(resolve(`evidence/native-${session}-failure.png`)).catch(() => undefined); } },
+  afterTest: async (
+    _test: unknown,
+    _context: unknown,
+    result: { passed: boolean },
+  ) => {
+    if (!result.passed) {
+      const { browser } = await import('@wdio/globals');
+      await browser
+        .saveScreenshot(resolve(`evidence/native-${session}-failure.png`))
+        .catch(() => undefined);
+    }
+  },
   framework: 'mocha',
   reporters: ['spec'],
   logLevel: 'warn',

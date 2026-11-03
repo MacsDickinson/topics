@@ -59,6 +59,7 @@ function validEvent(value: unknown): value is WorkspaceRunEvent {
 function App() {
   const [root, setRoot] = useState<RootRef | null>();
   const rootRef = useRef<RootRef | null>(null);
+  const selectedTopicId = useRef<string | null>(null);
   const epoch = useRef(0),
     detailSeq = useRef(0),
     refreshSeq = useRef(0),
@@ -101,6 +102,7 @@ function App() {
     setConfirmed(false);
   };
   const clearTopic = () => {
+    selectedTopicId.current = null;
     ++detailSeq.current;
     setTopic(null);
     setTopicLoading(false);
@@ -136,8 +138,12 @@ function App() {
       setOperations(results[2].value.operations);
     const failure = results.find((r) => r.status === 'rejected');
     if (failure?.status === 'rejected') report(failure.reason);
+    return results[1].status === 'fulfilled'
+      ? { proposals: results[1].value.proposals }
+      : undefined;
   }
   async function openTopic(id: string) {
+    selectedTopicId.current = id;
     const selected = rootRef.current;
     if (!selected) return;
     window.scrollTo(0, 0);
@@ -204,7 +210,25 @@ function App() {
       else {
         setNotice('Analysis complete. Review proposed changes in Inbox.');
         const selected = rootRef.current;
-        if (selected) void refresh(selected);
+        if (selected) {
+          const generation = epoch.current;
+          void refresh(selected).then((result) => {
+            if (
+              current(generation, selected.root_id) &&
+              !runRef.current &&
+              result?.proposals.some(
+                (p) =>
+                  p.status === 'accepted' &&
+                  p.candidates.length === 0 &&
+                  p.origin.kind === 'analysis' &&
+                  p.origin.run_id === value.run_id,
+              )
+            )
+              setNotice(
+                'No new changes. Your accepted understanding is already up to date for this selection.',
+              );
+          });
+        }
       }
     }
     // Proposal events never refresh data until the successful terminal event.
@@ -276,16 +300,32 @@ function App() {
     if (!active) return;
     const generation = epoch.current;
     // Close events immediately, but keep a retry action until IPC confirms stop.
-    runRef.current = null; pendingStart.current = false; earlyEvents.current = [];
-    setError(null); setNotice('Stopping run…');
+    runRef.current = null;
+    pendingStart.current = false;
+    earlyEvents.current = [];
+    setError(null);
+    setNotice('Stopping run…');
     try {
-      const result = await ipc<{cancelled:boolean}>('workspace_run_cancel', { root_id: active.root, run_id: active.id });
+      const result = await ipc<{ cancelled: boolean }>('workspace_run_cancel', {
+        root_id: active.root,
+        run_id: active.id,
+      });
       if (!current(generation, active.root)) return;
       setRun(null);
-      setNotice(result.cancelled ? 'Run stopped. No model changes were accepted.' : 'Run is no longer active. Review Inbox for any completed proposals.');
-      if (!result.cancelled && rootRef.current) await refresh(rootRef.current, generation);
+      setNotice(
+        result.cancelled
+          ? 'Run stopped. No model changes were accepted.'
+          : 'Run is no longer active. Review Inbox for any completed proposals.',
+      );
+      if (!result.cancelled && rootRef.current)
+        await refresh(rootRef.current, generation);
     } catch (e) {
-      if (current(generation, active.root)) { setNotice('Cancellation was not confirmed. Retry Stop run or change notes folder.'); report(e); }
+      if (current(generation, active.root)) {
+        setNotice(
+          'Cancellation was not confirmed. Retry Stop run or change notes folder.',
+        );
+        report(e);
+      }
     }
   }
   async function changeRoot() {
@@ -442,6 +482,7 @@ function App() {
     const selected = rootRef.current;
     if (!selected || busy) return;
     const generation = epoch.current;
+    const detailId = selectedTopicId.current;
     setBusy(true);
     setError(null);
     try {
@@ -461,6 +502,12 @@ function App() {
             : 'Changes accepted. Your source notes were not rewritten.',
         );
         await refresh(selected, generation);
+        if (
+          detailId &&
+          selectedTopicId.current === detailId &&
+          current(generation, selected.root_id)
+        )
+          await openTopic(detailId);
       }
     } catch (e) {
       if (current(generation, selected.root_id)) report(e);
@@ -541,7 +588,7 @@ function App() {
       });
       if (current(generation, selected.root_id)) {
         await refresh(selected, generation);
-        await openTopic(id);
+        if (selectedTopicId.current === id) await openTopic(id);
       }
     } catch (e) {
       if (current(generation, selected.root_id)) report(e);

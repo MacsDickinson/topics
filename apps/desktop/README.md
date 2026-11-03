@@ -24,7 +24,7 @@ npm test
 npm run build
 ```
 
-Every app launch/test must use synthetic notes and an absolute isolated `TOPICS_APP_DATA_DIR`; do not launch against personal configured roots or the repository notes symlink. Native runners create and remove their own synthetic fixture trees, use a pre-created synthetic HOME, and use a nonpersistent WebKit store. Production app configuration stays persistent.
+Every app launch/test must use synthetic notes and an absolute isolated `TOPICS_APP_DATA_DIR`; do not launch against personal configured roots or the repository notes symlink. Native runners create and remove their own synthetic fixture trees, use a pre-created synthetic HOME, and use a nonpersistent WebKit store. Production app configuration stays persistent. Release macOS bundles use local ad-hoc signing (no credentials); verify with `codesign --verify --deep --strict ../../target/release/bundle/macos/Topics.app`.
 
 ```sh
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native

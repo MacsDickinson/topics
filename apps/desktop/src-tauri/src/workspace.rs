@@ -1,6 +1,7 @@
 //! Tauri is an adapter: all source access and decisions go through the core service.
 use serde_json::{Value, json};
 use std::{
+    collections::BTreeSet,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -278,6 +279,7 @@ impl ScopedHost {
                         scope_id: self.scope_id.clone(),
                         run_id: self.run_id.clone(),
                     })?;
+                    let selected_sources: BTreeSet<_> = sources.sources.iter().map(|s| s.summary.source_id.as_str()).collect();
                     let mut topic_contexts = Vec::new();
                     // Local inventory is never model-visible. Every returned view
                     // must independently pass the core scope/sensitivity boundary.
@@ -293,15 +295,12 @@ impl ScopedHost {
                             run_id: self.run_id.clone(),
                             topic_id: topic.id,
                         }) {
-                            // A cloud-allowed but unrelated/empty topic still has a
-                            // name/ID. Do not include it merely because it exists.
-                            if !view.current_claims.is_empty()
-                                || !view.history.is_empty()
-                                || !view.connections.is_empty()
-                                || !view.unresolved.is_empty()
-                            {
-                                topic_contexts.push(view);
-                            }
+                            // Redacted current values alone must not broaden an
+                            // analysis into a different topic. Require remaining
+                            // evidence that is associated with this selection.
+                            let claim_selected = |claim: &Claim| claim.sources.iter().any(|e| matches!(e, Evidence::Passage { source } if selected_sources.contains(source.source_id.as_str())));
+                            let associated = view.current_claims.iter().any(claim_selected) || view.history.iter().any(claim_selected) || view.connections.iter().any(|c| c.sources.iter().any(|s| selected_sources.contains(s.source_id.as_str()))) || view.unresolved.iter().any(|c| matches!(c, Candidate::UnresolvedIdentity { sources, .. } if sources.iter().any(|s| selected_sources.contains(s.source_id.as_str()))));
+                            if associated { topic_contexts.push(view); }
                         }
                     }
                     Ok(json!({ "sources": sources.sources, "topic_contexts": topic_contexts }))

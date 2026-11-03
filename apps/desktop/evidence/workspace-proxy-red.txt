@@ -1,0 +1,54 @@
+✖ proxy dispatch exits before GUI, root discovery or personal configuration (3010.344084ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3067.161875
+
+✖ failing tests:
+
+test at scripts/native-proxy.test.mjs:8:1
+✖ proxy dispatch exits before GUI, root discovery or personal configuration (3010.344084ms)
+  AssertionError [ERR_ASSERTION]: Proxy must terminate promptly: Error: spawnSync /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/../../target/debug/topics-desktop ETIMEDOUT
+  + actual - expected
+  
+  + Error: spawnSync /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/../../target/debug/topics-desktop ETIMEDOUT
+  +     at Object.spawnSync (node:internal/child_process:1191:20)
+  +     at spawnSync (node:child_process:929:24)
+  +     at TestContext.<anonymous> (file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-proxy.test.mjs:15:20)
+  +     at Test.runInAsyncScope (node:async_hooks:227:14)
+  +     at Test.run (node:internal/test_runner/test:1402:25)
+  +     at Test.start (node:internal/test_runner/test:1262:17)
+  +     at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+  +   code: 'ETIMEDOUT',
+  +   errno: -60,
+  +   path: '/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/../../target/debug/topics-desktop',
+  +   spawnargs: [
+  +     '--topics-mcp-proxy'
+  +   ],
+  +   syscall: 'spawnSync /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/../../target/debug/topics-desktop'
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-proxy.test.mjs:16:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: Error: spawnSync /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/../../target/debug/topics-desktop ETIMEDOUT
+        at Object.spawnSync (node:internal/child_process:1191:20)
+        at spawnSync (node:child_process:929:24)
+        at TestContext.<anonymous> (file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-proxy.test.mjs:15:20)
+        at Test.runInAsyncScope (node:async_hooks:227:14)
+        at Test.run (node:internal/test_runner/test:1402:25)
+        at Test.start (node:internal/test_runner/test:1262:17)
+        at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17),
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

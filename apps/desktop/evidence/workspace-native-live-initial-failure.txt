@@ -1,0 +1,72 @@
+
+> @topics/desktop@0.1.0 test:native:live
+> node scripts/native-live-smoke.mjs
+
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-CtLYaM_J.css           10.32 kB │ gzip:  2.97 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-Dji6uBlT.js           260.78 kB │ gzip: 79.85 kB
+✓ built in 581ms
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 5.80s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-03T04:06:32.897Z
+
+[0-0] RUNNING in undefined - file:///tests/native/live-workspace.ts
+[0-0] Error in "Genuine synthetic discovery and topic correction through real desktop IPC.discovers cited pending knowledge, accepts it, proposes a chat correction and accepts only by human action"
+Error: Model tool failed; all candidates discardedCheck the runtime status, then retry. You can still browse and create proposals.Dismiss error
+    at finished (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/native/live-workspace.ts:29:11)
+    at async Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/native/live-workspace.ts:46:5)
+[0-0] FAILED in undefined - file:///tests/native/live-workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 10be3e32-286a-4d95-b016-31aaa4390a8d
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/live-workspace.ts
+[webkit 605.1.15 macos #0-0] Genuine synthetic discovery and topic correction through real desktop IPC
+[webkit 605.1.15 macos #0-0]    ✖ discovers cited pending knowledge, accepts it, proposes a chat correction and accepts only by human action
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 failing (16s)
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1) Genuine synthetic discovery and topic correction through real desktop IPC discovers cited pending knowledge, accepts it, proposes a chat correction and accepts only by human action
+[webkit 605.1.15 macos #0-0] Model tool failed; all candidates discardedCheck the runtime status, then retry. You can still browse and create proposals.Dismiss error
+[webkit 605.1.15 macos #0-0] Error: Model tool failed; all candidates discardedCheck the runtime status, then retry. You can still browse and create proposals.Dismiss error
+[webkit 605.1.15 macos #0-0]     at finished (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/native/live-workspace.ts:29:11)
+[webkit 605.1.15 macos #0-0]     at async Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/native/live-workspace.ts:46:5)
+
+
+Spec Files:	 0 passed, 1 failed, 1 total (100% completed) in 00:00:16  
+
+file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-live-smoke.mjs:72
+    throw new Error(`${command} exited ${result.status}`);
+          ^
+
+Error: npm exited 1
+    at run (file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-live-smoke.mjs:72:11)
+    at file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-live-smoke.mjs:87:3
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.2

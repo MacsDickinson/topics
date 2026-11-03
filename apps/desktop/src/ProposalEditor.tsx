@@ -33,6 +33,17 @@ export function ProposalEditor({
   ];
   const update = (index: number, candidate: Candidate) =>
     setCandidates((list) => list.map((c, i) => (index === i ? candidate : c)));
+  if (proposal.status === 'accepted' && proposal.candidates.length === 0)
+    return (
+      <article className="proposal">
+        <h2>No new changes</h2>
+        <p>
+          Your accepted understanding already covers this selection. Nothing was
+          added.
+        </p>
+        <span className="badge accepted">Already known</span>
+      </article>
+    );
   return (
     <article className="proposal">
       <header className="proposal-heading">
@@ -138,7 +149,25 @@ export function ProposalEditor({
                     }
                   />
                 </label>
-                <label>Topic sensitivity<select value={candidate.topic.sensitivity} onChange={e => update(index, { ...candidate, topic: { ...candidate.topic, sensitivity: e.target.value as Topic['sensitivity'] } })}><option value="unknown">Unknown</option><option value="cloud_allowed">Cloud allowed</option><option value="local_only">Local-only</option></select></label>
+                <label>
+                  Topic sensitivity
+                  <select
+                    value={candidate.topic.sensitivity}
+                    onChange={(e) =>
+                      update(index, {
+                        ...candidate,
+                        topic: {
+                          ...candidate.topic,
+                          sensitivity: e.target.value as Topic['sensitivity'],
+                        },
+                      })
+                    }
+                  >
+                    <option value="unknown">Unknown</option>
+                    <option value="cloud_allowed">Cloud allowed</option>
+                    <option value="local_only">Local-only</option>
+                  </select>
+                </label>
               </>
             )}
             {(candidate.kind === 'claim' ||

@@ -170,7 +170,6 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
   });
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
   await page.getByRole('button', { name: 'Topics', exact: true }).click();
-  await page.getByRole('button', { name: 'Ledger', exact: true }).click();
   await expect(page.getByText('Tuesday', { exact: true })).toBeVisible();
   await expect(
     page.getByText('Your correction', { exact: false }),
@@ -542,15 +541,68 @@ test('keyboard search works from topics and narrow screens keep controls reachab
   });
 });
 
-test('failed cancellation remains retryable and ignores late output until stop is confirmed', async ({ page }) => {
-  await workspaceFixture(page); await start(page);
-  await page.evaluate(() => { (window as any).failures.workspace_run_cancel = { code: 'internal', message: 'Run cancellation could not be confirmed.', details: null }; });
+test('failed cancellation remains retryable and ignores late output until stop is confirmed', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await page.evaluate(() => {
+    (window as any).failures.workspace_run_cancel = {
+      code: 'internal',
+      message: 'Run cancellation could not be confirmed.',
+      details: null,
+    };
+  });
   await page.getByRole('button', { name: 'Stop run' }).click();
   await expect(page.getByRole('alert')).toContainText('could not be confirmed');
   await expect(page.getByRole('button', { name: 'Stop run' })).toBeEnabled();
-  await page.evaluate(() => { const w = window as any; w.emitRun(1, { kind: 'text_delta', text: 'LATE AFTER STOP REQUEST' }); delete w.failures.workspace_run_cancel; });
-  await expect(page.getByText('LATE AFTER STOP REQUEST', { exact: true })).toHaveCount(0);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.emitRun(1, { kind: 'text_delta', text: 'LATE AFTER STOP REQUEST' });
+    delete w.failures.workspace_run_cancel;
+  });
+  await expect(
+    page.getByText('LATE AFTER STOP REQUEST', { exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Stop run' }).click();
   await expect(page.getByRole('button', { name: 'Stop run' })).toHaveCount(0);
-  await expect(page.getByText('Run stopped. No model changes were accepted.', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Run stopped. No model changes were accepted.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test('accepted empty analysis outcome says no new changes without an approval card', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.showProposal();
+    w.proposals[0].status = 'accepted';
+    w.proposals[0].candidates = [];
+    w.emitRun(1, { kind: 'completed' });
+  });
+  await expect(
+    page.getByText(
+      'No new changes. Your accepted understanding is already up to date for this selection.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page.getByRole('button', { name: /Inbox/ }).click();
+  await expect(
+    page.getByRole('heading', { name: 'No new changes' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Approve selected changes' }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() =>
+      (window as any).calls.filter(
+        (c: any) => c.command === 'workspace_proposal_decide',
+      ),
+    ),
+  ).toEqual([]);
 });

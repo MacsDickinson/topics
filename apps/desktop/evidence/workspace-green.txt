@@ -2,23 +2,33 @@
 > @topics/desktop@0.1.0 test
 > playwright test --workers=1
 
-[WebServer] (node:32847) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (node:67249) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 [WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
 
-Running 17 tests using 1 worker
+Running 21 tests using 1 worker
 
-(node:32849) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:67256) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
   ✓   1 tests/async.spec.ts:14:1 › late responses cannot replace newer results or cleared input (1.6s)
-  ✓   2 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (938ms)
-  ✓   3 tests/async.spec.ts:48:1 › hostile result markup stays inert while FTS highlights render (551ms)
-  ✓   4 tests/search.spec.ts:45:35 › Search shows results from the core (396ms)
-  ✓   5 tests/search.spec.ts:45:35 › Empty results say so (380ms)
-  ✓   6 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (249ms)
-  ✓   7 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (307ms)
-  ✓   8 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (1.0s)
-  ✓   9 tests/workspace.spec.ts:194:1 › approval errors preserve edited candidates and rejected proposals never become topics (460ms)
-  ✓  10 tests/workspace.spec.ts:219:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (407ms)
-  ✓  11 tests/workspace.spec.ts:247:1 › changing root cancels run and clears old topic, proposal and delayed reads (376ms)
-  ✓  12 tests/workspace.spec.ts:273:1 › missing runtime leaves topic browsing and manual proposal capture available (210ms)
-  ✓  13 tests/workspace.spec.ts:289:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (241ms)
+  ✓   2 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (967ms)
+  ✓   3 tests/async.spec.ts:48:1 › hostile result markup stays inert while FTS highlights render (668ms)
+  ✓   4 tests/search.spec.ts:45:35 › Search shows results from the core (477ms)
+  ✓   5 tests/search.spec.ts:45:35 › Empty results say so (441ms)
+  ✓   6 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (496ms)
+  ✓   7 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (395ms)
+  ✓   8 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (982ms)
+  ✓   9 tests/workspace.spec.ts:198:1 › approval errors preserve edited candidates and rejected proposals never become topics (448ms)
+  ✓  10 tests/workspace.spec.ts:223:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (410ms)
+  ✓  11 tests/workspace.spec.ts:251:1 › changing root cancels run and clears old topic, proposal and delayed reads (443ms)
+  ✓  12 tests/workspace.spec.ts:277:1 › missing runtime leaves topic browsing and manual proposal capture available (259ms)
+  ✓  13 tests/workspace.spec.ts:293:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (286ms)
+  ✓  14 tests/workspace.spec.ts:328:1 › manual fallback stages a proposal and still needs explicit human approval (314ms)
+  ✓  15 tests/workspace.spec.ts:350:1 › omitted dependencies fail visibly and the exact edited subset stays reviewable (472ms)
+  ✓  16 tests/workspace.spec.ts:382:1 › late topic detail read after a root switch cannot reveal old-root evidence (546ms)
+  ✓  17 tests/workspace.spec.ts:424:1 › stale scope, runtime errors and malformed events stay actionable without accepting data (479ms)
+  ✓  18 tests/workspace.spec.ts:477:1 › an older list refresh cannot overwrite newer workspace data (425ms)
+  ✓  19 tests/workspace.spec.ts:519:1 › keyboard search works from topics and narrow screens keep controls reachable (352ms)
+  ✓  20 tests/workspace.spec.ts:544:1 › failed cancellation remains retryable and ignores late output until stop is confirmed (395ms)
+  ✓  21 tests/workspace.spec.ts:576:1 › accepted empty analysis outcome says no new changes without an approval card (376ms)
+
+  21 passed (12.4s)

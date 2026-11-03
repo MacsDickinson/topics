@@ -1,0 +1,33 @@
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling libsqlite3-sys v0.36.0
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.1
+   Compiling block2 v0.6.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling window-vibrancy v0.8.1
+   Compiling muda v0.20.0
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+    Finished `test` profile [unoptimized] target(s) in 16.97s
+     Running unittests src/main.rs (target/debug/deps/topics_desktop-1cf51eb51b2a400e)
+
+running 6 tests
+test runtime_path::tests::finder_discovery_only_checks_known_executable_metadata ... ok
+test workspace::tests::cancelled_core_capability_cannot_stage_late_candidates ... ok
+test workspace::tests::host_denies_approval_extra_arguments_and_unconfirmed_scope ... ok
+test workspace::tests::host_validates_without_staging_then_commits_pending_only ... ok
+test workspace::tests::multiple_tool_calls_validate_dependencies_as_one_buffer ... ok
+test workspace::tests::scoped_context_never_exposes_unrelated_or_local_only_topic_inventory ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
