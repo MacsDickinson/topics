@@ -333,6 +333,15 @@ mod tests {
     use super::*;
     use std::os::unix::process::ExitStatusExt;
     #[test]
+    fn healthy_probe_can_finish_after_the_former_two_second_startup_cutoff() {
+        let mut command = Command::new("/bin/sh");
+        command.args(["-c", "sleep 2.2; printf ready"]);
+        let output = bounded_probe(command, b"")
+            .expect("a healthy bounded helper must have startup headroom beyond two seconds");
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"ready");
+    }
+    #[test]
     fn helper_failures_cannot_masquerade_as_permission_denial() {
         for (status, stdout) in [
             (1, b"".to_vec()),

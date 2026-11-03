@@ -1,0 +1,22 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.22s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c80774858c720e19)
+
+running 1 test
+test isolation::tests::healthy_probe_can_finish_after_the_former_two_second_startup_cutoff ... FAILED
+
+failures:
+
+---- isolation::tests::healthy_probe_can_finish_after_the_former_two_second_startup_cutoff stdout ----
+
+thread 'isolation::tests::healthy_probe_can_finish_after_the_former_two_second_startup_cutoff' (4170492) panicked at crates/topics-runtime/src/isolation.rs:340:14:
+a healthy bounded helper must have startup headroom beyond two seconds: "Native confinement probe exceeded deadline"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    isolation::tests::healthy_probe_can_finish_after_the_former_two_second_startup_cutoff
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 26 filtered out; finished in 2.22s
+
+error: test failed, to rerun pass `-p topics-runtime --lib`

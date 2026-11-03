@@ -1,0 +1,15 @@
+Actual hosted macOS RED: run 41728961231 job 126240993654, main c9dfe9c.
+The log gives no per-helper identity/timing; timeout is right-censored at the old two-second bound.
+
+2026-11-03T22:27:34.6460440Z ---- native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed stdout ----
+2026-11-03T22:27:34.6461010Z 
+2026-11-03T22:27:34.6461880Z thread 'native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed' (32821) panicked at crates/topics-runtime/tests/acceptance.rs:82:54:
+2026-11-03T22:27:34.6463730Z error: test failed, to rerun pass `-p topics-runtime --test acceptance`
+2026-11-03T22:27:34.6464700Z called `Result::unwrap()` on an `Err` value: "Native confinement probe exceeded deadline"
+2026-11-03T22:27:34.6465520Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+2026-11-03T22:27:34.6466010Z 
+2026-11-03T22:27:34.6466130Z 
+2026-11-03T22:27:34.6466420Z failures:
+2026-11-03T22:27:34.6467070Z     native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed
+2026-11-03T22:27:34.6467550Z 
+2026-11-03T22:27:34.6468140Z test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.16s

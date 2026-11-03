@@ -1,0 +1,278 @@
+{
+  "cold_definition": "first invocation in this measurement process; OS caches were not purged",
+  "load_definition": "two bounded owned yes processes with discarded output, killed and reaped after each loaded phase",
+  "platform": "macos_local",
+  "samples": [
+    {
+      "elapsed_ms": 13.304875000000001,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 0,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 100.346334,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 0,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.926,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 1,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 74.634541,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 1,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 11.953958,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 2,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 80.5475,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 2,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.864958,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 3,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 72.038834,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 3,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.850791000000001,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 4,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 74.19275,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 4,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.81225,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 5,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 75.294542,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 5,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.836,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 6,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 75.435042,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 6,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.310792,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 7,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 68.849125,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 7,
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 971.883041,
+      "error": null,
+      "helper": "complete_preflight",
+      "loaded": false,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.748458000000001,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 0,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 81.215084,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 0,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.318917,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 1,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 74.985,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 1,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.855167000000002,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 2,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 75.182583,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 2,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.870458,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 3,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 75.56949999999999,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 3,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 12.887917,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 4,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 75.53966600000001,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 4,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 13.637916,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 5,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 81.29370800000001,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 5,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 11.78125,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 6,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 80.265166,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 6,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 13.010917000000001,
+      "error": null,
+      "helper": "sandbox_true",
+      "iteration": 7,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 81.75916699999999,
+      "error": null,
+      "helper": "sandbox_python_imports",
+      "iteration": 7,
+      "loaded": true,
+      "success": true
+    },
+    {
+      "elapsed_ms": 1130.533042,
+      "error": null,
+      "helper": "complete_preflight",
+      "loaded": true,
+      "success": true
+    }
+  ],
+  "synthetic_only": true
+}
