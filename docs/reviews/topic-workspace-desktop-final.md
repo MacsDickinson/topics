@@ -7,3 +7,9 @@ The independent sequential-keystroke probe now preserves `Team Notes/one.md` and
 One extra scratch alias probe failed in the reviewer's own setup; it was not attributed to application behavior. The repository's rule-path keyboard test passed. Native, provider, and signature tests were not rerun by this reviewer; the implementer's evidence remains separate, and final integrated native acceptance is still required after core/runtime hardening.
 
 Nonblocking limits: application-data error recovery uses a message-string check, and navigation may retain a stale analysis preview; the core revalidates the preview before use. This acceptance covers the desktop changes, not unresolved core or runtime findings.
+
+## Guarded publication follow-up
+
+Sonnet independently accepted the Rust-only `1c2070b..d42843e` desktop follow-up after reading the actual adapter and supporting core/permit publication semantics, and rerunning all ten Rust tests. Orca Task `task_71a31da6d593`, report `msg_8f70b63c1e3c`. Captured root/scope/run/origin remain immutable; production staging uses only the opaque runtime permit around the core's final publication action. No old production staging path, permit constructor, or approval bypass remains. Denied and revoked publication stays invisible after service reopen, and an already-cancelled capability fails before publication. UI behavior is unchanged.
+
+Preparation still holds the service mutex; cancellation may wait for the short final publication action once its linearization point is crossed. A denied publication consumes its run capability and needs a new run. Runtime/core acceptance and final integrated native verification remain separate requirements.
