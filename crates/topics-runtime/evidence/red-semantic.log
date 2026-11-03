@@ -1,0 +1,36 @@
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-core)
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.96s
+     Running tests/acceptance.rs (target/debug/deps/acceptance-dbddec85a80e1aae)
+
+running 7 tests
+test only_successful_matching_terminal_publishes_once ... ok
+test failed_unknown_and_duplicate_terminal_never_publish ... ok
+test cancel_and_late_events_discard_buffer ... ok
+test unknown_effective_tool_surface_blocks_selected_bytes ... ok
+test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... FAILED
+test malformed_model_output_and_authority_fields_are_rejected ... FAILED
+test native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed ... ok
+
+failures:
+
+---- tool_boundary_denies_spoofed_wrong_session_expired_and_unknown stdout ----
+
+thread 'tool_boundary_denies_spoofed_wrong_session_expired_and_unknown' (3101246) panicked at crates/topics-runtime/tests/acceptance.rs:45:9:
+assertion failed: gate.authorize(session, cap, tool, &args).is_err()
+
+---- malformed_model_output_and_authority_fields_are_rejected stdout ----
+
+thread 'malformed_model_output_and_authority_fields_are_rejected' (3101243) panicked at crates/topics-runtime/tests/acceptance.rs:53:9:
+assertion failed: gate.authorize("session", gate.capability(), "propose_changes",
+        &args).is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    malformed_model_output_and_authority_fields_are_rejected
+    tool_boundary_denies_spoofed_wrong_session_expired_and_unknown
+
+test result: FAILED. 5 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+error: test failed, to rerun pass `-p topics-runtime --test acceptance`
