@@ -438,6 +438,22 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
                 let full = target_path(&ctx.root, &path, false)?;
                 let bytes = fs::read(full).map_err(internal)?;
                 let record = Record::parse(&bytes)?;
+                let expected_kind = match dir {
+                    "topics" => "topic",
+                    "claims" => "claim",
+                    "connections" => "connection",
+                    "rules" => "rule",
+                    "sources" => "source",
+                    "statements" => "statement",
+                    "operations" => "operation",
+                    _ => "unresolved",
+                };
+                if record.record_kind != expected_kind {
+                    return Err(error(
+                        "invalid_input",
+                        "Record kind differs from its directory",
+                    ));
+                }
                 valid_id(&record.id)?;
                 valid_id(&record.operation_id)?;
                 if name != format!("{}.md", record.id) {
@@ -475,11 +491,18 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
         .iter()
         .map(|c| (c.operation.id.clone(), c))
         .collect();
-    let tombstones: BTreeSet<_> = state
+    let operation_order: BTreeMap<_, _> = state
         .operations
         .iter()
-        .flat_map(|c| c.tombstones.clone())
+        .enumerate()
+        .map(|(i, c)| (c.operation.id.clone(), i))
         .collect();
+    let mut tombstones = BTreeMap::new();
+    for (order, commit) in state.operations.iter().enumerate() {
+        for id in &commit.tombstones {
+            tombstones.insert(id.clone(), order);
+        }
+    }
     let mut ids = BTreeSet::new();
     let mut duplicates = BTreeSet::new();
     for (_, r) in &records {
@@ -494,7 +517,11 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
                 .push(format!("Duplicate record identity excluded: {}", r.id));
             continue;
         }
-        if tombstones.contains(&r.id) {
+        if tombstones.get(&r.id).is_some_and(|order| {
+            operation_order
+                .get(&r.operation_id)
+                .is_none_or(|record_order| order >= record_order)
+        }) {
             continue;
         }
         let Some(op) = committed.get(&r.operation_id) else {
@@ -508,6 +535,20 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             state
                 .warnings
                 .push(format!("Externally changed record excluded: {path}"));
+            continue;
+        }
+        let identity_field = match r.record_kind.as_str() {
+            "claim" => "revision_id",
+            "source" => "source_id",
+            "unresolved" => "",
+            _ => "id",
+        };
+        if !identity_field.is_empty()
+            && r.data.get(identity_field).and_then(Value::as_str) != Some(&r.id)
+        {
+            state.warnings.push(format!(
+                "Record payload identity differs from filename: {path}"
+            ));
             continue;
         }
         macro_rules! insert {
@@ -541,4 +582,120 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
         }
     }
     Ok(state)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn setup() -> (tempfile::TempDir, Context, Vec<(String, Record)>, Id) {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("notes");
+        fs::create_dir(&root).unwrap();
+        let partition = temp.path().join("app-data/root");
+        fs::create_dir_all(&partition).unwrap();
+        let ctx = Context {
+            root,
+            root_id: new_id(),
+            partition,
+            interrupt_after: Some(1),
+        };
+        let op = new_id();
+        let a = Topic {
+            id: new_id(),
+            topic_kind: TopicKind::Person,
+            name: "A".into(),
+            aliases: vec![],
+            sensitivity: Sensitivity::Unknown,
+        };
+        let b = Topic {
+            id: new_id(),
+            topic_kind: TopicKind::Project,
+            name: "B".into(),
+            aliases: vec![],
+            sensitivity: Sensitivity::Unknown,
+        };
+        let records = vec![
+            (
+                format!("topics/topics/{}.md", a.id),
+                Record::new("topic", &a.id, &op, &a).unwrap(),
+            ),
+            (
+                format!("topics/topics/{}.md", b.id),
+                Record::new("topic", &b.id, &op, &b).unwrap(),
+            ),
+        ];
+        (temp, ctx, records, op)
+    }
+    #[test]
+    fn interrupted_replacements_are_invisible_until_commit_and_recovery_is_idempotent() {
+        let (_temp, mut ctx, records, op) = setup();
+        let e = commit(
+            &ctx,
+            "Synthetic interrupted operation",
+            records,
+            CommitIntent::default(),
+        )
+        .unwrap_err();
+        assert_eq!(e.code, "internal");
+        let journal: Journal = read_json(
+            &ctx.partition
+                .join("journals")
+                .join(&op)
+                .join("journal.json"),
+        )
+        .unwrap();
+        assert_eq!(journal.status, "staged");
+        assert!(journal.targets.iter().all(|t| t.old_bytes.is_none()));
+        assert!(
+            target_path(&ctx.root, &journal.targets[0].path, false)
+                .unwrap()
+                .exists()
+        );
+        assert!(
+            !target_path(&ctx.root, &journal.targets[1].path, false)
+                .unwrap()
+                .exists()
+        );
+        assert!(load(&ctx).unwrap().topics.is_empty());
+        ctx.interrupt_after = None;
+        recover(&ctx).unwrap();
+        let state = load(&ctx).unwrap();
+        assert_eq!(state.topics.len(), 2);
+        assert_eq!(state.operations.len(), 1);
+        recover(&ctx).unwrap();
+        assert_eq!(load(&ctx).unwrap().operations.len(), 1);
+    }
+    #[test]
+    fn recovery_conflict_retains_three_versions_and_never_publishes_marker() {
+        let (_temp, mut ctx, records, op) = setup();
+        assert!(
+            commit(
+                &ctx,
+                "Synthetic interrupted operation",
+                records,
+                CommitIntent::default()
+            )
+            .is_err()
+        );
+        let dir = ctx.partition.join("journals").join(&op);
+        let j: Journal = read_json(&dir.join("journal.json")).unwrap();
+        let target = target_path(&ctx.root, &j.targets[1].path, false).unwrap();
+        fs::write(&target, b"# External synthetic version\n").unwrap();
+        ctx.interrupt_after = None;
+        recover(&ctx).unwrap();
+        let j: Journal = read_json(&dir.join("journal.json")).unwrap();
+        assert_eq!(j.status, "conflict");
+        let conflict: Value = read_json(&dir.join("conflict-1.json")).unwrap();
+        assert!(conflict["old_bytes"].is_null());
+        assert_eq!(
+            serde_json::from_value::<Vec<u8>>(conflict["staged_bytes"].clone()).unwrap(),
+            j.targets[1].new_bytes
+        );
+        assert_eq!(
+            serde_json::from_value::<Vec<u8>>(conflict["current_bytes"].clone()).unwrap(),
+            b"# External synthetic version\n"
+        );
+        assert!(load(&ctx).unwrap().topics.is_empty());
+        assert!(load(&ctx).unwrap().operations.is_empty());
+    }
 }

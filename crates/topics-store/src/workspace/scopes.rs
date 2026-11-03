@@ -97,7 +97,7 @@ fn restricted_sources(state: &State) -> BTreeSet<Id> {
     let mut sources: BTreeSet<_> = state
         .sources
         .values()
-        .filter(|s| s.sensitivity == Sensitivity::LocalOnly)
+        .filter(|s| path_sensitivity(state, &s.path) == Sensitivity::LocalOnly)
         .map(|s| s.source_id.clone())
         .collect();
     for c in state
@@ -472,7 +472,7 @@ impl WorkspaceService {
         let eligible=|c:&Claim|claim_allowed(c,&state,&allowed,&request.topic_id,0);
         view.current_claims.retain(eligible);view.history.retain(eligible);
         view.connections.retain(|c|c.sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok()) && endpoint_cloud(&state,&c.from) && endpoint_cloud(&state,&c.to));
-        view.unresolved.retain(|c|matches!(c,Candidate::UnresolvedIdentity{sources,..} if sources.iter().all(|s|allowed.contains(&s.source_id))));
+        view.unresolved.retain(|c|matches!(c,Candidate::UnresolvedIdentity{sources,candidates,..} if sources.iter().all(|s|allowed.contains(&s.source_id))&&candidates.iter().all(|id|state.topics.get(id).is_some_and(|t|t.sensitivity==Sensitivity::CloudAllowed))));
         view.warnings.clear();Ok(view)
     })
     }

@@ -58,6 +58,18 @@ pub struct WorkspaceService {
     fault: std::sync::Mutex<Option<usize>>,
 }
 impl WorkspaceService {
+    /// Human-only persisted correction/edit evidence retrieval; never a model tool.
+    pub fn statement_get(&self, request: StatementGetRequest) -> WResult<UserStatement> {
+        self.with(&request.root_id, |ctx| {
+            valid_id(&request.statement_id)?;
+            load(ctx)?
+                .statements
+                .get(&request.statement_id)
+                .cloned()
+                .ok_or_else(|| error("invalid_input", "User statement does not exist"))
+        })
+    }
+
     /// Deterministic interruption seam for synthetic persistence/BDD tests only.
     #[cfg(any(test, feature = "test-support"))]
     pub fn interrupt_next_operation_after(&self, files: usize) {
@@ -306,6 +318,7 @@ impl WorkspaceService {
                 .iter()
                 .find(|c| c.operation.id == request.operation_id)
                 .ok_or_else(|| error("invalid_input", "Operation does not exist"))?;
+            if target.undo_of.is_some() {return Err(error("invalid_input","A compensating undo cannot itself be undone; restore through a reviewed proposal"));}
             if state
                 .operations
                 .iter()
@@ -359,10 +372,8 @@ impl WorkspaceService {
                     .as_deref()
                     .map(hash);
                 if current != Some(t.new_hash.clone()) {
-                    return Err(error(
-                        "conflict",
-                        "Cannot undo an externally or subsequently changed record",
-                    ));
+                    let restored=bytes_optional(&target_path(&ctx.root,&t.path,false)?)?.and_then(|bytes|Record::parse(&bytes).ok()).zip(Record::parse(&t.new_bytes).ok()).is_some_and(|(current,original)|current.id==original.id&&current.record_kind==original.record_kind&&current.data==original.data&&state.operations.iter().any(|c|c.operation.id==current.operation_id&&c.undo_of.is_some()));
+                    if !restored {return Err(error("conflict","Cannot undo an externally or subsequently changed record"));}
                 }
                 expected.insert(t.path.clone(), current);
                 if let Some(old) = &t.old_bytes {

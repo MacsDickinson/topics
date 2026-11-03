@@ -302,3 +302,7 @@ impl<'de> Deserialize<'de> for Decision {
         })
     }
 }
+value!(StatementGetRequest {
+    root_id: Id,
+    statement_id: Id
+});

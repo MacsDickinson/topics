@@ -30,6 +30,13 @@ pub fn validate_candidate_shapes(candidates: &[Candidate]) -> WorkspaceResult<()
     if candidates.is_empty() || candidates.len() > 200 {
         return Err(invalid("Submit 1–200 review candidates"));
     }
+    if serde_json::to_vec(candidates)
+        .map_err(|_| invalid("Invalid proposal data"))?
+        .len()
+        > 2 * 1024 * 1024
+    {
+        return Err(invalid("Proposal exceeds the 2 MiB review limit"));
+    }
     for c in candidates {
         match c {
             Candidate::Topic { topic } => {

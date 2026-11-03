@@ -601,3 +601,236 @@ fn invalid_dates_empty_selection_and_non_markdown_are_actionable() {
         .unwrap_err();
     assert_eq!(e.code, "invalid_input");
 }
+
+#[test]
+fn model_cannot_reference_private_endpoints_or_deduplicate_into_private_decisions() {
+    let f = Fixture::new();
+    f.write("Meetings/public.md", "# Public selected meeting\n");
+    f.write("Meetings/private.md", "# Private\nPRIVATE MARKER\n");
+    let private = f.source("Meetings/private.md");
+    let t = topic("Private person");
+    let c = f.claim(&t, &private.citation, "PRIVATE CLAIM");
+    let candidates = vec![
+        Candidate::Topic { topic: t.clone() },
+        Candidate::Claim { claim: c },
+    ];
+    f.accept(candidates.clone());
+    f.set_source(&private.summary, Sensitivity::LocalOnly);
+    let p = f.preview(vec!["Meetings/public.md"]);
+    let stage = |candidates| {
+        let run = f.run(&p, true).unwrap();
+        f.service.stage_proposal(StageProposalRequest {
+            root_id: f.root_id.clone(),
+            scope_id: Some(p.scope_id.clone()),
+            origin: Origin::Analysis {
+                run_id: run.run_id.clone(),
+            },
+            candidates,
+        })
+    };
+    assert_eq!(stage(candidates).unwrap_err().code, "forbidden");
+    let source = f.source("Meetings/public.md");
+    let conn = Connection {
+        id: id(),
+        from: Endpoint::Source {
+            source_id: private.summary.source_id,
+            locator: Locator {
+                start_byte: 0,
+                end_byte: 5,
+                heading: None,
+            },
+        },
+        relation: "mentions".into(),
+        to: Endpoint::Topic { id: t.id },
+        uncertainty: None,
+        sources: vec![source.citation],
+        valid_from: None,
+        valid_to: None,
+    };
+    assert_eq!(
+        stage(vec![Candidate::Connection { connection: conn }])
+            .unwrap_err()
+            .code,
+        "forbidden"
+    );
+}
+#[test]
+fn historical_uuid_cannot_be_reused_after_creation_undo() {
+    let f = Fixture::new();
+    let t = topic("Historical identity");
+    let r = f.accept(vec![Candidate::Topic { topic: t.clone() }]);
+    let undo = f
+        .service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: r.operation.unwrap().id,
+        })
+        .unwrap();
+    let mut reused = t;
+    reused.name = "Reused historical UUID".into();
+    assert_eq!(
+        f.stage(vec![Candidate::Topic { topic: reused }])
+            .unwrap_err()
+            .code,
+        "conflict"
+    );
+    assert_eq!(
+        f.service
+            .undo(UndoRequest {
+                root_id: f.root_id.clone(),
+                operation_id: undo.operation.id
+            })
+            .unwrap_err()
+            .code,
+        "invalid_input"
+    );
+}
+#[test]
+fn explicit_source_review_can_lift_a_label_after_a_source_edit() {
+    let f = Fixture::new();
+    f.write("Meetings/one.md", "# Private old bytes\n");
+    let old = f.source("Meetings/one.md");
+    f.set_source(&old.summary, Sensitivity::LocalOnly);
+    f.write("Meetings/one.md", "# Explicitly reviewed new bytes\n");
+    let edited = f.source("Meetings/one.md");
+    assert_ne!(old.summary.source_id, edited.summary.source_id);
+    assert_eq!(edited.summary.sensitivity, Sensitivity::LocalOnly);
+    f.set_source(&edited.summary, Sensitivity::CloudAllowed);
+    let p = f.preview(vec!["Meetings/one.md"]);
+    assert_eq!(p.sources.len(), 1);
+    assert_eq!(p.sources[0].sensitivity, Sensitivity::CloudAllowed);
+    assert!(f.run(&p, false).is_ok());
+}
+
+#[test]
+fn source_metadata_can_be_registered_again_after_undo_without_losing_identity() {
+    let f = Fixture::new();
+    f.write("Meetings/one.md", "# Source\n");
+    let source = f.source("Meetings/one.md");
+    let operation = f
+        .service
+        .history_list(f.req())
+        .unwrap()
+        .operations
+        .into_iter()
+        .find(|o| o.description == "Register human source inventory")
+        .unwrap();
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: operation.id,
+        })
+        .unwrap();
+    let restored = f.source("Meetings/one.md");
+    assert_eq!(restored.summary, source.summary);
+}
+#[test]
+fn undo_of_update_then_original_creation_compensates_in_order() {
+    let f = Fixture::new();
+    let t = topic("Undoable topic");
+    let creation = f
+        .accept(vec![Candidate::Topic { topic: t.clone() }])
+        .operation
+        .unwrap();
+    let label = f
+        .service
+        .sensitivity_set(SensitivitySetRequest {
+            root_id: f.root_id.clone(),
+            target: Endpoint::Topic { id: t.id },
+            sensitivity: Sensitivity::LocalOnly,
+        })
+        .unwrap()
+        .operation;
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: label.id,
+        })
+        .unwrap();
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: creation.id,
+        })
+        .unwrap();
+    assert!(f.service.topics_list(f.req()).unwrap().topics.is_empty());
+}
+
+#[test]
+fn validate_only_model_tool_call_does_not_publish_or_consume_capability() {
+    let f = Fixture::new();
+    f.write("Meetings/one.md", "# Synthetic selected meeting\n");
+    let scope = f.preview(vec!["Meetings/one.md"]);
+    let run = f.run(&scope, true).unwrap();
+    let request = StageProposalRequest {
+        root_id: f.root_id.clone(),
+        scope_id: Some(scope.scope_id.clone()),
+        origin: Origin::Analysis {
+            run_id: run.run_id.clone(),
+        },
+        candidates: vec![Candidate::Topic {
+            topic: topic("Buffered only"),
+        }],
+    };
+    let count = f.service.history_list(f.req()).unwrap().operations.len();
+    f.service.validate_proposal(request.clone()).unwrap();
+    assert!(
+        f.service
+            .proposals_list(f.req())
+            .unwrap()
+            .proposals
+            .is_empty()
+    );
+    assert!(f.service.topics_list(f.req()).unwrap().topics.is_empty());
+    assert_eq!(
+        f.service.history_list(f.req()).unwrap().operations.len(),
+        count
+    );
+    assert!(
+        f.service
+            .scope_read(ScopeReadRequest {
+                root_id: f.root_id.clone(),
+                scope_id: scope.scope_id.clone(),
+                run_id: run.run_id.clone()
+            })
+            .is_ok()
+    );
+    assert_eq!(
+        f.service.stage_proposal(request).unwrap().status,
+        ProposalStatus::Pending
+    );
+    assert_eq!(
+        f.service
+            .scope_read(ScopeReadRequest {
+                root_id: f.root_id.clone(),
+                scope_id: scope.scope_id,
+                run_id: run.run_id
+            })
+            .unwrap_err()
+            .code,
+        "forbidden"
+    );
+}
+#[test]
+fn human_statement_retrieval_returns_persisted_text_after_restart() {
+    let f = Fixture::new();
+    let t = topic("Alex");
+    f.accept(vec![Candidate::Topic { topic: t.clone() }]);
+    let s = f
+        .service
+        .user_statement(UserStatementRequest {
+            root_id: f.root_id.clone(),
+            topic_id: t.id,
+            text: "Use they/them; this is my correction".into(),
+        })
+        .unwrap();
+    let reopened = WorkspaceService::open(f.temp.path().join("app-data")).unwrap();
+    let got = reopened
+        .statement_get(StatementGetRequest {
+            root_id: f.root_id.clone(),
+            statement_id: s.id.clone(),
+        })
+        .unwrap();
+    assert_eq!(got, s);
+    assert!(got.text.contains("they/them"));
+}
