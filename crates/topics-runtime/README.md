@@ -169,4 +169,6 @@ Catalog provenance: upstream OpenAI Codex commit
 SHA256 `63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672`.
 The upstream Apache-2.0 license is retained in `CODEX-CATALOG-LICENSE.txt`.
 
-Review findings, exact final test counts and remaining integration gates: [evidence/REVIEW-REMEDIATION.md](evidence/REVIEW-REMEDIATION.md).
+Current bounded re-review fixes, 45 deterministic plus four explicit native tests,
+and frozen-source executable chronology: [evidence/REREVIEW-REMEDIATION.md](evidence/REREVIEW-REMEDIATION.md).
+Earlier review history: [evidence/REVIEW-REMEDIATION.md](evidence/REVIEW-REMEDIATION.md).

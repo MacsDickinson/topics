@@ -1,0 +1,47 @@
+{
+  "source_commit": "1430eba0c9644abfe67851bc9ed1f3b5167acbcc",
+  "source_scope_sha256": "669c6f5c66893f4eac6892903ee0658c597bcf168dab4d22d5a6756791037609",
+  "latest_source_mtime_ns": 1793685618239791665,
+  "started_utc": "2026-11-03T06:07:38.822181+00:00",
+  "finished_utc": "2026-11-03T06:08:22.466543+00:00",
+  "binaries": [
+    {
+      "target": "schema_pin",
+      "sha256": "b3570afb5088b7095eaef2f139bab61f4dc496590b857957cb1c9e0e2dc2407a",
+      "mtime_ns": 1793686062475349306,
+      "elapsed_seconds": 0.371,
+      "exit_code": 0
+    },
+    {
+      "target": "config_override_native",
+      "sha256": "c1c114eb5a03ab49e7a3258e03e17e38ba7f551ac85ba74d4ec7961a80b28858",
+      "mtime_ns": 1793686062586499780,
+      "elapsed_seconds": 0.305,
+      "exit_code": 0
+    },
+    {
+      "target": "live_codex",
+      "sha256": "1abbb03a1b77fb75611591897842b3e6ece36b90fce9b34105d73c8db6818b59",
+      "mtime_ns": 1793686062617803150,
+      "elapsed_seconds": 39.113,
+      "exit_code": 0
+    }
+  ],
+  "source_unchanged": true,
+  "hostile_environment_keys_tested": [
+    "CODEX_ACCESS_TOKEN",
+    "CODEX_APP_SERVER_CHATGPT_BASE_URL",
+    "CODEX_AUTHAPI_BASE_URL",
+    "CODEX_CA_CERTIFICATE",
+    "CODEX_ROLLOUT_TRACE_ROOT",
+    "HTTPS_PROXY",
+    "OPENAI_ORGANIZATION",
+    "OPENAI_PROJECT",
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "SSLKEYLOGFILE"
+  ],
+  "trace_path_created": false,
+  "keylog_created": false,
+  "live_attempts": 1,
+  "synthetic_only": true
+}

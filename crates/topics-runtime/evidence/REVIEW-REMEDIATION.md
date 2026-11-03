@@ -1,5 +1,9 @@
 # Runtime Opus review remediation
 
+Final bounded re-review fixes, current 45-test count and frozen-source native
+chronology: [REREVIEW-REMEDIATION.md](REREVIEW-REMEDIATION.md). Counts and final-run
+records below describe the earlier first-review remediation revision.
+
 This report supersedes security and API claims in the historical REPORT.md for
 `a612725`. Implementation is ready for independent re-review; this is not release
 approval or a claim that desktop/core acceptance was run by this worker.
