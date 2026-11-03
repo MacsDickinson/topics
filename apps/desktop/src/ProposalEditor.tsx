@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { parseLines } from './Scope';
 import { Evidence, SourceEvidence } from './Evidence';
 import type { Candidate, Endpoint, Proposal, Topic } from './workspace-types';
 
@@ -23,6 +24,52 @@ export function ProposalEditor({
   const [candidates, setCandidates] = useState<Candidate[]>(
     structuredClone(proposal.candidates),
   );
+  const [listDrafts, setListDrafts] = useState(() =>
+    proposal.candidates.map((c) => ({
+      aliases: c.kind === 'topic' ? c.topic.aliases.join(', ') : '',
+      paths:
+        c.kind === 'correction' ? c.rule.scope.source_paths.join('\n') : '',
+    })),
+  );
+  const updateList = (
+    index: number,
+    field: 'aliases' | 'paths',
+    value: string,
+  ) =>
+    setListDrafts((list) =>
+      list.map((draft, i) =>
+        i === index ? { ...draft, [field]: value } : draft,
+      ),
+    );
+  const approvalCandidates = () =>
+    candidates
+      .map(
+        (c, i): Candidate =>
+          c.kind === 'topic'
+            ? {
+                ...c,
+                topic: {
+                  ...c.topic,
+                  aliases: listDrafts[i].aliases
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                },
+              }
+            : c.kind === 'correction'
+              ? {
+                  ...c,
+                  rule: {
+                    ...c.rule,
+                    scope: {
+                      ...c.rule.scope,
+                      source_paths: parseLines(listDrafts[i].paths),
+                    },
+                  },
+                }
+              : c,
+      )
+      .filter((_, i) => included[i]);
   const [included, setIncluded] = useState(
     proposal.candidates.map((c) => c.kind !== 'unresolved_identity'),
   );
@@ -81,6 +128,7 @@ export function ProposalEditor({
             <label className="check include">
               <input
                 type="checkbox"
+                aria-label={`Include ${candidate.kind === 'correction' ? 'correction and future rule' : candidate.kind === 'unresolved_identity' ? 'unresolved mention' : candidate.kind}: ${candidate.kind === 'topic' ? candidate.topic.name : candidate.kind === 'claim' || candidate.kind === 'correction' ? `${knownTopics.find((t) => t.id === candidate.claim.subject_id)?.name || 'Topic'} ${candidate.claim.predicate}: ${candidate.claim.value}` : candidate.kind === 'connection' ? `${endpointLabel(candidate.connection.from, knownTopics)} ${candidate.connection.relation} ${endpointLabel(candidate.connection.to, knownTopics)}` : candidate.name} (change ${index + 1})`}
                 checked={included[index]}
                 onChange={(e) =>
                   setIncluded((list) =>
@@ -134,18 +182,9 @@ export function ProposalEditor({
                 <label>
                   Aliases
                   <input
-                    value={candidate.topic.aliases.join(', ')}
+                    value={listDrafts[index].aliases}
                     onChange={(e) =>
-                      update(index, {
-                        ...candidate,
-                        topic: {
-                          ...candidate.topic,
-                          aliases: e.target.value
-                            .split(',')
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        },
-                      })
+                      updateList(index, 'aliases', e.target.value)
                     }
                   />
                 </label>
@@ -287,21 +326,9 @@ export function ProposalEditor({
                       Apply future rule to these source paths
                       <textarea
                         placeholder="Empty means eligible sources for this topic and property"
-                        value={candidate.rule.scope.source_paths.join('\n')}
+                        value={listDrafts[index].paths}
                         onChange={(e) =>
-                          update(index, {
-                            ...candidate,
-                            rule: {
-                              ...candidate.rule,
-                              scope: {
-                                ...candidate.rule.scope,
-                                source_paths: e.target.value
-                                  .split('\n')
-                                  .map((s) => s.trim())
-                                  .filter(Boolean),
-                              },
-                            },
-                          })
+                          updateList(index, 'paths', e.target.value)
                         }
                       />
                     </label>
@@ -388,9 +415,7 @@ export function ProposalEditor({
           <button
             className="primary"
             disabled={busy || !included.some(Boolean)}
-            onClick={() =>
-              void decide(candidates.filter((_, i) => included[i]))
-            }
+            onClick={() => void decide(approvalCandidates())}
           >
             Approve selected changes
           </button>

@@ -1,0 +1,35 @@
+
+> @topics/desktop@0.1.0 tauri
+> tauri build
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 38 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.35 kB │ gzip:  0.26 kB
+dist/assets/index-CtLYaM_J.css   10.32 kB │ gzip:  2.97 kB
+dist/assets/index-BxynB3SZ.js   263.34 kB │ gzip: 80.50 kB
+✓ built in 535ms
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
+    Finished `release` profile [optimized] target(s) in 20.98s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/topics-desktop
+    Bundling Topics.app (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app)
+     Signing with identity "-"
+Signing with identity "-"
+Signing /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app/Contents/MacOS/topics-desktop
+/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app/Contents/MacOS/topics-desktop: replacing existing signature
+Signing with identity "-"
+Signing /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app
+/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app: replacing existing signature
+        Warn skipping app notarization, no APPLE_ID & APPLE_PASSWORD & APPLE_TEAM_ID or APPLE_API_KEY & APPLE_API_ISSUER & APPLE_API_KEY_PATH environment variables found
+    Finished 1 bundle at:
+        /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app (18.02 MiB)
+

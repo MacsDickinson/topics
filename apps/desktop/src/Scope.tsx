@@ -5,25 +5,40 @@ export const emptySpec: ScopeSpec = {
   date_from: null,
   date_to: null,
 };
+export type ScopeDraft = Omit<ScopeSpec, 'files' | 'folders'> & {
+  files: string;
+  folders: string;
+};
+export const emptyDraft: ScopeDraft = { ...emptySpec, files: '', folders: '' };
+export const parseLines = (value: string) =>
+  value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+export const parseScope = (draft: ScopeDraft): ScopeSpec => ({
+  ...draft,
+  files: parseLines(draft.files),
+  folders: parseLines(draft.folders),
+});
+export const hasPaths = (draft: ScopeDraft) =>
+  [...draft.files.split('\n'), ...draft.folders.split('\n')].some(
+    (path) => path.trim().length > 0,
+  );
 export function ScopeFields({
   spec,
   onChange,
   disabled,
 }: {
-  spec: ScopeSpec;
-  onChange: (spec: ScopeSpec) => void;
+  spec: ScopeDraft;
+  onChange: (spec: ScopeDraft) => void;
   disabled: boolean;
 }) {
-  const lines = (value: string) =>
-    value
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
   return (
     <fieldset disabled={disabled} className="scope-fields">
       <legend>Select notes</legend>
       <p className="muted">
-        Enter paths inside this notes folder, one per line. Dates include both
+        Choose at least one Markdown file or folder, one path per line. Dates
+        only filter the files and folders you choose. Dates include both
         endpoints; undated notes are excluded when filtering by date.
       </p>
       <div className="form-grid">
@@ -34,10 +49,8 @@ export function ScopeFields({
             id="scope-files"
             rows={2}
             placeholder="Meetings/one.md"
-            value={spec.files.join('\n')}
-            onChange={(e) =>
-              onChange({ ...spec, files: lines(e.target.value) })
-            }
+            value={spec.files}
+            onChange={(e) => onChange({ ...spec, files: e.target.value })}
           />
         </label>
         <label htmlFor="scope-folders">
@@ -47,10 +60,8 @@ export function ScopeFields({
             id="scope-folders"
             rows={2}
             placeholder="Meetings"
-            value={spec.folders.join('\n')}
-            onChange={(e) =>
-              onChange({ ...spec, folders: lines(e.target.value) })
-            }
+            value={spec.folders}
+            onChange={(e) => onChange({ ...spec, folders: e.target.value })}
           />
         </label>
         <label>

@@ -6,7 +6,15 @@ import { Sources } from './Sources';
 import { ipc, apiError, errorHelp } from './ipc';
 import { ProposalEditor } from './ProposalEditor';
 import { TopicDetail } from './TopicDetail';
-import { emptySpec, ScopeFields, ScopeReview } from './Scope';
+import {
+  emptySpec,
+  emptyDraft,
+  parseScope,
+  hasPaths,
+  ScopeFields,
+  ScopeReview,
+  type ScopeDraft,
+} from './Scope';
 import type {
   ApiError,
   Candidate,
@@ -15,7 +23,6 @@ import type {
   RootRef,
   RuntimeStatus,
   ScopePreview,
-  ScopeSpec,
   Sensitivity,
   Topic,
   TopicView,
@@ -63,7 +70,8 @@ function App() {
   const epoch = useRef(0),
     detailSeq = useRef(0),
     refreshSeq = useRef(0),
-    scopeSeq = useRef(0);
+    scopeSeq = useRef(0),
+    chatScopeSeq = useRef(0);
   const [screen, setScreen] = useState<Screen>('search');
   const [settings, setSettings] = useState(false),
     [path, setPath] = useState(''),
@@ -78,9 +86,11 @@ function App() {
     [bootError, setBootError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
-  const [spec, setSpec] = useState<ScopeSpec>(emptySpec),
+  const [spec, setSpec] = useState<ScopeDraft>(emptyDraft),
     [preview, setPreview] = useState<ScopePreview | null>(null),
     [confirmed, setConfirmed] = useState(false);
+  const [chatPreview, setChatPreview] = useState<ScopePreview | null>(null),
+    [chatConfirmed, setChatConfirmed] = useState(false);
   const [message, setMessage] = useState(''),
     [manual, setManual] = useState(false),
     [name, setName] = useState(''),
@@ -96,10 +106,19 @@ function App() {
   const current = (generation: number, id?: string) =>
     epoch.current === generation && (!id || rootRef.current?.root_id === id);
   const report = (e: unknown) => setError(apiError(e));
-  const invalidateScope = () => {
+  const invalidateAnalysisScope = () => {
     ++scopeSeq.current;
     setPreview(null);
     setConfirmed(false);
+  };
+  const invalidateChatScope = () => {
+    ++chatScopeSeq.current;
+    setChatPreview(null);
+    setChatConfirmed(false);
+  };
+  const invalidateScope = () => {
+    invalidateAnalysisScope();
+    invalidateChatScope();
   };
   const clearTopic = () => {
     selectedTopicId.current = null;
@@ -143,6 +162,7 @@ function App() {
       : undefined;
   }
   async function openTopic(id: string) {
+    const topicChanged = selectedTopicId.current !== id;
     selectedTopicId.current = id;
     const selected = rootRef.current;
     if (!selected) return;
@@ -151,8 +171,10 @@ function App() {
       sequence = ++detailSeq.current;
     setTopic(null);
     setTopicLoading(true);
-    setMessage('');
-    invalidateScope();
+    if (topicChanged) {
+      setMessage('');
+      invalidateChatScope();
+    }
     setError(null);
     try {
       const result = await ipc<TopicView>('workspace_topic_get', {
@@ -344,7 +366,7 @@ function App() {
     rootRef.current = null;
     setRoot(null);
     setTopics([]);
-    setSpec(emptySpec);
+    setSpec(emptyDraft);
     setName('');
     setKind('thread');
     setManualSensitivity('unknown');
@@ -384,52 +406,61 @@ function App() {
     setError(null);
     setBusy(true);
     const generation = epoch.current,
-      sequence = ++scopeSeq.current;
-    setConfirmed(false);
-    setPreview(null);
+      scopeRequest = chat ? chatScopeSeq : scopeSeq,
+      sequence = ++scopeRequest.current;
+    const updatePreview = chat ? setChatPreview : setPreview;
+    (chat ? setChatConfirmed : setConfirmed)(false);
+    updatePreview(null);
     const chatFiles = topic
       ? [
-          ...new Set([
-            ...[...topic.current_claims, ...topic.history].flatMap((c) =>
-              c.sources.flatMap((s) =>
-                s.kind === 'passage' ? [s.source.path] : [],
+          ...new Set(
+            [...topic.current_claims, ...topic.history]
+              .flatMap((c) =>
+                c.sources.flatMap((s) =>
+                  s.kind === 'passage' ? [s.source.path] : [],
+                ),
+              )
+              .concat(
+                topic.connections.flatMap((c) => c.sources.map((s) => s.path)),
               ),
-            ),
-            ...topic.connections.flatMap((c) => c.sources.map((s) => s.path)),
-          ]),
+          ),
         ]
       : [];
     try {
       const result = await ipc<ScopePreview>('workspace_scope_preview', {
         root_id: selected.root_id,
-        spec: chat ? { ...emptySpec, files: chatFiles } : spec,
+        spec: chat ? { ...emptySpec, files: chatFiles } : parseScope(spec),
       });
       if (
         current(generation, selected.root_id) &&
-        sequence === scopeSeq.current
+        sequence === scopeRequest.current
       )
-        setPreview(result);
+        updatePreview(result);
     } catch (e) {
       if (
         current(generation, selected.root_id) &&
-        sequence === scopeSeq.current
+        sequence === scopeRequest.current
       )
         report(e);
     } finally {
       if (current(generation, selected.root_id)) setBusy(false);
     }
   }
-  const canSend =
-    !!preview &&
-    preview.root_id === root?.root_id &&
-    preview.sources.every((s) => s.sensitivity !== 'local_only') &&
-    (!preview.sources.some((s) => s.sensitivity === 'unknown') || confirmed);
+  const scopeReady = (scope: ScopePreview | null, consent: boolean) =>
+    !!scope &&
+    scope.root_id === root?.root_id &&
+    scope.sources.every((s) => s.sensitivity !== 'local_only') &&
+    (!scope.sources.some((s) => s.sensitivity === 'unknown') || consent);
+  const canSend = scopeReady(preview, confirmed),
+    canSendChat = scopeReady(chatPreview, chatConfirmed);
   async function start(chat = false) {
     const selected = rootRef.current;
+    const selectedPreview = chat ? chatPreview : preview,
+      consent = chat ? chatConfirmed : confirmed;
     if (
       !selected ||
-      !preview ||
-      !canSend ||
+      !selectedPreview ||
+      !(chat ? canSendChat : canSend) ||
       busy ||
       runRef.current ||
       !runtime?.available
@@ -447,8 +478,8 @@ function App() {
       if (!current(generation, selected.root_id)) return;
       const request = {
         root_id: selected.root_id,
-        scope_id: preview.scope_id,
-        confirm_unknown: confirmed,
+        scope_id: selectedPreview.scope_id,
+        confirm_unknown: consent,
       };
       const result = await ipc<{ run_id: string }>(
         chat ? 'workspace_chat_start' : 'workspace_analysis_start',
@@ -466,13 +497,15 @@ function App() {
       setRun(active);
       pendingStart.current = false;
       for (const event of earlyEvents.current.splice(0)) receive(event);
-      invalidateScope();
+      (chat ? invalidateChatScope : invalidateAnalysisScope)();
+      if (chat) setMessage('');
     } catch (e) {
       if (current(generation, selected.root_id)) {
         pendingStart.current = false;
         earlyEvents.current = [];
         report(e);
-        if (apiError(e).code === 'stale_scope') invalidateScope();
+        if (apiError(e).code === 'stale_scope')
+          (chat ? invalidateChatScope : invalidateAnalysisScope)();
       }
     } finally {
       if (current(generation, selected.root_id)) setBusy(false);
@@ -596,6 +629,7 @@ function App() {
       if (current(generation, selected.root_id)) setBusy(false);
     }
   }
+  const appDataBootError = !!bootError?.message.includes('TOPICS_APP_DATA_DIR');
   const pendingCount = proposals.filter((p) => p.status === 'pending').length;
   const navigate = (next: Screen) => {
     window.scrollTo(0, 0);
@@ -603,7 +637,6 @@ function App() {
     setManual(false);
     setSettings(false);
     setError(null);
-    invalidateScope();
   };
   return (
     <div className="workspace">
@@ -668,6 +701,7 @@ function App() {
           </p>
           <button
             className="quiet"
+            disabled={appDataBootError}
             onClick={() => {
               setSettings(true);
               setManual(false);
@@ -676,7 +710,7 @@ function App() {
           >
             Change notes folder
           </button>
-          {runtime && (
+          {runtime && !bootError && (
             <div className={`runtime ${runtime.available ? 'ready' : ''}`}>
               <p>
                 {runtime.available
@@ -693,7 +727,7 @@ function App() {
         </div>
       </aside>
       <main className="workspace-main">
-        {(settings || (root === null && !bootError)) && (
+        {!appDataBootError && (settings || root === null) && (
           <section className="setup">
             <header className="page-header">
               <h1>{root ? 'Choose notes folder' : 'Start with your notes'}</h1>
@@ -739,7 +773,21 @@ function App() {
             </form>
           </section>
         )}
-        {bootError && settings && <p className="notice">{bootError.message}</p>}
+        {bootError && (
+          <section
+            role="alert"
+            className="error boot-error"
+            aria-label="Workspace unavailable"
+          >
+            <h2>Workspace unavailable</h2>
+            <p>{bootError.message}</p>
+            <p>
+              {appDataBootError
+                ? 'Set TOPICS_APP_DATA_DIR to a non-empty absolute path, then restart Topics.'
+                : 'Choose an available notes folder above to recover this workspace.'}
+            </p>
+          </section>
+        )}
         {error && (
           <div role="alert" className="error">
             <p>{error.message}</p>
@@ -823,7 +871,7 @@ function App() {
           </section>
         ) : (
           <>
-            {screen === 'search' && (
+            {screen === 'search' && !bootError && (
               <Search key={root?.root_id || `none-${epoch.current}`} />
             )}
             {screen === 'topics' && (
@@ -905,11 +953,11 @@ function App() {
                         >
                           Preview chat sources
                         </button>
-                        {preview && (
+                        {chatPreview && (
                           <ScopeReview
-                            preview={preview}
-                            confirmed={confirmed}
-                            setConfirmed={setConfirmed}
+                            preview={chatPreview}
+                            confirmed={chatConfirmed}
+                            setConfirmed={setChatConfirmed}
                           />
                         )}
                         <div className="actions">
@@ -917,7 +965,7 @@ function App() {
                             className="primary"
                             disabled={
                               !message.trim() ||
-                              !canSend ||
+                              !canSendChat ||
                               busy ||
                               !!run ||
                               !runtime?.available ||
@@ -965,19 +1013,11 @@ function App() {
                   disabled={busy || !!run}
                   onChange={(value) => {
                     setSpec(value);
-                    invalidateScope();
+                    invalidateAnalysisScope();
                   }}
                 />
                 <button
-                  disabled={
-                    busy ||
-                    !!run ||
-                    !root ||
-                    (!spec.files.length &&
-                      !spec.folders.length &&
-                      !spec.date_from &&
-                      !spec.date_to)
-                  }
+                  disabled={busy || !!run || !root || !hasPaths(spec)}
                   onClick={() => void getPreview()}
                 >
                   Preview selection

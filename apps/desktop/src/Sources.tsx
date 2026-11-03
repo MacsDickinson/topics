@@ -20,7 +20,10 @@ export function Sources({
   const [sources, setSources] = useState<SourceSummary[]>([]),
     [selected, setSelected] = useState<ScopedSource | null>(null),
     [loading, setLoading] = useState(false),
-    [writing, setWriting] = useState(false);
+    [writing, setWriting] = useState(false),
+    [inventory, setInventory] = useState<'loading' | 'ready' | 'error'>(
+      'loading',
+    );
   const alive = useRef(true),
     sequence = useRef(0);
   useEffect(() => {
@@ -29,10 +32,16 @@ export function Sources({
       root_id: root.root_id,
     })
       .then((r) => {
-        if (alive.current) setSources(r.sources);
+        if (alive.current) {
+          setSources(r.sources);
+          setInventory('ready');
+        }
       })
       .catch((e) => {
-        if (alive.current) onError(e);
+        if (alive.current) {
+          setInventory('error');
+          onError(e);
+        }
       });
     return () => {
       alive.current = false;
@@ -98,7 +107,10 @@ export function Sources({
       </header>
       <div className="source-browser">
         <div className="source-list" aria-label="Source notes">
-          {sources.length === 0 && (
+          {inventory === 'loading' && (
+            <p aria-live="polite">Loading source notes…</p>
+          )}
+          {inventory === 'ready' && sources.length === 0 && (
             <p className="empty">
               No Markdown notes found. Add notes inside your selected folder.
             </p>

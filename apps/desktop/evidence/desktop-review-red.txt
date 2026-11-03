@@ -1,0 +1,222 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 --grep review F
+
+[WebServer] (node:74414) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:74416) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/workspace.spec.ts:610:1 › review F1 keyboard paths retain spaces and newlines until explicit preview (5.5s)
+(node:74424) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/workspace.spec.ts:623:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval (5.4s)
+(node:74441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/workspace.spec.ts:641:1 › review F2 root boot errors are immediately actionable without runtime-only advice (5.1s)
+(node:74446) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 tests/workspace.spec.ts:649:1 › review F3 dates only filter an explicit nonblank files or folder selection (5.3s)
+(node:74477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  5 tests/workspace.spec.ts:658:1 › review F4 refresh of the same topic preserves chat draft and consent (5.8s)
+(node:74508) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  6 tests/workspace.spec.ts:669:1 › review F4 source inventory loading is distinct from an empty folder (5.2s)
+
+
+  1) tests/workspace.spec.ts:610:1 › review F1 keyboard paths retain spaces and newlines until explicit preview 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByLabel('Markdown files', { exact: true })
+    Timeout: 5000ms
+    - Expected  - 2
+    + Received  + 1
+
+    - Team Notes/one.md
+    - Team Notes/two.md
+    + TeamNotes/one.mdTeamNotes/two.md
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('Markdown files', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('Markdown files', { exact: true })
+        14 × locator resolved to <textarea rows="2" id="scope-files" aria-label="Markdown files" placeholder="Meetings/one.md">TeamNotes/one.mdTeamNotes/two.md</textarea>
+           - unexpected value "TeamNotes/one.mdTeamNotes/two.md"
+
+
+      615 |   await files.press('Enter');
+      616 |   await files.pressSequentially('Team Notes/two.md');
+    > 617 |   await expect(files).toHaveValue('Team Notes/one.md\nTeam Notes/two.md');
+          |                       ^
+      618 |   await files.press('Home'); await files.pressSequentially('  ');
+      619 |   await page.getByRole('button', { name: 'Preview selection' }).click();
+      620 |   expect(await page.evaluate(() => (window as any).calls.find((c: any) => c.command === 'workspace_scope_preview').args.request.spec.files)).toEqual(['Team Notes/one.md', 'Team Notes/two.md']);
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:617:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F1-keyboa-9c960-ines-until-explicit-preview/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F1-keyboa-9c960-ines-until-explicit-preview/error-context.md
+
+  2) tests/workspace.spec.ts:623:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByLabel('Aliases', { exact: true })
+    Expected: "Ledger migration, Finance team"
+    Received: "LedgermigrationFinanceteam"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('Aliases', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('Aliases', { exact: true })
+        14 × locator resolved to <input value="LedgermigrationFinanceteam"/>
+           - unexpected value "LedgermigrationFinanceteam"
+
+
+      625 |   const aliases = page.getByLabel('Aliases', { exact: true });
+      626 |   await aliases.pressSequentially('Ledger migration, Finance team');
+    > 627 |   await expect(aliases).toHaveValue('Ledger migration, Finance team');
+          |                         ^
+      628 |   await page.getByRole('button', { name: 'Approve selected changes' }).click();
+      629 |   expect(await page.evaluate(() => (window as any).calls.find((c: any) => c.command === 'workspace_proposal_decide').args.request.decision.candidates[0].topic.aliases)).toEqual(['Ledger migration', 'Finance team']);
+      630 |   await page.getByRole('button', { name: 'Topics', exact: true }).click(); await page.getByRole('button', { name: 'Ledger', exact: true }).click();
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:627:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F1-keyboa-ec527-teral-drafts-until-approval/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F1-keyboa-ec527-teral-drafts-until-approval/error-context.md
+
+  3) tests/workspace.spec.ts:641:1 › review F2 root boot errors are immediately actionable without runtime-only advice 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "The selected notes folder is unavailable."
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+
+
+      642 |   await page.addInitScript(() => { (window as any).__TAURI_INTERNALS__ = { invoke: async (command: string) => { if (command === 'workspace_root_get') throw {code:'no_root',message:'The selected notes folder is unavailable.',details:null}; if (command === 'workspace_runtime_status') return {available:true,version:'0.166.0',message:'Installed'}; throw new Error(command); } }; });
+      643 |   await page.goto('/');
+    > 644 |   await expect(page.getByRole('alert')).toContainText('The selected notes folder is unavailable.');
+          |                                         ^
+      645 |   await expect(page.getByLabel('Notes folder path')).toBeVisible();
+      646 |   await expect(page.getByRole('button', { name:'Check runtime again' })).toHaveCount(0);
+      647 | });
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:644:41
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F2-root-b-fe72a-without-runtime-only-advice/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F2-root-b-fe72a-without-runtime-only-advice/error-context.md
+
+  4) tests/workspace.spec.ts:649:1 › review F3 dates only filter an explicit nonblank files or folder selection 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('button', { name: 'Preview selection' })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: 'Preview selection' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Preview selection' })
+        14 × locator resolved to <button>Preview selection</button>
+           - unexpected value "enabled"
+
+
+      650 |   await workspaceFixture(page); await page.getByRole('button', {name:'Analyse notes',exact:true}).click();
+      651 |   await page.getByLabel('From date').fill('2026-11-01');
+    > 652 |   await expect(page.getByRole('button', {name:'Preview selection'})).toBeDisabled();
+          |                                                                      ^
+      653 |   await page.getByLabel('Folders', {exact:true}).fill('  \n  ');
+      654 |   await expect(page.getByRole('button', {name:'Preview selection'})).toBeDisabled();
+      655 |   await expect(page.getByText('Dates only filter the files and folders you choose.', {exact:false})).toBeVisible();
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:652:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F3-dates--f40c5-k-files-or-folder-selection/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F3-dates--f40c5-k-files-or-folder-selection/error-context.md
+
+  5) tests/workspace.spec.ts:658:1 › review F4 refresh of the same topic preserves chat draft and consent 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByLabel('Message about this topic')
+    Expected: "Keep my unfinished correction."
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('Message about this topic') with timeout 5000ms
+      - waiting for getByLabel('Message about this topic')
+        14 × locator resolved to <textarea rows="3" id="topic-message" placeholder="What should I know about this topic?"></textarea>
+           - unexpected value ""
+
+
+      663 |   await page.getByRole('button', {name:'New topic',exact:true}).click(); await page.getByLabel('Topic name', {exact:true}).fill('Another topic'); await page.getByRole('button', {name:'Create proposal'}).click();
+      664 |   await page.getByRole('button', {name:'Approve selected changes'}).click(); await page.getByRole('button', {name:'Topics',exact:true}).click();
+    > 665 |   await expect(page.getByLabel('Message about this topic')).toHaveValue('Keep my unfinished correction.');
+          |                                                             ^
+      666 |   await expect(page.getByLabel('Allow these unknown-sensitivity notes for this run')).toBeChecked();
+      667 | });
+      668 |
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:665:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F4-refres-76d76-rves-chat-draft-and-consent/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F4-refres-76d76-rves-chat-draft-and-consent/error-context.md
+
+  6) tests/workspace.spec.ts:669:1 › review F4 source inventory loading is distinct from an empty folder 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Loading source notes…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Loading source notes…', { exact: true }) with timeout 5000ms
+      - waiting for getByText('Loading source notes…', { exact: true })
+
+
+      670 |   await workspaceFixture(page); await page.evaluate(() => { (window as any).defer.workspace_sources_list = true; });
+      671 |   await page.getByRole('button', {name:'Sources',exact:true}).click();
+    > 672 |   await expect(page.getByText('Loading source notes…', {exact:true})).toBeVisible();
+          |                                                                       ^
+      673 |   await expect(page.getByText('No Markdown notes found.', {exact:false})).toHaveCount(0);
+      674 |   await page.evaluate(() => (window as any).defer.workspace_sources_list.resolve({sources:[]}));
+      675 |   await expect(page.getByText('No Markdown notes found.', {exact:false})).toBeVisible();
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:672:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F4-source-1a96c-stinct-from-an-empty-folder/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F4-source-1a96c-stinct-from-an-empty-folder/error-context.md
+
+  6 failed
+    tests/workspace.spec.ts:610:1 › review F1 keyboard paths retain spaces and newlines until explicit preview 
+    tests/workspace.spec.ts:623:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval 
+    tests/workspace.spec.ts:641:1 › review F2 root boot errors are immediately actionable without runtime-only advice 
+    tests/workspace.spec.ts:649:1 › review F3 dates only filter an explicit nonblank files or folder selection 
+    tests/workspace.spec.ts:658:1 › review F4 refresh of the same topic preserves chat draft and consent 
+    tests/workspace.spec.ts:669:1 › review F4 source inventory loading is distinct from an empty folder 

@@ -1,0 +1,50 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 --grep independently preserve
+
+[WebServer] (node:74914) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:74916) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/workspace.spec.ts:678:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines (5.7s)
+
+
+  1) tests/workspace.spec.ts:678:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByLabel('Apply future rule to these source paths')
+    Timeout: 5000ms
+    - Expected  - 2
+    + Received  + 1
+
+    - Team Notes/a.md
+    - Team Notes/b.md
+    + TeamNotes/a.mdTeamNotes/b.md
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('Apply future rule to these source paths') with timeout 5000ms
+      - waiting for getByLabel('Apply future rule to these source paths')
+        14 × locator resolved to <textarea placeholder="Empty means eligible sources for this topic and property">TeamNotes/a.mdTeamNotes/b.md</textarea>
+           - unexpected value "TeamNotes/a.mdTeamNotes/b.md"
+
+
+      682 |   await page.getByRole('button', {name:/Inbox/}).click();
+      683 |   const paths = page.getByLabel('Apply future rule to these source paths'); await paths.clear(); await paths.pressSequentially('Team Notes/a.md'); await paths.press('Enter'); await paths.pressSequentially('Team Notes/b.md');
+    > 684 |   await expect(paths).toHaveValue('Team Notes/a.md\nTeam Notes/b.md');
+          |                       ^
+      685 | });
+      686 |
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:684:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F1-keyboa-74bc2-e-spaces-and-multiple-lines/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F1-keyboa-74bc2-e-spaces-and-multiple-lines/error-context.md
+
+  1 failed
+    tests/workspace.spec.ts:678:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines 

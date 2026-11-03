@@ -1,0 +1,17 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 5.21s
+     Running unittests src/main.rs (target/debug/deps/topics_desktop-a0db99f0f2b3d13b)
+
+running 8 tests
+test entrypoint_tests::proxy_dispatch_requires_exact_supported_position_and_argument_count ... ok
+test workspace::tests::invalid_request_shapes_keep_typed_api_errors_before_service_access ... ok
+test runtime_path::tests::finder_discovery_only_checks_known_executable_metadata ... ok
+test workspace::tests::cancelled_core_capability_cannot_stage_late_candidates ... ok
+test workspace::tests::host_denies_approval_extra_arguments_and_unconfirmed_scope ... ok
+test workspace::tests::multiple_tool_calls_validate_dependencies_as_one_buffer ... ok
+test workspace::tests::host_validates_without_staging_then_commits_pending_only ... ok
+test workspace::tests::scoped_context_never_exposes_unrelated_or_local_only_topic_inventory ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+

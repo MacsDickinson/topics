@@ -1,0 +1,1 @@
+96b197774c12ffda27949b9337f630c4ef1fccacd07397ae72f47b3f7f0fb3c1  ../../target/release/bundle/macos/Topics.app/Contents/MacOS/topics-desktop

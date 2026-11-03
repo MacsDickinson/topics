@@ -354,7 +354,7 @@ test('omitted dependencies fail visibly and the exact edited subset stays review
   await start(page);
   await finish(page);
   await page
-    .getByRole('checkbox', { name: 'Include topic', exact: true })
+    .getByRole('checkbox', { name: /^Include topic: Ledger/ })
     .uncheck();
   await page.evaluate(() => {
     (window as any).failures.workspace_proposal_decide = {
@@ -374,7 +374,7 @@ test('omitted dependencies fail visibly and the exact edited subset stays review
     ),
   ).toEqual(['claim']);
   await expect(
-    page.getByRole('checkbox', { name: 'Include topic', exact: true }),
+    page.getByRole('checkbox', { name: /^Include topic: Ledger/ }),
   ).not.toBeChecked();
   expect(await page.evaluate(() => (window as any).topics)).toEqual([]);
 });
@@ -605,4 +605,231 @@ test('accepted empty analysis outcome says no new changes without an approval ca
       ),
     ),
   ).toEqual([]);
+});
+
+test('review F1 keyboard paths retain spaces and newlines until explicit preview', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await page
+    .getByRole('button', { name: 'Analyse notes', exact: true })
+    .click();
+  const files = page.getByLabel('Markdown files', { exact: true });
+  await files.pressSequentially('Team Notes/one.md');
+  await files.press('Enter');
+  await files.pressSequentially('Team Notes/two.md');
+  await expect(files).toHaveValue('Team Notes/one.md\nTeam Notes/two.md');
+  await files.press('Home');
+  await files.pressSequentially('  ');
+  await page.getByRole('button', { name: 'Preview selection' }).click();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as any).calls.find(
+          (c: any) => c.command === 'workspace_scope_preview',
+        ).args.request.spec.files,
+    ),
+  ).toEqual(['Team Notes/one.md', 'Team Notes/two.md']);
+});
+
+test('review F1 keyboard aliases and correction paths keep literal drafts until approval', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await finish(page);
+  const aliases = page.getByLabel('Aliases', { exact: true });
+  await aliases.pressSequentially('Ledger migration, Finance team');
+  await expect(aliases).toHaveValue('Ledger migration, Finance team');
+  await page.getByRole('button', { name: 'Approve selected changes' }).click();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as any).calls.find(
+          (c: any) => c.command === 'workspace_proposal_decide',
+        ).args.request.decision.candidates[0].topic.aliases,
+    ),
+  ).toEqual(['Ledger migration', 'Finance team']);
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Ledger', exact: true }).click();
+  await page
+    .getByLabel('Message about this topic')
+    .fill('The launch is Tuesday.');
+  await page.getByRole('button', { name: 'Preview chat sources' }).click();
+  await page
+    .getByLabel('Allow these unknown-sensitivity notes for this run')
+    .check();
+  await page.getByRole('button', { name: 'Send message' }).click();
+  await page.evaluate(() => {
+    const w = window as any;
+    w.showCorrection();
+    w.emitRun(1, { kind: 'completed' });
+  });
+  await page.getByRole('button', { name: /Inbox/ }).click();
+  const paths = page.getByLabel('Apply future rule to these source paths');
+  await paths.clear();
+  await paths.pressSequentially('Team Notes/a.md');
+  await paths.press('Enter');
+  await paths.pressSequentially('Team Notes/b.md');
+  await expect(paths).toHaveValue('Team Notes/a.md\nTeam Notes/b.md');
+  await page.getByRole('button', { name: 'Approve selected changes' }).click();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as any).calls
+          .filter((c: any) => c.command === 'workspace_proposal_decide')
+          .at(-1).args.request.decision.candidates[0].rule.scope.source_paths,
+    ),
+  ).toEqual(['Team Notes/a.md', 'Team Notes/b.md']);
+});
+
+test('review F2 root boot errors are immediately actionable without runtime-only advice', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    (window as any).__TAURI_INTERNALS__ = {
+      invoke: async (command: string) => {
+        if (command === 'workspace_root_get')
+          throw {
+            code: 'no_root',
+            message: 'The selected notes folder is unavailable.',
+            details: null,
+          };
+        if (command === 'workspace_runtime_status')
+          return { available: true, version: '0.166.0', message: 'Installed' };
+        throw new Error(command);
+      },
+    };
+  });
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText(
+    'The selected notes folder is unavailable.',
+  );
+  await expect(page.getByLabel('Notes folder path')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Check runtime again' }),
+  ).toHaveCount(0);
+});
+
+test('review F3 dates only filter an explicit nonblank files or folder selection', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await page
+    .getByRole('button', { name: 'Analyse notes', exact: true })
+    .click();
+  await page.getByLabel('From date').fill('2026-11-01');
+  await expect(
+    page.getByRole('button', { name: 'Preview selection' }),
+  ).toBeDisabled();
+  await page.getByLabel('Folders', { exact: true }).fill('  \n  ');
+  await expect(
+    page.getByRole('button', { name: 'Preview selection' }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText('Dates only filter the files and folders you choose.', {
+      exact: false,
+    }),
+  ).toBeVisible();
+});
+
+test('review F4 refresh of the same topic preserves chat draft and consent', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await finish(page);
+  await page.getByRole('button', { name: 'Approve selected changes' }).click();
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Ledger', exact: true }).click();
+  await page
+    .getByLabel('Message about this topic')
+    .fill('Keep my unfinished correction.');
+  await page.getByRole('button', { name: 'Preview chat sources' }).click();
+  await page
+    .getByLabel('Allow these unknown-sensitivity notes for this run')
+    .check();
+  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByLabel('Topic name', { exact: true }).fill('Another topic');
+  await page.getByRole('button', { name: 'Create proposal' }).click();
+  await page.getByRole('button', { name: 'Approve selected changes' }).click();
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await expect(page.getByLabel('Message about this topic')).toHaveValue(
+    'Keep my unfinished correction.',
+  );
+  await expect(
+    page.getByLabel('Allow these unknown-sensitivity notes for this run'),
+  ).toBeChecked();
+});
+
+test('review F4 source inventory loading is distinct from an empty folder', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await page.evaluate(() => {
+    (window as any).defer.workspace_sources_list = true;
+  });
+  await page.getByRole('button', { name: 'Sources', exact: true }).click();
+  await expect(
+    page.getByText('Loading source notes…', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('No Markdown notes found.', { exact: false }),
+  ).toHaveCount(0);
+  await page.evaluate(() =>
+    (window as any).defer.workspace_sources_list.resolve({ sources: [] }),
+  );
+  await expect(
+    page.getByText('No Markdown notes found.', { exact: false }),
+  ).toBeVisible();
+});
+
+test('review F1 keyboard correction paths independently preserve spaces and multiple lines', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await finish(page);
+  await page.getByRole('button', { name: 'Approve selected changes' }).click();
+  await start(page);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.showCorrection();
+    w.emitRun(1, { kind: 'completed' });
+  });
+  await page.getByRole('button', { name: /Inbox/ }).click();
+  const paths = page.getByLabel('Apply future rule to these source paths');
+  await paths.clear();
+  await paths.pressSequentially('Team Notes/a.md');
+  await paths.press('Enter');
+  await paths.pressSequentially('Team Notes/b.md');
+  await expect(paths).toHaveValue('Team Notes/a.md\nTeam Notes/b.md');
+});
+
+test('review F4 include labels distinguish candidates of the same kind', async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await start(page);
+  await page.evaluate(() => {
+    const w = window as any;
+    w.showProposal();
+    const second = structuredClone(w.proposals[0].candidates[1]);
+    second.claim.value = 'Monday';
+    w.proposals[0].candidates.push(second);
+    w.emitRun(1, { kind: 'completed' });
+  });
+  await page.getByRole('button', { name: /Inbox/ }).click();
+  await expect(
+    page.getByRole('checkbox', {
+      name: 'Include claim: Ledger launch: Friday (change 2)',
+      exact: true,
+    }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole('checkbox', {
+      name: 'Include claim: Ledger launch: Monday (change 3)',
+      exact: true,
+    }),
+  ).toHaveCount(1);
 });

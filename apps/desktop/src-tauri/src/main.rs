@@ -42,7 +42,10 @@ async fn search_notes(
                 .map_err(|error| error.to_string())?
                 .is_none()
             {
-                return Err("No notes folder configured. Use topics use <path> first.".to_string());
+                return Err(
+                    "No notes folder configured. Choose a notes folder in the app first."
+                        .to_string(),
+                );
             }
             let watcher = service.watch().map_err(|error| error.to_string())?;
             *session = Some(StoreSession {
@@ -61,9 +64,15 @@ async fn search_notes(
     .map_err(|error| error.to_string())?
 }
 
+fn proxy_invocation(mut arguments: impl Iterator<Item = std::ffi::OsString>) -> bool {
+    arguments.next();
+    arguments.next().as_deref() == Some(std::ffi::OsStr::new("--topics-mcp-proxy"))
+        && arguments.next().is_none()
+}
+
 fn main() {
     // Minimal MCP proxy dispatch happens before GUI, state or root discovery.
-    if std::env::args().any(|argument| argument == "--topics-mcp-proxy") {
+    if proxy_invocation(std::env::args_os()) {
         std::process::exit(topics_runtime::run_stdio_proxy());
     }
     let builder = tauri::Builder::default();
@@ -106,4 +115,31 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Topics desktop");
+}
+
+#[cfg(test)]
+mod entrypoint_tests {
+    use super::*;
+    #[test]
+    fn proxy_dispatch_requires_exact_supported_position_and_argument_count() {
+        let args = |values: &[&str]| {
+            values
+                .iter()
+                .map(std::ffi::OsString::from)
+                .collect::<Vec<_>>()
+                .into_iter()
+        };
+        assert!(proxy_invocation(args(&["topics", "--topics-mcp-proxy"])));
+        assert!(!proxy_invocation(args(&["topics"])));
+        assert!(!proxy_invocation(args(&[
+            "topics",
+            "--open",
+            "--topics-mcp-proxy"
+        ])));
+        assert!(!proxy_invocation(args(&[
+            "topics",
+            "--topics-mcp-proxy",
+            "extra"
+        ])));
+    }
 }

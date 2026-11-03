@@ -1,0 +1,33 @@
+    Checking objc2-exception-helper v0.1.1
+    Checking libsqlite3-sys v0.36.0
+    Checking objc2 v0.6.5
+    Checking rusqlite v0.38.0
+    Checking topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
+    Checking objc2-core-foundation v0.3.2
+    Checking block2 v0.6.2
+    Checking objc2-javascript-core v0.3.2
+    Checking dispatch2 v0.3.1
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> crates/topics-store/src/workspace/persistence.rs:406:42
+    |
+406 | pub(super) fn journals(ctx: &Context) -> WResult<(Vec<(PathBuf, Journal)>, Vec<String>)> {
+    |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+    = note: `-D clippy::type-complexity` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::type_complexity)]`
+
+error: unnecessary use of `get(&source.source_id).is_none()`
+   --> crates/topics-store/src/workspace/scopes.rs:299:23
+    |
+299 |         state.sources.get(&source.source_id).is_none()
+    |         --------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |
+    |         help: replace it with: `!state.sources.contains_key(&source.source_id)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unnecessary_get_then_check
+    = note: `-D clippy::unnecessary-get-then-check` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::unnecessary_get_then_check)]`
+
+error: could not compile `topics-store` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
