@@ -35,3 +35,8 @@ pub struct IndexReport {
 
 pub mod workspace;
 pub use workspace::*;
+
+mod workspace_validation;
+pub use workspace_validation::{
+    validate_candidate_shapes, validate_date_range, validate_workspace_id,
+};

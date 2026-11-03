@@ -24,12 +24,23 @@ pub fn document(path: &str, body: &str, hash: String, modified_ns: String) -> Do
         .unwrap_or(file)
         .trim()
         .to_string();
-    let date = if kind == "meeting" || kind == "log" {
+    let filename_date = if kind == "meeting" || kind == "log" {
         date_prefix(file)
     } else {
         None
     };
-    if kind == "meeting" && date.is_some() {
+    let date = filename_date.clone().or_else(|| {
+        // Explicit date frontmatter is indexed too; unsupported dates remain undated.
+        body.strip_prefix("---\n")
+            .and_then(|s| s.split_once("\n---"))
+            .and_then(|(front, _)| {
+                front.lines().find_map(|line| {
+                    let d = line.strip_prefix("date: ")?.trim();
+                    (d.len() == 10).then(|| date_prefix(d)).flatten()
+                })
+            })
+    });
+    if kind == "meeting" && filename_date.is_some() {
         // Convention: YYYY-MM-DD-HH-MM-title.md; date-only names also work.
         let suffix = file.get(11..).unwrap_or("");
         let parts: Vec<_> = suffix.split('-').collect();
@@ -157,5 +168,37 @@ mod tests {
             assert_eq!(date_prefix(file), None, "{file}");
         }
         assert_eq!(date_prefix("2024-02-29-meeting"), Some("2024-02-29".into()));
+    }
+}
+
+#[cfg(test)]
+mod workspace_date_tests {
+    use super::*;
+    #[test]
+    fn indexed_frontmatter_date_is_validated_without_changing_arbitrary_titles() {
+        let d = document(
+            "Meetings/arbitrary-meeting-name.md",
+            "---\ndate: 2026-11-01\n---\n# Explicit title\n",
+            "h".into(),
+            "0".into(),
+        );
+        assert_eq!(d.date.as_deref(), Some("2026-11-01"));
+        assert_eq!(d.title, "Explicit title");
+        for date in ["2026-02-30", "2026-11-01 extra", "yesterday", "2026-1-1"] {
+            let d = document(
+                "folder/file.md",
+                &format!("---\ndate: {date}\n---\n# Note\n"),
+                "h".into(),
+                "0".into(),
+            );
+            assert!(d.date.is_none());
+        }
+        let d = document(
+            "Meetings/2026-11-03-session.md",
+            "---\ndate: 2026-11-01\n---\n# Title\n",
+            "h".into(),
+            "0".into(),
+        );
+        assert_eq!(d.date.as_deref(), Some("2026-11-03"));
     }
 }

@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+test-support = []
+
 [dependencies]
 topics-core.workspace = true
 serde.workspace = true
@@ -13,6 +16,9 @@ sha2 = "0.10"
 walkdir = "2"
 thiserror = "2"
 directories = "6"
+
+uuid = { version = "1", features = ["v4", "v5"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [dev-dependencies]
 tempfile = "3"

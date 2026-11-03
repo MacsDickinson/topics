@@ -7,11 +7,15 @@ pub type Timestamp = String;
 pub type Date = String;
 pub type WorkspaceResult<T> = Result<T, ApiError>;
 
+fn required<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Result<T, D::Error> {
+    T::deserialize(d)
+}
+
 macro_rules! value {
     ($name:ident { $($field:ident : $ty:ty),* $(,)? }) => {
         #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
         #[serde(deny_unknown_fields)]
-        pub struct $name { $(pub $field: $ty),* }
+        pub struct $name { $(#[serde(deserialize_with="required")] pub $field: $ty),* }
     };
 }
 value!(RootRef {
@@ -102,7 +106,7 @@ pub enum Candidate {
         sources: Vec<SourceRef>,
     },
 }
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Origin {
     Analysis { run_id: Id },
@@ -141,7 +145,7 @@ impl std::fmt::Display for ApiError {
     }
 }
 impl std::error::Error for ApiError {}
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Decision {
     Approve { candidates: Vec<Candidate> },
@@ -258,3 +262,43 @@ value!(SourceGetRequest {
     root_id: Id,
     source_id: Id
 });
+
+// Internally tagged unit variants otherwise ignore extra properties in serde.
+// Empty struct wire variants enforce the same strict input rule while keeping the
+// canonical ergonomic Rust variants Origin::Manual and Decision::Reject.
+impl<'de> Deserialize<'de> for Origin {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+        enum Wire {
+            Analysis { run_id: Id },
+            Chat { topic_id: Id, message_id: Id },
+            Manual {},
+        }
+        Ok(match Wire::deserialize(d)? {
+            Wire::Analysis { run_id } => Self::Analysis { run_id },
+            Wire::Chat {
+                topic_id,
+                message_id,
+            } => Self::Chat {
+                topic_id,
+                message_id,
+            },
+            Wire::Manual {} => Self::Manual,
+        })
+    }
+}
+impl<'de> Deserialize<'de> for Decision {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+        enum Wire {
+            Approve { candidates: Vec<Candidate> },
+            Reject {},
+        }
+        Ok(match Wire::deserialize(d)? {
+            Wire::Approve { candidates } => Self::Approve { candidates },
+            Wire::Reject {} => Self::Reject,
+        })
+    }
+}

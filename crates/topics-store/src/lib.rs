@@ -2,6 +2,7 @@
 mod app_data;
 mod parse;
 mod scan;
+mod workspace;
 pub use app_data::application_data_dir;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
@@ -17,6 +18,7 @@ use std::{
 };
 use thiserror::Error;
 pub use topics_core::{Document, IndexReport, Person, SearchResult};
+pub use workspace::WorkspaceService;
 
 pub type Result<T> = std::result::Result<T, StoreError>;
 #[derive(Debug, Error)]
