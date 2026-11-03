@@ -1067,7 +1067,7 @@ Execution of 1 workers started at 2026-11-03T08:08:17.644Z
 [webkit 605.1.15 macos #0-0] 2 passing (3.4s)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:04  
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:04
 
 
 Execution of 1 workers started at 2026-11-03T08:08:24.442Z
@@ -1087,7 +1087,7 @@ Execution of 1 workers started at 2026-11-03T08:08:24.442Z
 [webkit 605.1.15 macos #0-0] 1 passing (105ms)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00
 
 
 Execution of 1 workers started at 2026-11-03T08:08:27.704Z
@@ -1107,7 +1107,7 @@ Execution of 1 workers started at 2026-11-03T08:08:27.704Z
 [webkit 605.1.15 macos #0-0] 1 passing (105ms)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00
 
 
 > @topics/desktop@0.1.0 test:native:workspace
@@ -1176,7 +1176,7 @@ Execution of 1 workers started at 2026-11-03T08:08:39.233Z
 [webkit 605.1.15 macos #0-0] 1 passing (1.4s)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:02  
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:02
 
 
 Execution of 1 workers started at 2026-11-03T08:08:43.881Z
@@ -1196,7 +1196,7 @@ Execution of 1 workers started at 2026-11-03T08:08:43.881Z
 [webkit 605.1.15 macos #0-0] 1 passing (104ms)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00
 
 
 Execution of 1 workers started at 2026-11-03T08:08:47.121Z
@@ -1216,5 +1216,4 @@ Execution of 1 workers started at 2026-11-03T08:08:47.121Z
 [webkit 605.1.15 macos #0-0] 1 passing (103ms)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
-
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00

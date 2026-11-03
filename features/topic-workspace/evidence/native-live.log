@@ -47,7 +47,7 @@ Execution of 1 workers started at 2026-11-03T08:14:10.082Z
 [webkit 605.1.15 macos #0-0] 1 passing (49.1s)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:49  
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:49
 
 
 Execution of 1 workers started at 2026-11-03T08:15:02.774Z
@@ -67,5 +67,4 @@ Execution of 1 workers started at 2026-11-03T08:15:02.774Z
 [webkit 605.1.15 macos #0-0] 1 passing (506ms)
 
 
-Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
-
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01

@@ -34,4 +34,3 @@ Signing /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bund
         Warn skipping app notarization, no APPLE_ID & APPLE_PASSWORD & APPLE_TEAM_ID or APPLE_API_KEY & APPLE_API_ISSUER & APPLE_API_KEY_PATH environment variables found
     Finished 1 bundle at:
         /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/release/bundle/macos/Topics.app (20.31 MiB)
-
