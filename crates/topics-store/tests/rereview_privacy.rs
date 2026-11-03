@@ -513,6 +513,10 @@ fn n35_correction_marker_and_app_data_loss_should_warn() {
         !v.warnings.is_empty(),
         "newest marker plus app data lost: false claim current, orphan correction and rule files on disk, no warning"
     );
+    assert!(
+        v.current_claims.is_empty(),
+        "orphan replacement is not accepted and prior false current assertion stays withheld"
+    );
 }
 #[test]
 fn n40_guard_denied_leaves_no_visibility_and_no_temp() {
@@ -1014,4 +1018,377 @@ fn topic_only_repeat_is_pending_ambiguity_and_nested_topics_are_source_notes() {
     assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
     f.approve(&p).unwrap();
     assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 2);
+}
+
+#[test]
+fn n01_prestaged_provisional_duplicate_conflicts() {
+    let f = F::new();
+    f.write("M/a.md", "fact\n");
+    let s = f.source("M/a.md");
+    let (t1, t2) = (topic("Alex"), topic("Alex"));
+    let c1 = f.claim(&t1, &s.citation, "x");
+    let mut c2 = f.claim(&t2, &s.citation, "x");
+    c2.uncertainty = Some("reworded".into());
+    let p1 = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t1), cc(&c1)])
+        .unwrap();
+    let p2 = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t2), cc(&c2)])
+        .unwrap();
+    assert_ne!(p1.id, p2.id);
+    f.approve(&p1).unwrap();
+    let r = f.approve(&p2);
+    eprintln!(
+        "OBS second={} topics={} ",
+        code(&r),
+        f.service.topics_list(f.req()).unwrap().topics.len()
+    );
+    assert_eq!(code(&r), "conflict");
+    assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
+    assert_eq!(f.view(&t1).unwrap().current_claims.len(), 1);
+    assert_eq!(
+        f.service
+            .proposals_list(f.req())
+            .unwrap()
+            .proposals
+            .iter()
+            .find(|x| x.id == p2.id)
+            .unwrap()
+            .status,
+        ProposalStatus::Conflict
+    );
+    let q = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t2), cc(&c2)])
+        .unwrap();
+    eprintln!("OBS refresh status={:?} n={}", q.status, q.candidates.len());
+    assert!(q.candidates.is_empty());
+}
+
+#[test]
+fn n02_prestaged_reused_id_duplicate_conflicts() {
+    let f = F::new();
+    f.write("M/a.md", "fact\n");
+    let s = f.source("M/a.md");
+    let t = topic("A");
+    f.accept(vec![tc(&t)]);
+    let c1 = f.claim(&t, &s.citation, "x");
+    let mut c2 = fresh(&c1);
+    c2.uncertainty = Some("reworded".into());
+    let p1 = f.model_stage(vec!["M/a.md"], vec![cc(&c1)]).unwrap();
+    let p2 = f.model_stage(vec!["M/a.md"], vec![cc(&c2)]).unwrap();
+    f.approve(&p1).unwrap();
+    let r = f.approve(&p2);
+    eprintln!("OBS {}", code(&r));
+    assert_eq!(code(&r), "conflict");
+    assert_eq!(f.view(&t).unwrap().current_claims.len(), 1);
+}
+
+#[test]
+fn n03_prestaged_connection_duplicate_conflicts() {
+    let f = F::new();
+    f.write("M/a.md", "fact\n");
+    let s = f.source("M/a.md");
+    let (a, b) = (topic("A"), topic("B"));
+    f.accept(vec![tc(&a), tc(&b)]);
+    let c1 = f.conn(&a, &b, &s.citation);
+    let mut c2 = f.conn(&a, &b, &s.citation);
+    c2.uncertainty = Some("reworded".into());
+    let p1 = f
+        .model_stage(
+            vec!["M/a.md"],
+            vec![Candidate::Connection { connection: c1 }],
+        )
+        .unwrap();
+    let p2 = f
+        .model_stage(
+            vec!["M/a.md"],
+            vec![Candidate::Connection { connection: c2 }],
+        )
+        .unwrap();
+    f.approve(&p1).unwrap();
+    let r = f.approve(&p2);
+    eprintln!("OBS {}", code(&r));
+    assert_eq!(code(&r), "conflict");
+    assert_eq!(f.view(&a).unwrap().connections.len(), 1);
+}
+
+#[test]
+fn n04_prestaged_provisional_cannot_bypass_later_correction() {
+    let f = F::new();
+    f.write("M/a.md", "alex he/him\n");
+    let s = f.source("M/a.md");
+    let (t1, t2) = (topic("Alex"), topic("Alex"));
+    let c1 = f.claim(&t1, &s.citation, "he/him");
+    let mut c2 = f.claim(&t2, &s.citation, "he/him");
+    c2.uncertainty = Some("reworded".into());
+    let p1 = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t1), cc(&c1)])
+        .unwrap();
+    let p2 = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t2), cc(&c2)])
+        .unwrap();
+    f.approve(&p1).unwrap();
+    human_cloud(&f, &t1);
+    let (n, r) = f.correct(&t1, &c1, "they/them");
+    f.accept(vec![Candidate::Correction { claim: n, rule: r }]);
+    let d = f.approve(&p2);
+    let tops = f.service.topics_list(f.req()).unwrap().topics.len();
+    eprintln!("OBS {} topics={tops}", code(&d));
+    assert_eq!(code(&d), "conflict");
+    assert_eq!(tops, 1);
+    assert_eq!(f.view(&t1).unwrap().current_claims[0].value, "they/them");
+    // reused-subject variant staged before the rule exists
+}
+
+#[test]
+fn n05_prestaged_reused_subject_cannot_bypass_later_rule() {
+    let f = F::new();
+    f.write("M/a.md", "alex he/him\n");
+    let s = f.source("M/a.md");
+    let t = topic("Alex");
+    let c = f.claim(&t, &s.citation, "he/him");
+    f.accept(vec![tc(&t), cc(&c)]);
+    f.write("M/b.md", "alex he/him again\n");
+    let b = f.source("M/b.md");
+    let mut c2 = fresh(&c);
+    c2.sources = vec![Evidence::Passage {
+        source: b.citation.clone(),
+    }];
+    c2.uncertainty = Some("w".into());
+    // Different logical assertion text only by evidence: same_claim would dedupe it, so use a distinct date to keep it pending.
+    c2.valid_from = Some("2026-01-01".into());
+    let p = f.model_stage(vec!["M/b.md"], vec![cc(&c2)]).unwrap();
+    assert_eq!(p.status, ProposalStatus::Pending);
+    let (n, r) = f.correct(&t, &c, "they/them");
+    f.accept(vec![Candidate::Correction { claim: n, rule: r }]);
+    let d = f.approve(&p);
+    eprintln!("OBS {}", code(&d));
+    assert_eq!(code(&d), "conflict");
+}
+
+#[test]
+fn n06_prestaged_subset_cannot_silently_create_duplicate_identity_with_facts() {
+    let f = F::new();
+    f.write("M/a.md", "alex fact one\n");
+    let s = f.source("M/a.md");
+    let (t1, t2) = (topic("Alex"), topic("Alex"));
+    let c1 = f.claim(&t1, &s.citation, "one");
+    let mut c2 = f.claim(&t2, &s.citation, "one");
+    c2.uncertainty = Some("w".into());
+    let mut extra = f.claim(&t2, &s.citation, "two");
+    extra.predicate = "team".into();
+    let p1 = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t1), cc(&c1)])
+        .unwrap();
+    let p2 = f
+        .model_stage(vec!["M/a.md"], vec![tc(&t2), cc(&c2), cc(&extra)])
+        .unwrap();
+    f.approve(&p1).unwrap();
+    let r = f.decide(
+        &p2,
+        Decision::Approve {
+            candidates: vec![p2.candidates[0].clone(), cc(&extra)],
+        },
+    );
+    eprintln!(
+        "OBS subset={} topics={}",
+        code(&r),
+        f.service.topics_list(f.req()).unwrap().topics.len()
+    );
+    assert_eq!(code(&r), "conflict");
+    assert_eq!(f.service.topics_list(f.req()).unwrap().topics.len(), 1);
+}
+
+#[test]
+fn n07_unrelated_prestaged_proposals_do_not_false_conflict() {
+    let f = F::new();
+    f.write("M/a.md", "fact\n");
+    let s = f.source("M/a.md");
+    let t = topic("A");
+    f.accept(vec![tc(&t)]);
+    let c1 = f.claim(&t, &s.citation, "one");
+    let mut c2 = f.claim(&t, &s.citation, "two");
+    c2.predicate = "team".into();
+    let p1 = f.model_stage(vec!["M/a.md"], vec![cc(&c1)]).unwrap();
+    let p2 = f.model_stage(vec!["M/a.md"], vec![cc(&c2)]).unwrap();
+    f.approve(&p1).unwrap();
+    let r = f.approve(&p2);
+    eprintln!("OBS {}", code(&r));
+    assert_eq!(code(&r), "ok");
+}
+
+#[test]
+fn n08_genuine_second_joe_is_not_merged_and_ambiguity_is_explicit() {
+    let f = F::new();
+    f.write("M/a.md", "joe one\n");
+    f.write("M/b.md", "joe two\n");
+    let (a, b) = (f.source("M/a.md"), f.source("M/b.md"));
+    let j1 = topic("Joe");
+    let c1 = f.claim(&j1, &a.citation, "lead");
+    let p = f
+        .model_stage(vec!["M/a.md"], vec![tc(&j1), cc(&c1)])
+        .unwrap();
+    f.approve(&p).unwrap();
+    let j2 = topic("Joe");
+    let c2 = f.claim(&j2, &b.citation, "intern");
+    let q = f
+        .model_stage(vec!["M/b.md"], vec![tc(&j2), cc(&c2)])
+        .unwrap();
+    let un = q.candidates.iter().find_map(|c| {
+        if let Candidate::UnresolvedIdentity { candidates, .. } = c {
+            Some(candidates.clone())
+        } else {
+            None
+        }
+    });
+    eprintln!(
+        "OBS status={:?} kinds={} unresolved={:?}",
+        q.status,
+        q.candidates.len(),
+        un.as_ref().map(|u| u.len())
+    );
+    assert!(un.is_some());
+    f.approve(&q).unwrap();
+    let joes = f
+        .service
+        .topics_list(f.req())
+        .unwrap()
+        .topics
+        .iter()
+        .filter(|t| t.name == "Joe")
+        .count();
+    eprintln!(
+        "OBS joes={joes} j1_claims={}",
+        f.view(&j1).unwrap().current_claims.len()
+    );
+    assert_eq!(f.view(&j1).unwrap().current_claims.len(), 1);
+    assert_eq!(joes, 2);
+}
+
+#[test]
+fn n37_interrupted_correction_conflict_no_resurrection_positive() {
+    let f = F::new();
+    f.write("M/a.md", "alex he/him\n");
+    let s = f.source("M/a.md");
+    let t = topic("Alex");
+    let c = f.claim(&t, &s.citation, "he/him");
+    f.accept(vec![tc(&t), cc(&c)]);
+    let (n, r) = f.correct(&t, &c, "they/them");
+    let rule_path = f.root.join(format!("topics/rules/{}.md", r.id));
+    let p = f
+        .stage(vec![Candidate::Correction {
+            claim: n.clone(),
+            rule: r,
+        }])
+        .unwrap();
+    f.service.interrupt_next_operation_after(1);
+    assert!(f.approve(&p).is_err());
+    fs::write(&rule_path, b"external\n").unwrap();
+    let v = f.view(&t).unwrap();
+    eprintln!(
+        "OBS current={:?}",
+        v.current_claims
+            .iter()
+            .map(|c| c.value.clone())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(v.current_claims.len(), 1);
+    assert_eq!(v.current_claims[0].value, "he/him");
+    assert_eq!(fs::read(&rule_path).unwrap(), b"external\n");
+    assert_eq!(
+        f.service
+            .proposals_list(f.req())
+            .unwrap()
+            .proposals
+            .iter()
+            .find(|x| x.id == p.id)
+            .unwrap()
+            .status,
+        ProposalStatus::Conflict
+    );
+}
+
+#[test]
+fn maximum_raw_batch_private_name_does_not_change_tool_result_or_guard_visibility() {
+    let f = F::new();
+    f.write("M/a.md", "selected evidence\n");
+    let private = Topic {
+        sensitivity: Sensitivity::LocalOnly,
+        ..topic("Private Name")
+    };
+    f.accept(vec![tc(&private)]);
+    let p = f.preview(vec!["M/a.md"]);
+    let run_id = f.run(&p);
+    let mut candidates: Vec<_> = (0..200).map(|n| tc(&topic(&format!("Name {n}")))).collect();
+    let request = |candidates| StageProposalRequest {
+        root_id: f.root_id.clone(),
+        scope_id: Some(p.scope_id.clone()),
+        origin: Origin::Analysis {
+            run_id: run_id.clone(),
+        },
+        candidates,
+    };
+    assert!(
+        f.service
+            .validate_proposal(request(candidates.clone()))
+            .is_ok()
+    );
+    candidates[0] = tc(&topic(&private.name));
+    assert!(
+        f.service
+            .validate_proposal(request(candidates.clone()))
+            .is_ok()
+    );
+    let before = f.service.proposals_list(f.req()).unwrap();
+    let result = f
+        .service
+        .stage_proposal_guarded(request(candidates), |_, _| {
+            Err(ApiError::new("cancelled", "revoked"))
+        });
+    assert_eq!(result.unwrap_err().code, "cancelled");
+    assert_eq!(f.service.proposals_list(f.req()).unwrap(), before);
+    assert_eq!(
+        f.service.topics_list(f.req()).unwrap().topics,
+        vec![private]
+    );
+}
+
+#[test]
+fn orphan_rule_alone_quarantines_false_head_without_accepting_replacement() {
+    let f = F::new();
+    let (t, _, _) = alex_flow(&f);
+    let view = f.view(&t).unwrap();
+    let corrected = &view.current_claims[0];
+    let operations = f.service.history_list(f.req()).unwrap().operations;
+    let correction_op = operations.last().unwrap();
+    fs::remove_file(
+        f.root
+            .join(format!("topics/operations/{}.md", correction_op.id)),
+    )
+    .unwrap();
+    fs::remove_file(
+        f.root
+            .join(format!("topics/claims/{}.md", corrected.revision_id)),
+    )
+    .unwrap();
+    let data = tempfile::tempdir().unwrap();
+    let mut service = WorkspaceService::open(data.path().join("rebuilt")).unwrap();
+    let root_id = service
+        .root_set(RootSetRequest {
+            path: f.root.to_str().unwrap().into(),
+            create: false,
+        })
+        .unwrap()
+        .root
+        .root_id;
+    let view = service
+        .topic_get(TopicGetRequest {
+            root_id,
+            topic_id: t.id,
+        })
+        .unwrap();
+    assert!(!view.warnings.is_empty());
+    assert!(view.current_claims.is_empty());
+    assert!(view.history.iter().any(|c| c.value == "he/him"));
+    assert!(view.history.iter().all(|c| c.value != "they/them"));
 }
