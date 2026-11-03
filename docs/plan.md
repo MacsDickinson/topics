@@ -2,7 +2,7 @@
 
 Date: 2026-11-01. Revised after plan review on 2026-11-02. Based on the four reports in `docs/research/`; decisions below supersede their earlier recommendations.
 
-Phase 0's plan and 17 feature scenarios were approved on 2026-11-02 with the instruction to start the Orca team. Its implementation and independent Claude reviews are recorded in [the Phase 0 delivery report](phase-0-report.md). Later phases still require their own plan and scenario sign-off.
+Phase 0's plan and 17 feature scenarios were approved on 2026-11-02 with the instruction to start the Orca team. Its implementation and independent Claude reviews are recorded in [the Phase 0 delivery report](phase-0-report.md). The next milestone is authorized for overnight implementation by the user’s explicit instruction quoted in [its plan](../features/topic-workspace/PLAN.md); its scenarios are drafted, not individually reviewed by the user. Other future phases retain their own sign-off requirements.
 
 ## What we are building
 
@@ -87,7 +87,7 @@ CI: `cargo fmt`, `clippy -D warnings`, `cargo test`, cucumber with `fail_on_skip
 
 ## Delivery phases
 
-Each phase is one feature with its own sign-off.
+The in-progress [Topic workspace milestone](../features/topic-workspace/PLAN.md) delivers bounded discovery and correction first, combining slices of former phases 2, 3, 4 and 6. Its explicit overnight authority overrides the additional human sign-off gate for that milestone only; failing scenarios must still be recorded before code. The following table describes the remaining broader direction, not completed implementation. Each later feature has its own sign-off.
 
 | # | Feature | You get |
 |---|---|---|
