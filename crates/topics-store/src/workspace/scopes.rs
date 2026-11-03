@@ -177,19 +177,14 @@ pub(super) fn validate_source(ctx: &Context, state: &State, source: &SourceRef) 
 }
 pub(super) use topics_core::validate_date_range as validate_dates;
 
-fn restricted_sources(state: &State) -> BTreeSet<Id> {
+fn topic_tainted_sources(state: &State) -> BTreeSet<Id> {
     let private: BTreeSet<_> = state
         .topics
         .values()
         .filter(|t| topic_restricted(state, &t.id))
         .map(|t| t.id.clone())
         .collect();
-    let mut sources: BTreeSet<_> = state
-        .sources
-        .values()
-        .filter(|s| source_policy(state, &s.path, &s.hash) == Sensitivity::LocalOnly)
-        .map(|s| s.source_id.clone())
-        .collect();
+    let mut sources = BTreeSet::new();
     for c in state
         .claims
         .values()
@@ -209,6 +204,16 @@ fn restricted_sources(state: &State) -> BTreeSet<Id> {
             sources.extend(c.sources.iter().map(|s| s.source_id.clone()));
         }
     }
+    sources
+}
+fn restricted_sources(state: &State) -> BTreeSet<Id> {
+    let mut sources: BTreeSet<_> = state
+        .sources
+        .values()
+        .filter(|s| source_policy(state, &s.path, &s.hash) == Sensitivity::LocalOnly)
+        .map(|s| s.source_id.clone())
+        .collect();
+    sources.extend(topic_tainted_sources(state));
     sources
 }
 pub(super) fn path_sensitivity(state: &State, path: &str) -> Sensitivity {
@@ -240,6 +245,17 @@ fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
     let own = source_policy(state, path, h);
     if own == Sensitivity::LocalOnly {
         return own;
+    }
+    // Reviewing source bytes cannot declassify a private derived topic. Apply
+    // topic taint before the exact-byte source-consent override, so preview can
+    // exclude only this source and retain the unrelated eligible selection.
+    let topic_tainted = topic_tainted_sources(state);
+    if state
+        .source_history
+        .iter()
+        .any(|s| (s.hash == h || s.path == path) && topic_tainted.contains(&s.source_id))
+    {
+        return Sensitivity::LocalOnly;
     }
     if state
         .reviewed_sources
@@ -739,7 +755,14 @@ fn human_value_supported(state: &State, claim: &Claim) -> bool {
         let path = format!("topics/statements/{statement_id}.md");
         state.operations.iter().any(|operation| {
             if !operation.targets.iter().any(|t| t.path == path) { return false; }
-            if operation.operation.description == "Record user statement" { return true; }
+            if operation.operation.description == "Record user statement" {
+                // Approval of a question or metadata revision does not author
+                // the unchanged transcript value. A raw statement supports an
+                // actual changed value, or a literal value it itself supplied.
+                let changed_value = claim.supersedes.iter().any(|id| state.claims.get(id).is_some_and(|old| old.value.trim() != claim.value.trim()));
+                let literal_value = state.statements.get(statement_id).is_some_and(|statement| !claim.value.trim().is_empty() && statement.text.contains(claim.value.trim()));
+                return changed_value || literal_value;
+            }
             operation.proposal.as_ref().is_some_and(|decision| {
                 decision.applied_candidates.iter().any(|candidate| {
                     let (Candidate::Claim {claim:applied} | Candidate::Correction {claim:applied,..}) = candidate else { return false; };

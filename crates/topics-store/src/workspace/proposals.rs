@@ -910,13 +910,19 @@ fn normalize_model_candidates(
             }
         }
     }
-    for candidate in candidates {
-        let mut ambiguity = None;
-        if mode != NormalizationMode::Input && !matches!(origin, Origin::Chat { .. }) {
-            for id in dependencies(std::slice::from_ref(&candidate)) {
-                if let Some(a) = ambiguous.get(&id) {
-                    ambiguity = Some(a.clone());
-                    break;
+    // Build the review dependency closure before replacing any claim. Both
+    // logical and revision IDs identify that claim to connection endpoints.
+    // An already declared unresolved candidate is a human decision, not a new
+    // model identity: preserve its exact alternatives independent of UUID order.
+    let mut review_ambiguity = ambiguous.clone();
+    if mode != NormalizationMode::Input && !matches!(origin, Origin::Chat { .. }) {
+        for candidate in &candidates {
+            if matches!(candidate, Candidate::UnresolvedIdentity { .. }) {
+                continue;
+            }
+            for id in dependencies(std::slice::from_ref(candidate)) {
+                if review_ambiguity.contains_key(&id) {
+                    continue;
                 }
                 if let Some(topic) = state.topics.get(&id) {
                     let ids: Vec<_> = state
@@ -926,13 +932,58 @@ fn normalize_model_candidates(
                         .map(|t| t.id.clone())
                         .collect();
                     if ids.len() > 1 {
-                        ambiguity = Some((topic.name.clone(), ids));
-                        break;
+                        review_ambiguity.insert(id, (topic.name.clone(), ids));
                     }
                 }
             }
         }
-        if let Some((name, ids)) = ambiguity {
+        loop {
+            let mut changed = false;
+            for candidate in &candidates {
+                if let Candidate::Claim { claim } | Candidate::Correction { claim, .. } = candidate
+                    && let Some(ambiguity) = dependencies(std::slice::from_ref(candidate))
+                        .iter()
+                        .find_map(|id| review_ambiguity.get(id))
+                        .cloned()
+                {
+                    for id in [&claim.id, &claim.revision_id] {
+                        if !review_ambiguity.contains_key(id) {
+                            review_ambiguity.insert(id.clone(), ambiguity.clone());
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+    }
+    // Suppression also removes dependents rather than stranding their endpoints.
+    let suppressed: BTreeSet<_> = candidates
+        .iter()
+        .filter_map(|candidate| match candidate {
+            Candidate::Claim { claim }
+                if state.rules.values().any(|rule| rule_matches(rule, claim)) =>
+            {
+                Some([claim.id.clone(), claim.revision_id.clone()])
+            }
+            _ => None,
+        })
+        .flatten()
+        .collect();
+    for candidate in candidates {
+        if matches!(candidate, Candidate::UnresolvedIdentity { .. }) {
+            prepared.push(candidate);
+            continue;
+        }
+        if mode != NormalizationMode::Input
+            && !matches!(origin, Origin::Chat { .. })
+            && let Some((name, ids)) = dependencies(std::slice::from_ref(&candidate))
+                .iter()
+                .find_map(|id| review_ambiguity.get(id))
+                .cloned()
+        {
             let sources = evidence_refs(&candidate).into_iter().cloned().collect();
             prepared.push(Candidate::UnresolvedIdentity {
                 name,
@@ -941,7 +992,10 @@ fn normalize_model_candidates(
             });
             continue;
         }
-        if matches!(&candidate,Candidate::Claim{claim} if state.rules.values().any(|rule|rule_matches(rule,claim)))
+        if matches!(&candidate, Candidate::Claim {claim} if suppressed.contains(&claim.revision_id))
+            || dependencies(std::slice::from_ref(&candidate))
+                .iter()
+                .any(|id| suppressed.contains(id))
         {
             continue;
         }
@@ -981,10 +1035,28 @@ fn normalize_model_candidates(
                 .iter_mut()
                 .find(|c| matches!(c,Candidate::Claim{claim:old} if same_claim(old,claim)))
         {
-            merge_uncertainty(&mut old.uncertainty, &claim.uncertainty);
-            pending_ids.insert(claim.id.clone(), old.id.clone());
-            pending_ids.insert(claim.revision_id.clone(), old.revision_id.clone());
-            for evidence in &claim.sources {
+            if !old.supersedes.is_empty() && !claim.supersedes.is_empty() && old.id != claim.id {
+                return Err(error(
+                    "invalid_input",
+                    "Equivalent revisions target different assertions; review separately",
+                ));
+            }
+            // A superseding revision owns the established logical assertion;
+            // retaining a plain new UUID would lose or invalidate supersession.
+            let additional = if old.supersedes.is_empty() && !claim.supersedes.is_empty() {
+                std::mem::replace(old, claim.clone())
+            } else {
+                claim.clone()
+            };
+            merge_uncertainty(&mut old.uncertainty, &additional.uncertainty);
+            pending_ids.insert(additional.id.clone(), old.id.clone());
+            pending_ids.insert(additional.revision_id.clone(), old.revision_id.clone());
+            for revision in &additional.supersedes {
+                if !old.supersedes.contains(revision) {
+                    old.supersedes.push(revision.clone());
+                }
+            }
+            for evidence in &additional.sources {
                 if !old.sources.contains(evidence) {
                     old.sources.push(evidence.clone());
                 }

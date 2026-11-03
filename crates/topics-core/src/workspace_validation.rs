@@ -63,6 +63,9 @@ pub fn validate_candidate_shapes(candidates: &[Candidate]) -> WorkspaceResult<()
                 validate_date_range(&claim.valid_from, &claim.valid_to)?;
                 if let Candidate::Correction { rule, .. } = c {
                     validate_workspace_id(&rule.id)?;
+                    if rule.match_value.trim() == rule.replacement.trim() {
+                        return Err(invalid("Correction must change the matched value"));
+                    }
                 }
             }
             Candidate::Connection { connection } => {
