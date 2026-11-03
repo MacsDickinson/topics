@@ -1,0 +1,14 @@
+{
+  "source_commit": "4e01d9ff875be20a0ae4fe754b37cf1c026b933e",
+  "source_scope_sha256": "ee9f06be7d20f1e5106d39c22fd51c916444396ef5de1fcf321fd2a866d19401",
+  "latest_source_mtime_ns": 1793745258754921437,
+  "measurement_binary_sha256": "c7712e1467bb31722326dfed4720941913b1d5cf6a5e62e2fe9f4c1c072d4321",
+  "measurement_binary_mtime_ns": 1793745265107801761,
+  "started_utc": "2026-11-03T22:37:04.892294+00:00",
+  "finished_utc": "2026-11-03T22:37:08.912048+00:00",
+  "source_unchanged": true,
+  "samples": 34,
+  "all_success": true,
+  "model_calls": 0,
+  "synthetic_only": true
+}

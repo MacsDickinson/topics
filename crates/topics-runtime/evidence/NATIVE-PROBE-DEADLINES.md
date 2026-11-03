@@ -105,3 +105,25 @@ on the final source before integration, then rerun hosted macOS; this worker doe
 not claim a local measurement is a new hosted macOS pass. Root manifests, public
 Runtime/CommitPermit APIs, provider configuration, tool surface and core/UI remain
 unchanged, and no push is performed here.
+
+## Final local source chronology
+
+RED/baseline commit: `f16a770a6e036e4ded1d1e854c3bd8c0ae3572a1`.
+Frozen production fix: `4e01d9ff875be20a0ae4fe754b37cf1c026b933e`.
+The final local synthetic OS measurement ran 2026-11-03 22:37:04.892–22:37:08.912
+UTC against that unchanged source; only evidence/docs changed afterward.
+Source scope (runtime src/tests/examples/crate manifest) SHA256:
+`ee9f06be7d20f1e5106d39c22fd51c916444396ef5de1fcf321fd2a866d19401`.
+Measurement executable SHA256:
+`c7712e1467bb31722326dfed4720941913b1d5cf6a5e62e2fe9f4c1c072d4321`;
+its recorded mtime is newer than the final source edit, and it was unchanged
+through execution. The executable may be reused by cargo after source freeze;
+this record does not claim a fresh native model rebuild after commit creation.
+
+All 34 final samples pass. Unloaded/loaded sandbox-launch maxima were
+13.10/12.88 ms, Python-import maxima 105.61/81.11 ms, and actual complete
+preflight 988.17/966.63 ms. native-probe-timing-after.json contains every sample;
+native-probe-final-chronology.json records source and executable identities and
+zero model calls. These remain local measurements, not a reproduction or pass of
+the hosted macOS cold runner. The manager's fresh native live rebuild and focused
+cross-provider review are expressly still required for this production change.
