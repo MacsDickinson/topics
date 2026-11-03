@@ -1,0 +1,32 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running tests/clone_boundary.rs (target/debug/deps/clone_boundary-f8073be5d5245e9d)
+
+running 2 tests
+test clonefile_ancestor_cannot_copy_protected_descendant ... FAILED
+test fclonefileat_ancestor_cannot_copy_protected_descendant ... FAILED
+
+failures:
+
+---- clonefile_ancestor_cannot_copy_protected_descendant stdout ----
+
+thread 'clonefile_ancestor_cannot_copy_protected_descendant' (3518845) panicked at crates/topics-runtime/tests/clone_boundary.rs:24:128:
+assertion `left == right` failed: ancestor clone syscall must be denied
+  left: Number(0)
+ right: -1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- fclonefileat_ancestor_cannot_copy_protected_descendant stdout ----
+
+thread 'fclonefileat_ancestor_cannot_copy_protected_descendant' (3518846) panicked at crates/topics-runtime/tests/clone_boundary.rs:24:128:
+assertion `left == right` failed: ancestor clone syscall must be denied
+  left: Number(0)
+ right: -1
+
+
+failures:
+    clonefile_ancestor_cannot_copy_protected_descendant
+    fclonefileat_ancestor_cannot_copy_protected_descendant
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+error: test failed, to rerun pass `-p topics-runtime --test clone_boundary`

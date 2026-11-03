@@ -1,6 +1,7 @@
 //! Pinned installed Codex runtime. All domain mutation remains host-owned.
 pub mod bridge;
 mod commit;
+mod environment;
 pub mod isolation;
 mod mcp_client;
 pub use commit::CommitPermit;
@@ -71,7 +72,10 @@ pub(crate) fn error(code: &str, message: &str) -> ApiError {
     ApiError::new(code, message)
 }
 fn runtime_error(message: impl AsRef<str>) -> ApiError {
-    error("runtime_unavailable", message.as_ref())
+    error(
+        "runtime_unavailable",
+        &protocol::actionable_error(message.as_ref()),
+    )
 }
 impl Runtime {
     pub fn new(config: RuntimeConfig) -> Self {
@@ -85,11 +89,6 @@ impl Runtime {
             if !cfg!(target_os = "macos") {
                 return Err(runtime_error(
                     "Codex analysis requires supported macOS confinement; browsing/manual proposals remain available",
-                ));
-            }
-            if !self.config.proxy_path.is_file() {
-                return Err(runtime_error(
-                    "Install the Topics MCP proxy alongside the application",
                 ));
             }
             // Safe when a synchronous Tauri command is called from an async host.
@@ -119,7 +118,6 @@ impl Runtime {
             }
         }
         if self.config.codex_path.to_str().is_none()
-            || self.config.proxy_path.to_str().is_none()
             || !self.config.app_data.is_absolute()
             || !request.notes_root.is_absolute()
             || request.prompt.len() > protocol::MAX_FRAME / 2
@@ -274,7 +272,7 @@ impl Runtime {
         let catalog = install_catalog(&session_dir)?;
         let result=async {
             // First process reads effective server NAMES only, never logs config.
-            let mut discover=Process::spawn(self.command(&root,&cwd,&[],&[],&catalog))?;
+            let mut discover=Process::spawn(self.command(&root,&cwd,&[],&[],&catalog)?)?;
             let discovery=async {discover.initialize().await?;let value=discover.request("config/read",json!({"cwd":cwd,"includeLayers":false})).await?;
                 protocol::validate_privacy(&value["config"]).map_err(runtime_error)?;
                 let names=if value["config"]["mcp_servers"].is_null(){vec![]}else{value["config"]["mcp_servers"].as_object().map(|m|m.keys().cloned().collect::<Vec<_>>()).ok_or_else(||runtime_error("Codex configuration schema changed"))?};
@@ -290,7 +288,7 @@ impl Runtime {
             discover.stop().await;let (inherited,inherited_features)=discovered?;
             let bridge=bridge::Bridge::start(&request.run_id,&request.scope_id,host.clone(),state.clone()).await?;
             let client=match mcp_client::McpClient::connect(&bridge).await{Ok(client)=>client,Err(error)=>{bridge.close().await;return Err(error);}};
-            let process=Process::spawn(self.command(&root,&cwd,&inherited,&inherited_features,&catalog));
+            let process=Process::spawn(self.command(&root,&cwd,&inherited,&inherited_features,&catalog)?);
             let mut process=match process {Ok(p)=>p,Err(e)=>{bridge.close().await;return Err(e);}};
             let execution=self.execute(&mut process,request,&root,&cwd,&inherited,&state,&events,host.clone(),&client,&catalog);
             let mut result=tokio::select! {
@@ -314,7 +312,7 @@ impl Runtime {
         inherited: &[String],
         inherited_features: &[String],
         catalog: &Path,
-    ) -> tokio::process::Command {
+    ) -> WorkspaceResult<tokio::process::Command> {
         let mut cmd = isolation::command(root, &self.config.codex_path);
         cmd.current_dir(cwd);
         for flag in protocol::DISABLED {
@@ -324,34 +322,7 @@ impl Runtime {
         for setting in protocol::PRIVACY_OVERRIDES {
             cmd.args(["-c", *setting]);
         }
-        for variable in [
-            "OPENAI_BASE_URL",
-            "CHATGPT_BASE_URL",
-            "CODEX_BACKEND_BASE_URL",
-            "CODEX_CHATGPT_BASE_URL",
-            "OPENAI_API_KEY",
-            "CODEX_API_KEY",
-            "OTEL_EXPORTER_OTLP_ENDPOINT",
-            "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
-            "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
-            "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
-            "OTEL_EXPORTER_OTLP_HEADERS",
-            "HTTP_PROXY",
-            "HTTPS_PROXY",
-            "ALL_PROXY",
-            "http_proxy",
-            "https_proxy",
-            "all_proxy",
-            "OPENAI_API_BASE",
-            "OPENAI_API_HOST",
-            "SSL_CERT_FILE",
-            "SSL_CERT_DIR",
-            "REQUESTS_CA_BUNDLE",
-            "CURL_CA_BUNDLE",
-            "NODE_EXTRA_CA_CERTS",
-        ] {
-            cmd.env_remove(variable);
-        }
+        environment::apply(&mut cmd)?;
         for name in inherited_features {
             cmd.arg("-c").arg(format!("features.{name}=false"));
         }
@@ -365,7 +336,7 @@ impl Runtime {
             .arg(format!("model_catalog_json={}", json!(catalog)));
         cmd.env("RUST_LOG", "off");
         cmd.arg("app-server");
-        tokio::process::Command::from(cmd)
+        Ok(tokio::process::Command::from(cmd))
     }
     #[allow(clippy::too_many_arguments)]
     async fn execute(
@@ -570,10 +541,7 @@ impl Runtime {
                         let permit = CommitPermit::new(Duration::from_secs(5));
                         {
                             let mut s = state.lock().unwrap();
-                            if s.cancelled {
-                                return Err(error("cancelled", "Run cancelled"));
-                            }
-                            s.commit = Some(permit.clone());
+                            authorize_commit(&mut s, permit.clone())?;
                         }
                         let result = commit::stage(host.clone(), pending, permit.clone()).await;
                         if !finish_publication(request, state, events) {
@@ -595,72 +563,63 @@ async fn verify_inventory(
     thread_id: &str,
     expected: &[String],
 ) -> WorkspaceResult<()> {
-    for _ in 0..150 {
-        let mut rows = vec![];
-        let mut cursor = Value::Null;
-        let mut cursors = std::collections::HashSet::new();
-        for _ in 0..32 {
-            let inventory = process
-                .request(
-                    "mcpServerStatus/list",
-                    json!({"threadId":thread_id,"cursor":cursor,"limit":100}),
-                )
-                .await?;
-            rows.extend(
-                inventory["data"]
-                    .as_array()
-                    .ok_or_else(|| runtime_error("MCP inventory schema changed"))?
-                    .iter()
-                    .cloned(),
-            );
-            cursor = inventory
-                .get("nextCursor")
-                .cloned()
-                .ok_or_else(|| runtime_error("MCP inventory cursor missing"))?;
-            if cursor.is_null() {
-                break;
-            }
-            let s = cursor
-                .as_str()
-                .ok_or_else(|| runtime_error("MCP inventory cursor invalid"))?;
-            if !cursors.insert(s.to_owned()) {
-                return Err(runtime_error("MCP inventory cursor repeated"));
-            }
+    let mut rows = vec![];
+    let mut cursor = Value::Null;
+    let mut cursors = std::collections::HashSet::new();
+    for _ in 0..32 {
+        let inventory = process
+            .request(
+                "mcpServerStatus/list",
+                json!({"threadId":thread_id,"cursor":cursor,"limit":100}),
+            )
+            .await?;
+        rows.extend(
+            inventory["data"]
+                .as_array()
+                .ok_or_else(|| runtime_error("MCP inventory schema changed"))?
+                .iter()
+                .cloned(),
+        );
+        cursor = inventory
+            .get("nextCursor")
+            .cloned()
+            .ok_or_else(|| runtime_error("MCP inventory cursor missing"))?;
+        if cursor.is_null() {
+            break;
         }
-        if !cursor.is_null() {
-            return Err(runtime_error("MCP inventory exceeded page bound"));
+        let key = cursor
+            .as_str()
+            .ok_or_else(|| runtime_error("MCP inventory cursor invalid"))?;
+        if !cursors.insert(key.to_owned()) {
+            return Err(runtime_error("MCP inventory cursor repeated"));
         }
-        if rows.len() != expected.len()
-            || rows.iter().any(|row| {
-                row["name"]
-                    .as_str()
-                    .is_none_or(|name| !expected.iter().any(|expected| expected == name))
-            })
-        {
-            return Err(runtime_error("MCP server inventory drifted"));
-        }
-        let pending = rows.iter().any(|r| {
-            r["name"] == "topics"
-                && matches!(r["runtimeStatus"].as_str(), Some("starting" | "notStarted"))
-        });
-        if pending {
-            for row in &rows {
-                if row["name"] != "topics"
-                    && (row["runtimeStatus"] != "disabled"
-                        || row["tools"].as_object().is_none_or(|t| !t.is_empty()))
-                {
-                    return Err(runtime_error("Unexpected inherited MCP tool surface"));
-                }
-            }
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            continue;
-        }
-        return protocol::validate_inventory(&json!({"data":rows,"nextCursor":null}))
-            .map_err(runtime_error);
     }
-    Err(runtime_error(
-        "Topics MCP startup timed out; check packaged proxy",
-    ))
+    if !cursor.is_null() {
+        return Err(runtime_error("MCP inventory exceeded page bound"));
+    }
+    if rows.len() != expected.len()
+        || rows.iter().any(|row| {
+            row["name"]
+                .as_str()
+                .is_none_or(|name| !expected.iter().any(|expected| expected == name))
+        })
+    {
+        return Err(runtime_error("MCP server inventory drifted"));
+    }
+    protocol::validate_inventory(&json!({"data":rows,"nextCursor":null})).map_err(runtime_error)
+}
+fn authorize_commit(state: &mut RunState, permit: CommitPermit) -> WorkspaceResult<()> {
+    if state.cancelled {
+        return Err(error("cancelled", "Run cancelled; no proposals published"));
+    }
+    if state.failed {
+        return Err(error(
+            "forbidden",
+            "Tool verification failed before publication; review the selected scope and retry",
+        ));
+    }
+    state.commit = Some(permit);
+    Ok(())
 }
 
 fn canonical_id(id: &str) -> bool {
@@ -783,7 +742,9 @@ fn emit(request: &RunRequest, state: &mut RunState, sink: &EventSink, event: Run
 }
 async fn check_version(path: &Path) -> WorkspaceResult<()> {
     use tokio::io::AsyncReadExt;
-    let mut cmd = tokio::process::Command::new(path);
+    let mut base = std::process::Command::new(path);
+    environment::apply(&mut base)?;
+    let mut cmd = tokio::process::Command::from(base);
     cmd.arg("--version")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
@@ -839,20 +800,15 @@ fn validate_item(item: &Value) -> WorkspaceResult<()> {
     if item["id"].as_str().is_none_or(str::is_empty) {
         return Err(runtime_error("Missing item identity"));
     }
-    if matches!(
-        item["type"].as_str(),
-        Some("mcpToolCall" | "dynamicToolCall")
-    ) && !matches!(
-        item["status"].as_str(),
-        Some("inProgress" | "completed" | "failed")
-    ) {
+    if item["type"] == "dynamicToolCall"
+        && !matches!(
+            item["status"].as_str(),
+            Some("inProgress" | "completed" | "failed")
+        )
+    {
         return Err(runtime_error("Unknown MCP call status"));
     }
-    if matches!(
-        item["type"].as_str(),
-        Some("mcpToolCall" | "dynamicToolCall")
-    ) && item["status"] == "failed"
-    {
+    if item["type"] == "dynamicToolCall" && item["status"] == "failed" {
         return Err(runtime_error("Model tool failed; all candidates discarded"));
     }
     match item["type"].as_str() {
@@ -902,23 +858,48 @@ pub(crate) fn check_notification(frame: &Value) -> WorkspaceResult<()> {
         | "item/reasoning/summaryTextDelta"
         | "item/reasoning/summaryPartAdded"
         | "item/reasoning/textDelta"
-        | "item/mcpToolCall/progress"
         | "account/rateLimits/updated"
         | "turn/moderationMetadata" => Ok(()),
         "account/updated" if frame["params"]["authMode"] == "chatgpt" => Ok(()),
-        "mcpServer/startupStatus/updated"
-            if frame["params"]["name"] == "topics"
-                && matches!(
-                    frame["params"]["status"].as_str(),
-                    Some("starting" | "ready")
-                )
-                && frame["params"]["error"].is_null() =>
-        {
-            Ok(())
-        }
         "remoteControl/status/changed" if frame["params"]["status"] == "disabled" => Ok(()),
         _ => Err(runtime_error(
             "Unexpected runtime event or configuration change; run discarded",
         )),
+    }
+}
+
+#[cfg(test)]
+mod targeted_review_tests {
+    use super::*;
+    #[test]
+    fn second_commit_gate_rejects_failed_state() {
+        let mut state = RunState {
+            cancelled: false,
+            terminal: false,
+            calls: 0,
+            pending: vec![],
+            seq: 0,
+            terminal_emitted: false,
+            failed: true,
+            commit: None,
+            publication_emitted: false,
+        };
+        assert!(authorize_commit(&mut state, CommitPermit::new(Duration::from_secs(1))).is_err());
+        assert!(state.commit.is_none());
+    }
+    #[test]
+    fn safety_codes_have_actionable_sanitized_remediation() {
+        for code in [
+            "inherited_thread_instructions",
+            "unsafe_thread_configuration",
+            "custom_model_providers_unsupported",
+            "unsafe_feature_shell_tool",
+            "unexpected_custom_destination",
+            "unknown_future_safety_code",
+        ] {
+            let error = runtime_error(code);
+            assert!(!error.message.contains(code));
+            assert!(error.message.to_lowercase().contains("retry"));
+        }
     }
 }

@@ -85,6 +85,12 @@ pub fn validate_config(value: &Value, inherited: &[String]) -> Result<(), String
     Ok(())
 }
 pub fn validate_thread(value: &Value, cwd: &std::path::Path) -> Result<String, String> {
+    if value["instructionSources"]
+        .as_array()
+        .is_none_or(|sources| !sources.is_empty())
+    {
+        return Err("inherited_thread_instructions".into());
+    }
     if value["thread"]["ephemeral"] != true
         || value["approvalPolicy"] != "never"
         || value["sandbox"]["type"] != "readOnly"
@@ -226,4 +232,40 @@ pub fn validate_privacy(c: &Value) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+/// Translate static safety diagnostics, never raw frames or config values.
+pub(crate) fn actionable_error(message: &str) -> String {
+    let remediation = match message {
+        "inherited_thread_instructions" => {
+            "Codex loaded inherited AGENTS.md instructions. Disable those instructions in the configured Codex environment, then retry"
+        }
+        "unsafe_thread_configuration" => {
+            "Codex did not honor the required ephemeral read-only thread. Install the pinned Codex version, remove conflicting managed settings, then retry"
+        }
+        "custom_model_providers_unsupported" => {
+            "Custom Codex providers cannot be used for note analysis. Use the built-in ChatGPT provider with a clean Codex configuration, then retry"
+        }
+        "unsafe_privacy_controls" => {
+            "Required note-privacy controls could not be applied. Remove conflicting managed Codex overrides or use a clean Codex configuration, then retry"
+        }
+        "custom_provider_destination_unsupported" | "unexpected_custom_destination" => {
+            "Codex has an unsupported destination override. Remove custom endpoint settings and use the required ChatGPT subscription service, then retry"
+        }
+        code if code.starts_with("unsafe_feature_") || code == "unexpected_enabled_feature" => {
+            "An extra Codex feature remains enabled. Remove conflicting managed feature overrides or use a clean Codex configuration, then retry"
+        }
+        code if code.starts_with("inherited_") => {
+            "Codex loaded an inherited profile, prompt file, or endpoint setting. Disable those overrides in the configured Codex environment, then retry"
+        }
+        code if !code.contains(char::is_whitespace) => {
+            "Runtime safety verification failed. Restart Topics with the pinned Codex version and a supported local notes folder, then retry"
+        }
+        _ => message,
+    };
+    if remediation.to_lowercase().contains("retry") {
+        remediation.to_owned()
+    } else {
+        format!("{remediation}. Restart Topics with the pinned Codex configuration and retry.")
+    }
 }

@@ -90,9 +90,17 @@ impl McpClient {
         )
         .await
         .map_err(|_| error("runtime_unavailable", "Topics MCP request timed out"))?
-        .map_err(|_| error("forbidden", "Topics MCP request denied"))?;
+        .map_err(|_| {
+            error(
+                "forbidden",
+                "Topics tool request denied; review and reconfirm the selected sources, then retry",
+            )
+        })?;
         if result.is_error == Some(true) {
-            return Err(error("forbidden", "Topics MCP request denied"));
+            return Err(error(
+                "forbidden",
+                "Topics tool request denied; review and reconfirm the selected sources, then retry",
+            ));
         }
         let mut output = vec![];
         let mut bytes = 0;

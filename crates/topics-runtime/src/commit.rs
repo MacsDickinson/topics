@@ -83,9 +83,13 @@ impl CommitPermit {
             _ => None,
         }
     }
-    /// false means publication already linearized; cancellation is too late.
+    /// false means publication is in progress/busy or already linearized; do not block the caller on the final atomic action.
     pub(crate) fn revoke(&self) -> bool {
-        let mut state = self.inner.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut state = match self.inner.state.try_lock() {
+            Ok(state) => state,
+            Err(std::sync::TryLockError::WouldBlock) => return false,
+            Err(std::sync::TryLockError::Poisoned(error)) => error.into_inner(),
+        };
         if matches!(*state, State::Published(_)) {
             return false;
         }
@@ -166,5 +170,28 @@ mod tests {
         );
         assert_eq!(permit.published(), Some(vec![id]));
         assert_eq!(calls, 1);
+    }
+    #[test]
+    fn revoke_does_not_wait_for_final_publication_action() {
+        let permit = CommitPermit::new(Duration::from_secs(2));
+        let worker = permit.clone();
+        let id = uuid::Uuid::new_v4().to_string();
+        let expected = id.clone();
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            worker.publish(vec![id], &mut || {
+                entered_tx.send(()).unwrap();
+                release_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+                Ok(())
+            })
+        });
+        entered_rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        let start = Instant::now();
+        assert!(!permit.revoke());
+        assert!(start.elapsed() < Duration::from_millis(100));
+        release_tx.send(()).unwrap();
+        thread.join().unwrap().unwrap();
+        assert_eq!(permit.published(), Some(vec![expected]));
     }
 }

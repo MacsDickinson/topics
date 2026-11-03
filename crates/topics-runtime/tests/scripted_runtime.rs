@@ -42,6 +42,7 @@ fn fixture(mode: &str) -> (tempfile::TempDir, Runtime, RunRequest, Arc<Host>) {
     let source = format!(
         r#"#!/usr/bin/env python3
 import sys,json,os,socket,subprocess
+assert not {{'CODEX_ROLLOUT_TRACE_ROOT','CODEX_CA_CERTIFICATE','SSLKEYLOGFILE','CODEX_ACCESS_TOKEN','CODEX_APP_SERVER_CHATGPT_BASE_URL','CODEX_AUTHAPI_BASE_URL','OPENAI_ORGANIZATION','OPENAI_PROJECT'}}.intersection(os.environ)
 if '--version' in sys.argv: print('codex-cli 0.166.0');sys.exit()
 def emit(v):print(json.dumps(v),flush=True)
 def result(i,v):emit({{'id':i,'result':v}})
@@ -536,4 +537,62 @@ fn review_published_outcome_survives_host_stall_and_error() {
     release_tx.send(()).unwrap();
     assert!(done_rx.recv_timeout(Duration::from_secs(1)).unwrap());
     assert!(rx.recv_timeout(Duration::from_millis(40)).is_err());
+}
+
+#[test]
+fn review_child_environment_allowlist() {
+    if std::env::var_os("TOPICS_ENV_TEST_CHILD").is_some() {
+        let (_temp, rt, request, host) = fixture("complete");
+        let (tx, rx) = mpsc::channel();
+        rt.analysis_start(
+            request,
+            host.clone(),
+            Arc::new(move |e| {
+                let _ = tx.send(e);
+            }),
+        )
+        .unwrap();
+        loop {
+            let e = rx.recv_timeout(Duration::from_secs(15)).unwrap();
+            match e.event {
+                RunEvent::Completed => break,
+                RunEvent::Error { error } => {
+                    panic!("filtered child environment must support runtime: {error}")
+                }
+                _ => {}
+            }
+        }
+        assert_eq!(*host.stages.lock().unwrap(), 1);
+        return;
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let output = rt.block_on(async {
+        let mut cmd = tokio::process::Command::new(std::env::current_exe().unwrap());
+        cmd.args([
+            "--exact",
+            "review_child_environment_allowlist",
+            "--nocapture",
+        ])
+        .env("TOPICS_ENV_TEST_CHILD", "1")
+        .env("CODEX_ROLLOUT_TRACE_ROOT", temp.path().join("trace"))
+        .env("CODEX_CA_CERTIFICATE", temp.path().join("untrusted-ca"))
+        .env("SSLKEYLOGFILE", temp.path().join("keys"))
+        .env("CODEX_ACCESS_TOKEN", "synthetic-not-a-token")
+        .env("CODEX_APP_SERVER_CHATGPT_BASE_URL", "http://127.0.0.1:1")
+        .env("CODEX_AUTHAPI_BASE_URL", "http://127.0.0.1:1")
+        .env("OPENAI_ORGANIZATION", "synthetic")
+        .env("OPENAI_PROJECT", "synthetic")
+        .kill_on_drop(true);
+        tokio::time::timeout(Duration::from_secs(20), cmd.output())
+            .await
+            .unwrap()
+            .unwrap()
+    });
+    assert!(
+        output.status.success(),
+        "hostile inherited trace/CA/endpoint environment must be removed"
+    );
+    assert!(!temp.path().join("trace").exists());
+    assert!(!temp.path().join("keys").exists());
 }

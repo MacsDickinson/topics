@@ -71,7 +71,8 @@ service.stage_proposal_guarded(request, |proposal, action| {
 must be the **core-provided final short publication action**, after validation,
 blocking preparation and temp write/flush. It must contain no arbitrary host
 callbacks or preparation. Cancellation/timeout revoke before a late publication;
-if publication already linearized, cancellation returns false and published IDs
+if the final publication fence is busy or publication already linearized, cancellation
+returns false immediately and published IDs
 produce proposal/completed even if the host then hangs, panics or errors. Runtime
 holds no state lock during arbitrary host code. The final atomic OS rename cannot
 be universally preempted; the brief publication action is the explicit
@@ -91,8 +92,10 @@ endpoint `https://chatgpt.com/backend-api/codex` and ChatGPT service base, provi
 agent instructions off, empty developer instructions, zero project-doc bytes,
 history off, telemetry exporters off and content logging false, empty compact
 prompt and local thread store. Custom provider maps, selected profiles, prompt
-files and extra endpoint/telemetry settings are rejected. Child API/endpoint/OTEL
-environment overrides are removed without reading values; no global env/config
+files and extra endpoint/telemetry settings are rejected. Every child starts with
+`env_clear`: only validated HOME/CODEX_HOME, PATH, validated TMPDIR, bounded locale
+values and forced RUST_LOG=off cross the boundary. Trace, custom CA, proxy, auth,
+API and OTEL knobs are excluded without enumerating their values; no global env/config
 is changed, and no login, token IO/copy, deliberate refresh or API-key fallback
 exists. All inherited feature names are disabled, and effective enabled/unknown
 features fail closed. All Codex MCP entries must be disabled with empty inventory.
@@ -105,10 +108,12 @@ setup. UUID aliases and missing required nullable Candidate fields are rejected.
 
 On macOS, a static parameterized sandbox profile denies file-read-data and file
 writes beneath the canonical notes root, and literal unlink/rename of **each
-ancestor**. Untrusted paths are separate `-D` argv values, never Scheme text.
+ancestor**, plus file-clone denial on each ancestor literal. Untrusted paths are separate `-D` argv values, never Scheme text.
 Bounded synthetic preflight checks canonical/symlink reads, overwrite/create,
-ancestor `mv` and `RENAME_SWAP`, quoted Unicode paths and allowed sibling
-read/write. Probe fixtures must be outside the selected root and on its same
+ancestor `mv`, `RENAME_SWAP`, `clonefile` and `fclonefileat`, quoted Unicode
+paths and allowed sibling reads/writes/clones. Syscall helpers require actual
+successful unsandboxed positive controls and permission-specific denials; missing
+helpers or unsupported operations cannot count as confinement. Probe fixtures must be outside the selected root and on its same
 filesystem; unsupported volumes fail closed. No live note bytes are probed.
 
 This path boundary does not protect pre-existing outside-root hardlinks/copies or
@@ -133,7 +138,9 @@ Frames: 512 KiB; host responses/prompt: 256 KiB; stream output: 2 MiB; calls and
 candidates: 64; SDK host call timeout: 5s; callback timeout: 6s; staging preparation:
 5s; execution: 150s; endpoint: 180s. Stalled read/preparation callbacks are detached
 with process-wide bounded worker permits; they cannot publish after revocation.
-Strict MCP envelope, SDK decode and handshake checks precede rmcp, which otherwise
+Validated JSON is reserialized before SDK forwarding, so duplicate-key last-wins
+semantics cannot diverge between the guard and SDK. Strict MCP envelope, SDK decode
+and handshake checks precede rmcp, which otherwise
 ignores malformed frames. Client cancellation poisons/discards the buffer. Child
 process-group termination supplements pipe/endpoint teardown; Codex can place a
 proxy in another group, so proxy lifetime relies on tested EOF/endpoint shutdown,

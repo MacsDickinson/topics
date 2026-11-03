@@ -1,0 +1,28 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.78s
+     Running tests/clone_boundary.rs (target/debug/deps/clone_boundary-f8073be5d5245e9d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-c52e01b2cbdfd276)
+
+running 1 test
+test review_child_environment_allowlist ... FAILED
+
+failures:
+
+---- review_child_environment_allowlist stdout ----
+
+thread 'review_child_environment_allowlist' (3518797) panicked at crates/topics-runtime/tests/scripted_runtime.rs:547:802:
+hostile inherited trace/CA/endpoint environment must be removed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    review_child_environment_allowlist
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.21s
+
+error: test failed, to rerun pass `-p topics-runtime --test scripted_runtime`

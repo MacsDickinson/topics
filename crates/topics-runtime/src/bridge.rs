@@ -483,21 +483,25 @@ impl Bridge {
                                     }
                                 };
                             bytes += frame.len();
-                            let valid = serde_json::from_slice::<Value>(&frame)
-                                .ok()
-                                .and_then(|value| {
-                                    let next = validate_mcp_frame(&value, phase).ok()?;
-                                    if value["method"] == "notifications/cancelled" {
-                                        poison(&state);
-                                    }
-                                    phase = next;
-                                    Some(())
-                                })
-                                .is_some();
-                            if !valid || bytes > crate::protocol::MAX_OUTPUT {
+                            let normalized =
+                                serde_json::from_slice::<Value>(&frame)
+                                    .ok()
+                                    .and_then(|value| {
+                                        let next = validate_mcp_frame(&value, phase).ok()?;
+                                        if value["method"] == "notifications/cancelled" {
+                                            poison(&state);
+                                        }
+                                        phase = next;
+                                        let mut frame = serde_json::to_vec(&value).ok()?;
+                                        frame.push(b'\n');
+                                        Some(frame)
+                                    });
+                            let Some(frame) =
+                                normalized.filter(|_| bytes <= crate::protocol::MAX_OUTPUT)
+                            else {
                                 poison(&state);
                                 return;
-                            }
+                            };
                             if peer_write.write_all(&frame).await.is_err() {
                                 return;
                             }
@@ -929,5 +933,37 @@ mod tests {
         );
         assert_eq!(calls, 0);
         assert!(state.lock().unwrap().failed);
+    }
+    #[tokio::test]
+    async fn duplicate_key_forbidden_last_wins_frames_poison() {
+        let cases = [
+            r#"{"jsonrpc":"2.0","id":9,"method":"tools/call","method":"tools/call","params":{"name":"read_file","arguments":{}}}"#,
+            r#"{"jsonrpc":"2.0","id":8,"id":9,"method":"tools/call","params":{"name":"read_file","arguments":{}}}"#,
+            r#"{"jsonrpc":"1.0","jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"read_file","arguments":{}}}"#,
+            r#"{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"scope_sources","arguments":{"scope_id":"scope"}},"params":{"name":"read_file","arguments":{}}}"#,
+            r#"{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"scope_sources","name":"read_file","arguments":{}}}"#,
+        ];
+        for raw in cases {
+            let state = state();
+            let bridge = Bridge::start("session", "scope", Arc::new(Host), state.clone())
+                .await
+                .unwrap();
+            let mut stream = initialized(&bridge).await;
+            let result=send(&mut stream,json!({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"propose_changes","arguments":{"candidates":[{"kind":"topic","topic":{"id":"10000000-0000-4000-8000-000000000001","topic_kind":"person","name":"Synthetic","aliases":[],"sensitivity":"cloud_allowed"}}]}}})).await;
+            assert!(result.get("error").is_none());
+            assert_eq!(state.lock().unwrap().pending.len(), 1);
+            stream
+                .get_mut()
+                .write_all(format!("{raw}\n").as_bytes())
+                .await
+                .unwrap();
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while !state.lock().unwrap().failed && Instant::now() < deadline {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            assert!(state.lock().unwrap().failed);
+            assert!(state.lock().unwrap().pending.is_empty());
+            bridge.close().await;
+        }
     }
 }

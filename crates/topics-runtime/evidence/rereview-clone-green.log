@@ -1,0 +1,9 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running tests/clone_boundary.rs (target/debug/deps/clone_boundary-f8073be5d5245e9d)
+
+running 2 tests
+test fclonefileat_ancestor_cannot_copy_protected_descendant ... ok
+test clonefile_ancestor_cannot_copy_protected_descendant ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
