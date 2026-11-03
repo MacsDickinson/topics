@@ -1,0 +1,16 @@
+{
+  "platform": "Darwin",
+  "test": "bridge::tests::review_sdk_ignored_frames_poison_previous_buffer",
+  "invocations": 50,
+  "invalid_frame_cases_per_invocation": 8,
+  "total_invalid_frame_checks": 400,
+  "failed_invocations": 0,
+  "elapsed_seconds": 0.447,
+  "test_binary_sha256": "4a852dc1ab3eae43a38ae34866e5418c4c47b4fd95c98110f53f3f9a496efb37",
+  "production_bridge_prefix_unchanged": true,
+  "production_bridge_prefix_sha256": "48ca07fcfe35b623d15097203a022939f704351d36ac4b64252480e47e9b32f8",
+  "negative_failed_assertion_retained": true,
+  "pending_buffer_empty_asserted": true,
+  "processing_ack": "peer UnexpectedEof within 3 seconds before state assertions",
+  "blind_sleeps": 0
+}

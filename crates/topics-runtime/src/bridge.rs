@@ -790,10 +790,23 @@ mod tests {
                 .write_all(format!("{value}\n").as_bytes())
                 .await
                 .unwrap();
-            tokio::time::sleep(Duration::from_millis(40)).await;
+            // A successful write is not a processing acknowledgement. In particular,
+            // TCP delivery or executor scheduling can exceed the former 40ms sleep.
+            // The guard closes this connection after rejecting the frame; require
+            // that bounded acknowledgement before checking the original poison fence.
+            let rejected = tokio::time::timeout(
+                Duration::from_secs(3),
+                crate::transport::read_frame(&mut stream, MAX_FRAME),
+            )
+            .await
+            .expect("invalid MCP envelope was not rejected within the deadline")
+            .expect_err("invalid MCP envelope unexpectedly produced an SDK response");
+            assert_eq!(rejected.kind(), std::io::ErrorKind::UnexpectedEof);
             let failed = state.lock().unwrap().failed;
+            let empty = state.lock().unwrap().pending.is_empty();
             bridge.close().await;
             assert!(failed, "SDK ignored invalid envelope without poison");
+            assert!(empty, "invalid MCP envelope retained buffered candidates");
         }
     }
     #[test]
