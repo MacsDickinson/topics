@@ -1,0 +1,14 @@
+Manager-provided Linux Core CI RED; source 51caaa6, run 41602005434, job 125802721782.
+Original artifact: /tmp/topics-m1-core-ci-job.log; no locally fabricated failure.
+
+2026-11-03T08:19:23.6904437Z ---- bridge::tests::review_sdk_ignored_frames_poison_previous_buffer stdout ----
+2026-11-03T08:19:23.6905224Z 
+2026-11-03T08:19:23.6906172Z thread 'bridge::tests::review_sdk_ignored_frames_poison_previous_buffer' (6531) panicked at crates/topics-runtime/src/bridge.rs:796:13:
+2026-11-03T08:19:23.6907439Z SDK ignored invalid envelope without poison
+2026-11-03T08:19:23.6912285Z note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+2026-11-03T08:19:23.6913062Z 
+2026-11-03T08:19:23.6913605Z 
+2026-11-03T08:19:23.6913965Z failures:
+2026-11-03T08:19:23.6914621Z     bridge::tests::review_sdk_ignored_frames_poison_previous_buffer
+2026-11-03T08:19:23.6915666Z 
+2026-11-03T08:19:23.6916272Z test result: FAILED. 25 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
