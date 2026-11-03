@@ -1,0 +1,16 @@
+[package]
+name = "topics-runtime"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+topics-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rmcp = { version = "=3.8.0", features = ["server", "transport-async-rw"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "io-std", "time", "sync", "net"] }
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tempfile = "3"
