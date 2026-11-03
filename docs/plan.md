@@ -87,7 +87,7 @@ CI: `cargo fmt`, `clippy -D warnings`, `cargo test`, cucumber with `fail_on_skip
 
 ## Delivery phases
 
-The in-progress [Topic workspace milestone](../features/topic-workspace/PLAN.md) delivers bounded discovery and correction first, combining slices of former phases 2, 3, 4 and 6. Its explicit overnight authority overrides the additional human sign-off gate for that milestone only; failing scenarios must still be recorded before code. The following table describes the remaining broader direction, not completed implementation. Each later feature has its own sign-off.
+The delivered prototype [Topic workspace milestone](../features/topic-workspace/PLAN.md) delivers bounded discovery and correction first, combining slices of former phases 2, 3, 4 and 6. Its explicit overnight authority overrides the additional human sign-off gate for that milestone only; failing scenarios must still be recorded before code. The following table describes the remaining broader direction, not completed implementation. Each later feature has its own sign-off.
 
 | # | Feature | You get |
 |---|---|---|

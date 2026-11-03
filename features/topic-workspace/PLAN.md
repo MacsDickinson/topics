@@ -1,4 +1,4 @@
-# Topic workspace — milestone plan (in progress)
+# Topic workspace — milestone plan (prototype delivered)
 
 ## Authority and baseline
 
@@ -27,8 +27,10 @@ Local-only labels apply to sources and topics; if any selected source is local-o
 3. Run service BDD, unit and crash/conflict tests, scripted runtime protocol tests, Playwright mocked IPC, native WebdriverIO synthetic smoke, then `scripts/check.sh` and independent cross-provider review; fix findings and rerun affected checks. Provide desktop screenshots and complete scenario-to-evidence mapping. No skips.
 4. Synthetic end-to-end acceptance uses a temp root with two same-name people and a meeting, runs discovery, edits and accepts a cited claim, corrects it by chat, analyzes again, restarts, rebuilds index, checks correction and original bytes. Scripted model verifies orchestration, not model comprehension. Separately run a live runtime probe on a wholly synthetic note and isolated app data after negative tool-isolation proof; record version, sanitized configuration, calls and outcome, never personal credentials or notes. A failed probe blocks claiming a working discovery prototype.
 
-## Risks and explicit gates
+## Delivery status and remaining risks
 
-Codex app-server is experimental; protocol and isolation follow the runtime discovery evidence below. Verified findings: Codex 0.166.0 read-only sandbox and empty cwd alone do not isolate reads; inherited MCP servers persist when `mcp_servers={}` is merged. A synthetic live turn with shell/unified exec/hooks/plugins/apps disabled and explicit disabling of inherited servers successfully called only a synthetic Topics tool; negative isolation verification remains outstanding. Treat unknown tool/config isolation as a hard stop, not a warning. Local-only source classification and explicit scope are security boundaries, including for model-supplied references. Exact live runtime containment and transport must be verified and integrated before sending real notes. Review race/recovery behavior, unsupported malformed records, and platform-native test availability explicitly.
+Delivered 2026-11-03 under the explicit overnight authority above. Core, desktop and runtime cross-provider gates are accepted after retained RED/GREEN fixes. The integrated full check script and genuine synthetic Codex native discovery/correction/restart workflow pass. The local production bundle is ad-hoc signed at `target/prototype/Topics.app`; exact results, review links and bounded limits are in the [delivery report](../../docs/topic-workspace-report.md).
 
-Runtime discovery report (Codex 0.166.0, synthetic inputs) verified stdio JSON-RPC initialization, schema generation, MCP tool call and a real synthetic turn. It also verified inherited MCP configuration merges and that disabling named tools is not a complete read sandbox. An independent OS-isolation probe is pending; real-note analysis stays disabled until containment is demonstrated. Runtime worker must preserve the domain API and document the exact preflight and evidence.
+Codex app-server remains experimental and pinned to 0.166.0. Discovery showed that read-only sandboxing and disabled named tools alone are insufficient. The delivered route combines an exact two-tool catalog forwarded through the official MCP SDK with scope enforcement, macOS file restrictions, controlled environment and fail-closed startup. The [runtime investigation](../../docs/research/codex-effective-tools-discovery.md) and [final runtime acceptance](../../docs/reviews/topic-workspace-runtime-accepted.md) supersede the earlier pending-isolation status. No real notes were used in verification.
+
+The task backlog/daily ritual, Claude alternative, automatic import and broader original roadmap still need separate plans and user sign-off. This prototype establishes the inspect-and-correct workflow; it does not yet replace Monday actions prep.

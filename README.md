@@ -51,4 +51,4 @@ The core-only command runs formatting, warning-denied Clippy, Rust tests and bot
 
 Development and automated verification use synthetic temporary notes and an absolute isolated `TOPICS_APP_DATA_DIR`. Never point tests at personal notes or follow the repository's `notes` symlink. Normal app data defaults to `~/Library/Application Support/com.macsdickinson.topics`; CLI and desktop share configuration. Rust is pinned to 1.98.1 and desktop Node to 24.22.2 without changing global Node.
 
-[Phase 0 delivery](docs/phase-0-report.md) remains the foundation record. Milestone evidence and independent findings are retained in `features/topic-workspace/`, `crates/topics-runtime/evidence/`, `apps/desktop/evidence/` and `docs/reviews/`.
+[Topic workspace delivery and validation](docs/topic-workspace-report.md) records this prototype. [Phase 0 delivery](docs/phase-0-report.md) remains the foundation record. Milestone evidence and independent findings are retained in `features/topic-workspace/`, `crates/topics-runtime/evidence/`, `apps/desktop/evidence/` and `docs/reviews/`.

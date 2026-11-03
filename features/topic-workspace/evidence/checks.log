@@ -1,0 +1,1220 @@
+   Compiling libsqlite3-sys v0.36.0
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.1
+    Checking block2 v0.6.2
+    Checking objc2-core-foundation v0.3.2
+    Checking dispatch2 v0.3.1
+    Checking rusqlite v0.38.0
+    Checking topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+    Checking topics-cli v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-cli)
+    Checking topics-bdd v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-bdd)
+    Checking objc2-quartz-core v0.3.2
+    Checking objc2-app-kit v0.3.2
+    Checking objc2-web-kit v0.3.2
+    Checking tao v0.37.2
+    Checking muda v0.20.0
+    Checking window-vibrancy v0.8.1
+    Checking tauri-runtime v2.12.2
+    Checking tauri-runtime-wry v2.12.3
+    Checking tauri v2.12.5
+    Checking topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 11.38s
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling libsqlite3-sys v0.36.0
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+   Compiling block2 v0.6.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling objc2-foundation v0.3.2
+   Compiling topics-bdd v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-bdd)
+   Compiling topics-cli v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-cli)
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
+   Compiling tauri-runtime v2.12.2
+   Compiling wry v0.57.1
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+   Compiling topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `test` profile [unoptimized] target(s) in 18.82s
+     Running unittests src/main.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics_bdd-a09fa07a65586e88)
+
+running 2 tests
+test snapshot::tests::symlinks_are_recorded_without_following_them ... ok
+test snapshot::tests::extra_empty_directory_changes_snapshot ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/bin/workspace-bdd.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/workspace_bdd-ff779fe0811b75f7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics-c40a921c5a3adc11)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/commands.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/commands-440954143d762636)
+
+running 8 tests
+test obsolete_override_is_an_explicit_error_in_a_synthetic_home ... ok
+test os_default_matches_application_identifier_in_synthetic_home ... ok
+test unconfigured_reads_are_actionable_cli_errors ... ok
+test invalid_overrides_fail_without_creating_any_app_data ... ok
+test commands_share_isolated_config_and_report_failures ... ok
+test missing_root_can_be_replaced_or_initialised_through_real_cli ... ok
+test cli_switch_is_coherent_with_an_independent_process_retaining_a_watcher ... ok
+test cli_use_and_search_wait_for_external_store_lock_then_complete ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.76s
+
+     Running tests/workspace.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/workspace-a914ebcf21b908ce)
+
+running 1 test
+test real_cli_reviews_and_undoes_manual_proposal_using_one_request_object ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running unittests src/lib.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics_core-4ef45c21434c4597)
+
+running 2 tests
+test workspace_validation::tests::invalid_dates_and_noncanonical_ids_are_explicit_errors ... ok
+test workspace_validation::tests::mutation_input_rejects_authority_unknown_fields_and_missing_nullable_properties ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics_desktop-f5d74e404c999717)
+
+running 10 tests
+test entrypoint_tests::proxy_dispatch_requires_exact_supported_position_and_argument_count ... ok
+test runtime_path::tests::finder_discovery_only_checks_known_executable_metadata ... ok
+test workspace::tests::invalid_request_shapes_keep_typed_api_errors_before_service_access ... ok
+test workspace::tests::host_denies_approval_extra_arguments_and_unconfirmed_scope ... ok
+test workspace::tests::revocation_before_final_publication_cannot_stage_late ... ok
+test workspace::tests::publication_denial_cannot_leave_a_pending_proposal_visible ... ok
+test workspace::tests::cancelled_core_capability_cannot_stage_late_candidates ... ok
+test workspace::tests::multiple_tool_calls_validate_dependencies_as_one_buffer ... ok
+test workspace::tests::host_validates_without_staging_then_commits_pending_only ... ok
+test workspace::tests::scoped_context_never_exposes_unrelated_or_local_only_topic_inventory ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+
+     Running unittests src/lib.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics_runtime-ea832a99bff0e72f)
+
+running 26 tests
+test bridge::tests::authenticated_poison_revokes_unpublished_preparation ... ok
+test bridge::tests::review_full_strict_envelope_and_handshake_cases ... ok
+test bridge::tests::review_preinitialize_second_connection_poison_is_shared ... ok
+test commit::tests::published_result_cannot_be_revoked_or_overwritten ... ok
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test commit::tests::revoke_does_not_wait_for_final_publication_action ... ok
+test environment::tests::dotenv_absent_allows_default_missing_or_existing_home_and_explicit_home ... ok
+test environment::tests::dotenv_metadata_error_is_not_treated_as_absence ... ok
+test environment::tests::dotenv_existing_file_or_directory_blocks_default_and_explicit_home ... ok
+test environment::tests::dotenv_symlinks_including_dangling_links_block_launch ... ok
+test environment::tests::invalid_codex_home_fails_closed_without_creating_it ... ok
+test isolation::tests::helper_failures_cannot_masquerade_as_permission_denial ... ok
+test environment::tests::only_small_validated_allowlist_is_copied ... ok
+test targeted_review_tests::safety_codes_have_actionable_sanitized_remediation ... ok
+test targeted_review_tests::second_commit_gate_rejects_failed_state ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
+test bridge::tests::review_cancelled_inflight_mcp_request_cannot_buffer ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test bridge::tests::duplicate_key_forbidden_last_wins_frames_poison ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+test bridge::tests::review_unauthenticated_rate_limit_does_not_abort_authorized_session ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running unittests src/bin/topics-mcp-proxy.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics_mcp_proxy-1c5a8215c87e02f6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/acceptance-479d59ad642465ee)
+
+running 5 tests
+test unknown_effective_tool_surface_blocks_selected_bytes ... ok
+test missing_event_identity_cannot_be_mistaken_for_current_run ... ok
+test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... ok
+test malformed_model_output_and_authority_fields_are_rejected ... ok
+test native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+
+     Running tests/clone_boundary.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/clone_boundary-fea04286507dc600)
+
+running 2 tests
+test clonefile_ancestor_cannot_copy_protected_descendant ... ok
+test fclonefileat_ancestor_cannot_copy_protected_descendant ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests/config_override_native.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/config_override_native-bc7a8823e6b1aea4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/live_codex.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/live_codex-d8ac3a0294a0f248)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/proxy_lifecycle.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/proxy_lifecycle-832d7000825ba7f9)
+
+running 1 test
+test proxy_exits_after_authenticated_parent_disconnect_with_open_stdin ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests/review_privacy.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/review_privacy-282bf81baf3c02ad)
+
+running 4 tests
+test returned_non_ephemeral_thread_cannot_transmit ... ok
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... ok
+test canonical_uuid_aliases_and_missing_nullable_candidates_are_rejected ... ok
+test native_probe_capture_and_wait_are_bounded ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.04s
+
+     Running tests/schema_pin.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/schema_pin-d594977bbc769d6f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/scripted_runtime-ccd41fa3abbe2493)
+
+running 11 tests
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test review_child_environment_allowlist ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test review_published_outcome_survives_host_stall_and_error ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test review_cancel_stalled_host_has_bounded_terminal_and_releases_run_slot ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test review_staging_panic_emits_one_error_and_runtime_remains_usable ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+test review_cancel_and_timeout_revoke_late_prepared_publication ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.14s
+
+     Running unittests src/lib.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/topics_store-5b086cdc1d3a339f)
+
+running 11 tests
+test app_data::tests::default_uses_tauri_identifier_and_reports_missing_base ... ok
+test app_data::tests::empty_home_never_calls_os_fallback_without_override ... ok
+test app_data::tests::obsolete_environment_never_falls_back_even_with_new_override ... ok
+test app_data::tests::invalid_override_never_falls_back ... ok
+test parse::tests::malformed_and_unicode_dates_do_not_panic_or_become_dates ... ok
+test parse::workspace_date_tests::indexed_frontmatter_date_is_validated_without_changing_arbitrary_titles ... ok
+test parse::tests::meeting_metadata_comes_from_filename ... ok
+test app_data::tests::override_is_exact_and_does_not_discover_default ... ok
+test workspace::persistence::tests::recovery_conflict_retains_three_versions_and_never_publishes_marker ... ok
+test workspace::persistence::tests::interrupted_replacements_are_invisible_until_commit_and_recovery_is_idempotent ... ok
+test watcher_tests::idle_poll_does_not_rescan_bodies_but_metadata_change_does ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/coherence.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/coherence-807082943a0f11b6)
+
+running 2 tests
+test reads_recover_a_config_index_mismatch_after_interrupted_switch ... ok
+test independent_instances_and_old_watcher_never_restore_previous_root ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s
+
+     Running tests/final_confirmation.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/final_confirmation-a362fede257a8708)
+
+running 39 tests
+test a1c_n1_claim_endpoint_alias_collision ... ok
+test a1_n1_claim_endpoint_connection_private_name_oracle ... ok
+test a1b_n1_claim_endpoint_terminal_stage_private_name_poison ... ok
+test b0_n2_control_no_statement_value_withheld ... ok
+test a2_n1_ordinary_shapes_uniform_and_human_only ... ok
+test a3_n1_approved_ambiguity_never_reaches_model_context ... ok
+test a1d_n1_cloud_collisions_same_failure ... ok
+test b1_n2_chat_uncertainty_only_statement_must_not_declassify ... ok
+test b2_n2_chat_keeps_passage_plus_statement_must_not_declassify ... ok
+test b3_n2_statement_on_manual_metadata_revision_must_not_declassify ... ok
+test b4_n2_positive_chat_correction_changed_value_stays_usable ... ok
+test a4_topic_only_ambiguity_whole_approval_is_order_independent ... ok
+test b5_n2_positive_ui_value_edit_and_statement_retained_after_metadata_edit_blocked ... ok
+test b6_n2_chat_uncertainty_plus_date_metadata_only_declassifies ... ok
+test b7_n2_chat_question_new_predicate_same_transcript_value ... ok
+test c2_n3_older_review_of_same_hash_does_not_override_newer_private_label ... ok
+test b8_n2_chat_correction_candidate_with_unchanged_value ... ok
+test c1_n3_move_copy_never_inherits_destination_or_confirm_override ... ok
+test c3_n3_fresh_review_then_undo_returns_restricted ... ok
+test c4_n3_repair_cannot_launder_private_hash ... ok
+test c5_n3_private_by_topic_taint_moved_over_reviewed_path ... ok
+test c7_regression_reviewed_then_tainted_source_in_preview ... ok
+test d1_n4_all_endpoint_shapes ... ok
+test e2_n5_unicode_composition_observation ... ok
+test e3_n6_semantic_dedupe_keeps_supersession ... ok
+test e4_n7_n8 ... ok
+test e6_redaction_guard_undone_correction_statement ... ok
+test e5_n10_orphan_correction_no_false_revive ... ok
+test c6_n3_limit_observation_moved_and_edited ... ok
+test f1_legal_metadata_value_is_not_authorized_by_check_with_legal ... ok
+test f1_short_value_zed_is_not_authorized_by_ask_zedekiah_in_legal ... ok
+test r2_literal_raw_statement_value_is_usable_and_noop_correction_is_rejected ... ok
+test r5_source_label_cannot_release_topic_taint_and_preview_keeps_eligible_selection ... ok
+test r3_superseding_identity_and_all_dependent_endpoints_survive_either_batch_order ... ok
+test f2_metadata_lineage_cannot_manufacture_passage_only_value_authority ... ok
+test f2_metadata_followups_retain_real_correction_authority_in_manual_and_chat_history ... ok
+test r1_logical_and_revision_endpoints_keep_unrelated_facts_and_uniform_raw_errors ... ok
+test e1_n5_variants_and_no_merge ... ok
+test d2_n4_claim_endpoint_by_logical_id_uses_current_revision ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 16.89s
+
+     Running tests/rereview_privacy.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/rereview_privacy-d3c66f4d4a4d82b8)
+
+running 31 tests
+test maximum_raw_batch_private_name_does_not_change_tool_result_or_guard_visibility ... ok
+test model_validation_has_uniform_errors_and_never_publishes_private_ambiguity ... ok
+test n02_prestaged_reused_id_duplicate_conflicts ... ok
+test n03_prestaged_connection_duplicate_conflicts ... ok
+test n01_prestaged_provisional_duplicate_conflicts ... ok
+test a_changed_value_has_durable_authority_after_app_data_rebuild ... ok
+test moved_private_bytes_need_a_fresh_hash_bound_human_review ... ok
+test n04_prestaged_provisional_cannot_bypass_later_correction ... ok
+test n20_model_validation_must_not_reveal_local_only_topic_name ... ok
+test n06_prestaged_subset_cannot_silently_create_duplicate_identity_with_facts ... ok
+test n08_genuine_second_joe_is_not_merged_and_ambiguity_is_explicit ... ok
+test n05_prestaged_reused_subject_cannot_bypass_later_rule ... ok
+test n21_local_only_name_collision_must_not_fail_whole_analysis ... ok
+test n07_unrelated_prestaged_proposals_do_not_false_conflict ... ok
+test n10_kind_variant_must_not_bypass_rule ... ok
+test n22_redaction_must_not_export_transcript_value_after_uncertainty_only_edit ... ok
+test n09_name_variant_must_not_bypass_rule ... ok
+test n25_local_only_moved_over_reviewed_path_must_stay_restricted ... ok
+test n41_guard_no_action_and_ok_is_internal_error ... ok
+test n40_guard_denied_leaves_no_visibility_and_no_temp ... ok
+test n24_connection_source_endpoint_must_not_export_unselected_locator ... ok
+test n23_redacted_view_excludes_metadata_positive ... ok
+test n37_interrupted_correction_conflict_no_resurrection_positive ... ok
+test n35_correction_marker_and_app_data_loss_should_warn ... ok
+test n50_duplicates_inside_one_model_proposal ... ok
+test pending_semantic_dedupe_retains_evidence_and_remaps_claim_endpoints ... ok
+test source_connection_endpoint_is_human_visible_and_selected_context_visible ... ok
+test topic_only_repeat_is_pending_ambiguity_and_nested_topics_are_source_notes ... ok
+test orphan_rule_alone_quarantines_false_head_without_accepting_replacement ... ok
+test subject_only_edit_keeps_exact_human_evidence_but_does_not_declassify_value ... ok
+test n43_no_change_has_no_operation_or_knowledge_positive ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.79s
+
+     Running tests/review_probes.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/review_probes-9b7ce58ea786c382)
+
+running 47 tests
+test guarded_staging_can_be_revoked_after_preparation_without_publishing ... ok
+test approving_a_dependency_consistent_subset_ignores_changed_omitted_dependencies ... ok
+test human_legacy_search_excludes_app_records_and_keeps_source_search_useful ... ok
+test a_distinct_same_name_person_with_a_new_citation_is_not_merged_by_shared_predicate_value ... ok
+test different_temporal_assertions_do_not_prove_that_same_name_people_are_the_same_identity ... ok
+test inventory_registration_does_not_overwrite_an_untracked_record_target ... ok
+test guarded_success_duplicate_and_no_change_outcomes_all_use_the_publication_gate ... ok
+test p01_crash_leftover_tmp_in_proposals_must_not_brick ... ok
+test locator_heading_is_checked_on_source_endpoints_too ... ok
+test p03_recovered_approval_must_show_accepted_in_proposals_list ... ok
+test p02_crash_between_mkdir_and_journal_must_not_break_history ... ok
+test concurrently_staged_analysis_proposals_cannot_duplicate_an_assertion_at_approval ... ok
+test p05_replayed_marker_is_idempotent_positive ... ok
+test correction_rules_cannot_be_bypassed_by_a_proposal_staged_before_the_identity_was_accepted ... ok
+test p10_edited_local_only_label_record_must_fail_closed ... ok
+test p11_deleted_local_only_label_record_must_fail_closed ... ok
+test p12_restoring_older_committed_bytes_must_not_downgrade_label ... ok
+test p06_app_data_loss_rebuilds_knowledge_positive ... ok
+test p13_restoring_older_topic_bytes_must_warn_or_keep_local_only ... ok
+test p04_recovery_conflict_must_not_hide_previously_accepted_topic ... ok
+test p20_renamed_local_only_source_must_stay_restricted ... ok
+test p21_case_alias_must_not_bypass_local_only_label ... ok
+test p22_case_alias_must_not_expose_app_records ... ok
+test p14_deleted_superseding_claim_must_warn_not_silently_revive_false_claim ... ok
+test p24_repair_onto_local_only_path_must_not_relax_label ... ok
+test p23_model_must_not_self_label_new_topic_cloud_allowed ... ok
+test p25_undo_of_repair_must_keep_local_only_label_of_tombstoned_duplicate ... ok
+test p32_citation_heading_must_be_verified ... ok
+test p26_chat_must_stay_within_authorized_topic ... ok
+test p30_edited_connection_must_not_keep_unqualified_transcript_citation ... ok
+test p31_edited_claim_subject_must_record_provenance ... ok
+test p53_fingerprint_stable_for_connection_to_provisional_claim ... ok
+test p40_undo_after_decide_allows_reanalysis_to_propose_again ... ok
+test p42_undo_creation_must_not_skip_live_intermediate_updates ... ok
+test p50_unrelated_label_change_must_not_permanently_conflict_pending_proposal ... ok
+test p41_undo_claim_with_connection_on_logical_id_must_be_refused ... ok
+test p52_equivalent_claim_must_not_duplicate_via_different_candidate_set ... ok
+test p51_stale_unrelated_scope_file_must_not_strand_fresh_reanalysis ... ok
+test p43_undo_correction_positive ... ok
+test p54_fingerprint_must_distinguish_same_name_identities ... ok
+test p55_second_real_person_same_name_can_still_be_proposed_by_model ... ok
+test p56_model_claim_on_ambiguous_same_name_must_be_unresolved ... ok
+test p57_new_provisional_same_name_with_connection_must_be_unresolved ... ok
+test shared_passage_and_relation_do_not_merge_a_new_person_through_a_different_endpoint ... ok
+test recovery_conflict_invalidates_pending_dedupe_and_fresh_analysis_can_continue ... ok
+test p58_suppressed_only_output_must_not_fail_the_run ... ok
+test p59_rule_positive_other_person_and_replacement_not_auto_accepted ... ok
+
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.21s
+
+     Running tests/review_reanalysis.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/review_reanalysis-2b5261207a917721)
+
+running 21 tests
+test previously_registered_unknown_rename_target_does_not_drop_a_restrictive_content_label ... ok
+test missing_committed_marker_does_not_silently_resurrect_the_transcript_claim ... ok
+test r06_reusing_logical_claim_id_with_unchanged_value_is_not_terminal_error ... ok
+test r01_random_topic_id_with_identical_candidates_dedupes_positive ... ok
+test r05_reused_topic_candidate_with_known_id_is_usable ... ok
+test r03_random_topic_id_bypasses_rule_when_extra_fact_added ... ok
+test r02_random_topic_id_bypasses_rule_when_fingerprint_differs_by_uncertainty ... ok
+test r04_reused_id_suppressed_mixed_proposal_positive ... ok
+test r08_id_reuse_connection_must_dedupe_against_first_run ... ok
+test r07_known_context_reproposal_of_corrected_value_must_not_duplicate ... ok
+test r13_human_edited_claim_must_appear_in_model_context ... ok
+test r09_context_returns_correction_and_history_positive ... ok
+test r14_edited_away_value_reproposal_must_not_duplicate ... ok
+test r10_context_without_original_source_must_still_show_correction ... ok
+test r11_new_meeting_false_claim_with_reused_id_suppressed_positive ... ok
+test r12_new_meeting_random_topic_false_claim_bypasses_rule ... ok
+test r15_topic_named_from_newly_local_only_connection_source_denied_as_unit ... ok
+test r16_old_revision_of_path_labelled_local_only_denied_as_unit ... ok
+test r17_context_must_not_include_other_topics_unresolved_identities ... ok
+test r18_context_errors_are_uniform_for_missing_and_private_topics ... ok
+test redacted_current_correction_excludes_unselected_evidence_and_unrequested_statement_text ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.65s
+
+     Running tests/review_regressions.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/review_regressions-cf73749ae58241d2)
+
+running 10 tests
+test no_root_reads_report_choose_root_instead_of_no_matches ... ok
+test title_only_match_has_a_highlighted_excerpt ... ok
+test unix_backslashes_and_real_subdirectories_are_distinct_paths ... ok
+test config_publication_failure_keeps_selected_root_and_raw_index_unchanged ... ok
+test edited_deleted_profiles_and_multiple_glossary_aliases_are_replaced ... ok
+test unreadable_file_keeps_plain_record_without_stale_body_and_unreadable_root_fails ... ok
+test punctuation_terms_and_nul_do_not_remove_real_search_hits ... ok
+test corrupt_disposable_index_rebuilds_and_missing_root_can_be_reconfigured ... ok
+test watcher_reports_root_loss_recovers_and_stops_on_drop ... ok
+test concurrent_unlinks_warn_instead_of_aborting_scans ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.78s
+
+     Running tests/safety.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/safety-95bcc9ded758d803)
+
+running 5 tests
+test malformed_config_is_an_explicit_error ... ok
+test root_boundaries_and_nonempty_init_leave_sources_untouched ... ok
+test symlinks_never_expand_scan_beyond_root ... ok
+test retained_watcher_follows_root_switch ... ok
+test startup_hash_scan_detects_equal_mtime_edit_and_invalid_utf8_stays_plain ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/workspace_service.rs (/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/deps/workspace_service-416140f03ad7d3b0)
+
+running 24 tests
+test existing_store_lock_blocks_workspace_calls_until_release ... ok
+test approved_subset_rejects_omissions_and_cannot_be_redecided_differently ... ok
+test cancelled_capability_cannot_read_or_stage_even_valid_late_output ... ok
+test approving_an_edited_claim_records_the_human_edit_as_persisted_provenance ... ok
+test deleting_derived_db_and_disposable_proposals_does_not_duplicate_accepted_decisions ... ok
+test fingerprints_preserve_accepted_endpoint_identity ... ok
+test fresh_root_manual_proposals_survive_restart_and_decisions_are_idempotent ... ok
+test explicit_source_review_can_lift_a_label_after_a_source_edit ... ok
+test explicit_source_repair_retains_identity_and_label_but_never_reanchors_old_citations ... ok
+test invalid_dates_empty_selection_and_non_markdown_are_actionable ... ok
+test historical_uuid_cannot_be_reused_after_creation_undo ... ok
+test human_statement_retrieval_returns_persisted_text_after_restart ... ok
+test logical_claim_identity_cannot_collide_with_a_proposed_topic ... ok
+test ids_collisions_are_rejected_and_same_names_never_silently_merge ... ok
+test source_locators_use_utf8_bytes_and_hashes_not_character_offsets_or_model_excerpt ... ok
+test labelling_a_topic_local_only_invalidates_related_source_capabilities ... ok
+test scope_consent_is_per_run_and_source_change_or_root_reselection_expires_it ... ok
+test sensitivity_updates_undo_restore_previous_bytes_without_erasing_history ... ok
+test source_metadata_can_be_registered_again_after_undo_without_losing_identity ... ok
+test target_traversal_and_symlink_escape_are_rejected_without_external_writes ... ok
+test model_cannot_reference_private_endpoints_or_deduplicate_into_private_decisions ... ok
+test validate_only_model_tool_call_does_not_publish_or_consume_capability ... ok
+test source_sensitivity_is_durable_and_taints_manual_derived_topics ... ok
+test undo_of_update_then_original_creation_compensates_in_order ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.61s
+
+   Doc-tests topics_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests topics_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests topics_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+   Compiling topics-bdd v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-bdd)
+    Finished `dev` profile [unoptimized] target(s) in 3.37s
+     Running `/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-bdd --tags 'not @ui'`
+Feature: Index a notes folder read-only and search it
+  Scenario: Index classifies documents by folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then document "memory/people/alex-example.md" has kind "person"
+   ✔  And document "memory/projects/ledger-migration.md" has kind "project"
+   ✔  And document "Meetings/2026.10/2026-10-28-16-05-alex-121.md" has kind "meeting" dated "2026-10-28"
+   ✔  And document "Log/2026.10/2026-10-26.md" has kind "log" dated "2026-10-26"
+  Scenario: People are parsed from profiles with aliases
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then there is a person "Alex Example" known as "Alex" with pronouns "they/them"
+   ✔  And "Alex Example" has the alias "AJ"
+   ✔  And "Alex Example" has role "Engineering Manager" in team "Payments"
+  Scenario: Full-text search finds matches across document kinds
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  And I search for "ledger"
+   ✔  Then the results include "memory/projects/ledger-migration.md"
+   ✔  And the results include "Meetings/2026.10/2026-10-28-16-05-alex-121.md"
+   ✔  And the results include "Log/2026.10/2026-10-26.md"
+   ✔  And each result shows a snippet with "ledger" highlighted
+  Scenario: Indexing never modifies the notes folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then every file in the notes root has the same bytes and modified time as before
+  Scenario: A file that cannot be parsed does not stop the index
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  Given the file "memory/people/broken.md" contains invalid UTF-8
+   ✔  When the index is built
+   ✔  Then the index contains 6 documents
+   ✔  And there is 1 warning naming "memory/people/broken.md"
+Feature: Choose or create a notes folder
+  Scenario: Use an existing notes folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I set the notes root to "work-notes"
+   ✔  Then the notes root setting is "work-notes"
+   ✔  And the index contains 3 documents
+   ✔  And no file in "work-notes" has changed
+  Scenario: Create a fresh notes folder
+   ✔  Given the folder "new-notes" does not exist
+   ✔  When I initialise a notes root at "new-notes"
+   ✔  Then "new-notes" contains the folders "memory/people", "memory/projects", "Meetings", "Log" and "topics"
+   ✔  And the notes root setting is "new-notes"
+  Scenario: Refuse to initialise over an existing non-empty folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I initialise a notes root at "work-notes"
+   ✔  Then I am told the folder is not empty and to use it instead
+   ✔  And no file in "work-notes" has changed
+  Scenario: Switch to a different notes folder
+   ✔  Given the notes root is "work-notes" with 3 markdown files
+   ✔  And a folder "home-notes" containing 2 markdown files
+   ✔  When I set the notes root to "home-notes"
+   ✔  Then the index contains 2 documents
+   ✔  And no document from "work-notes" appears in search results
+Feature: Keep the index in step with the files
+  Scenario: Rebuild after the database is deleted
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  When the index database is deleted
+   ✔  And the app starts
+   ✔  Then the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger-migration.md"
+  Scenario: An external edit is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds searching for "Northwind" returns "memory/projects/ledger-migration.md"
+  Scenario: A new file is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program creates "Meetings/2026-11-02-10-00-standup.md" containing "Northwind call"
+   ✔  Then within 2 seconds the index contains 4 documents
+  Scenario: A renamed file keeps a single index entry
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program renames "memory/projects/ledger-migration.md" to "memory/projects/ledger.md"
+   ✔  Then within 2 seconds the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger.md"
+   ✔  And no result points to "memory/projects/ledger-migration.md"
+  Scenario: A deleted file leaves the index
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program deletes "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds the index contains 2 documents
+  Scenario: Changes made while the app was closed are caught on start
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is stopped
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  And the app starts
+   ✔  Then searching for "Northwind" returns "memory/projects/ledger-migration.md"
+[Summary]
+3 features
+15 scenarios (15 passed)
+78 steps (78 passed)
+   Compiling topics-bdd v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-bdd)
+    Finished `dev` profile [unoptimized] target(s) in 1.85s
+     Running `/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/workspace-bdd`
+Feature: Select notes and discover reviewable knowledge
+  Scenario: Preview a bounded selection before analysis
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given dated notes "Meetings/one.md" on "2026-11-01" and "Meetings/two.md" on "2026-11-03"
+   ✔  And an undated note "Meetings/undated.md"
+   ✔  When I preview folder "Meetings" for dates "2026-11-01" through "2026-11-02"
+   ✔  Then the preview includes "Meetings/one.md" and excludes "Meetings/two.md" and "Meetings/undated.md"
+   ✔  And no note bytes have been sent to a model
+  Scenario: Explicit confirmation allows unknown but never local-only notes
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given "Meetings/one.md" is unknown and "Meetings/private.md" is local-only
+   ✔  When I preview both files and confirm unknown sources for this run
+   ✔  Then the model can receive "Meetings/one.md"
+   ✔  And all model tools deny "Meetings/private.md" and its derived topic context
+  Scenario: Changed selection must be previewed again
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given I preview "Meetings/one.md"
+   ✔  When another program changes "Meetings/one.md" before analysis starts
+   ✔  Then analysis fails with "stale_scope"
+   ✔  And no note bytes are sent to a model
+  Scenario: Discovery yields cited proposals without accepting knowledge
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a selected synthetic meeting says "Alex leads Ledger"
+   ✔  And the scripted model proposes person "Alex", project "Ledger" and a cited "leads" connection
+   ✔  When analysis completes successfully
+   ✔  Then the proposals show the passage and its source locator
+   ✔  And no topic, claim or connection is accepted
+   ✔  And the meeting bytes are unchanged
+  Scenario: Same-name people stay unresolved
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given two accepted people named "Joe" have different IDs
+   ✔  And a selected meeting mentions "Joe" without distinguishing them
+   ✔  When the scripted model proposes an identity for that mention
+   ✔  Then the review shows both candidates as unresolved
+   ✔  And no connection to either person is accepted
+  Scenario: Repeated analysis does not duplicate accepted facts
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a cited claim from "Meetings/one.md" was accepted
+   ✔  When the same unchanged meeting produces the same claim in a later analysis
+   ✔  Then the existing decision is shown as a duplicate
+   ✔  And there is still one accepted claim
+Feature: Recover durable knowledge and preserve concurrent edits
+  Scenario: Rebuild accepted knowledge from Markdown
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given an accepted topic, claim, connection and correction rule
+   ✔  When the derived database is deleted and the app restarts
+   ✔  Then the same stable IDs, current claim, history and citation are recovered
+  Scenario: Conflict preserves external and proposed bytes
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending update with an expected record hash
+   ✔  When another program changes that record before approval
+   ✔  Then approval reports a conflict and preserves the external bytes and proposed bytes
+   ✔  And no dependent record becomes visible
+  Scenario: Recover an interrupted multi-file operation
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given approval of a topic and dependent claim is interrupted after the first file
+   ✔  When the app restarts
+   ✔  Then recovery completes the operation if remaining expected hashes match
+   ✔  And the topic and claim become visible together
+  Scenario: Recovery preserves conflicting changes
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given approval is interrupted after its first file
+   ✔  And another program changes a remaining target
+   ✔  When the app restarts
+   ✔  Then recovery reports a conflict and preserves old, staged and current versions
+   ✔  And incomplete records are not visible as accepted
+  Scenario: Undo creation and update with dependency checks
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a topic was created and a later claim depends on it
+   ✔  When I undo the topic creation
+   ✔  Then undo is refused with the dependent claim identified
+   ✔  When I undo the claim and then undo the topic creation
+   ✔  Then both are absent from current knowledge and remain visible in history
+  Scenario: Switching roots isolates records and pending proposals
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given root "A" has an accepted topic and pending proposal
+   ✔  When I switch to root "B"
+   ✔  Then neither root A's topic nor its proposal appears
+   ✔  And an old root A approval request is rejected
+Feature: Review knowledge and correct it through topic chat
+  Scenario: Edit and approve a cited proposal
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending claim says "Ledger launch is Friday" with a meeting citation
+   ✔  When I edit the claim to "Ledger launch is Monday" and approve it
+   ✔  Then the topic shows the accepted Monday claim with its citation and uncertainty
+   ✔  And the source meeting bytes are unchanged
+  Scenario: Reject a proposal
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending claim says "Ledger is cancelled"
+   ✔  When I reject the proposal
+   ✔  Then no accepted claim says "Ledger is cancelled"
+   ✔  And the proposal is marked rejected
+  Scenario: A connection cannot outlive an omitted proposed topic
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a proposal contains a new person and a connection to that person
+   ✔  When I approve only the connection
+   ✔  Then approval fails with a dependency error
+   ✔  And neither record is accepted
+  Scenario: Correction supersedes the old claim and scopes a future rule
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given an accepted claim says person "Alex" uses "he/him" with a transcript citation
+   ✔  And topic chat proposes "they/them" and a rule scoped to Alex's pronouns
+   ✔  When I approve the correction
+   ✔  Then Alex's current claim says "they/them" and cites my persisted chat statement
+   ✔  And the prior claim is superseded but visible in history
+   ✔  When the same transcript is analyzed again and the app restarts
+   ✔  Then "he/him" is not restored as current knowledge
+   ✔  And the rule does not change another person's pronouns
+   ✔  And the transcript bytes are unchanged
+  Scenario: Stale evidence prevents approval
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending claim cites a passage in "Meetings/one.md"
+   ✔  When another program changes that passage before I approve it
+   ✔  Then approval fails with "stale_evidence"
+   ✔  And the proposed claim is not accepted
+  Scenario: Competing corrections are not silently merged
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given two corrections supersede the same accepted claim revision
+   ✔  When the first correction is approved and the second is approved from its stale view
+   ✔  Then the second approval reports a conflict
+   ✔  And neither correction silently overwrites the other
+Feature: Keep model access scoped and failures non-mutating
+  Scenario: Tool boundary rejects unselected and local-only sources
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given the run is authorized only for "Meetings/one.md"
+   ✔  And "Meetings/private.md" is local-only
+   ✔  When the model requests "Meetings/private.md" or an unselected source by ID
+   ✔  Then the tool returns no source content or derived private context
+  Scenario: Malformed model output is rejected
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a model run returns a proposal with an invalid source locator
+   ✔  When the run completes
+   ✔  Then the proposal is rejected with an actionable error
+   ✔  And no accepted record or source file changes
+[Summary]
+4 features
+20 scenarios (20 passed)
+110 steps (110 passed)
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@topics/desktop@0.1.0',
+npm warn EBADENGINE   required: { node: '24.22.2' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/diff-sequences@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/expect-utils@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/get-type@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/pattern@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/schemas@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: '@jest/types@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'expect@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-diff@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-matcher-utils@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-message-util@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-mock@30.5.2',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-regex-util@30.5.0',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'jest-util@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'pretty-format@30.5.1',
+npm warn EBADENGINE   required: { node: '^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0' },
+npm warn EBADENGINE   current: { node: 'v23.5.0', npm: '10.9.2' }
+npm warn EBADENGINE }
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@8.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 529 packages, and audited 530 packages in 16s
+
+119 packages are looking for funding
+  run `npm fund` for details
+
+30 vulnerabilities (16 moderate, 14 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.35 kB │ gzip:  0.26 kB
+dist/assets/index-CtLYaM_J.css   10.32 kB │ gzip:  2.97 kB
+dist/assets/index-BxynB3SZ.js   263.34 kB │ gzip: 80.50 kB
+✓ built in 559ms
+
+> @topics/desktop@0.1.0 test
+> playwright test
+
+[WebServer] (node:50326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 29 tests using 3 workers
+
+(node:50330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50329) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50328) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (637ms)
+  ✓   1 tests/search.spec.ts:101:3 › Search shows results from the core (752ms)
+  ✓   4 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (330ms)
+  ✓   5 tests/search.spec.ts:101:3 › Empty results say so (380ms)
+  ✓   2 tests/async.spec.ts:35:1 › late responses cannot replace newer results or cleared input (1.6s)
+  ✓   6 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (962ms)
+  ✓   8 tests/workspace.spec.ts:198:1 › approval errors preserve edited candidates and rejected proposals never become topics (445ms)
+  ✓   7 tests/async.spec.ts:81:1 › IPC errors are visible and a subsequent search recovers (886ms)
+  ✓   9 tests/workspace.spec.ts:223:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (390ms)
+  ✓  10 tests/async.spec.ts:105:1 › hostile result markup stays inert while FTS highlights render (545ms)
+  ✓  11 tests/workspace.spec.ts:251:1 › changing root cancels run and clears old topic, proposal and delayed reads (387ms)
+  ✓  12 tests/workspace.spec.ts:277:1 › missing runtime leaves topic browsing and manual proposal capture available (192ms)
+  ✓  13 tests/workspace.spec.ts:293:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (243ms)
+  ✓  14 tests/workspace.spec.ts:328:1 › manual fallback stages a proposal and still needs explicit human approval (261ms)
+  ✓  15 tests/workspace.spec.ts:350:1 › omitted dependencies fail visibly and the exact edited subset stays reviewable (441ms)
+  ✓  16 tests/workspace.spec.ts:382:1 › late topic detail read after a root switch cannot reveal old-root evidence (542ms)
+  ✓  17 tests/workspace.spec.ts:424:1 › stale scope, runtime errors and malformed events stay actionable without accepting data (475ms)
+  ✓  18 tests/workspace.spec.ts:477:1 › an older list refresh cannot overwrite newer workspace data (404ms)
+  ✓  19 tests/workspace.spec.ts:519:1 › keyboard search works from topics and narrow screens keep controls reachable (353ms)
+  ✓  20 tests/workspace.spec.ts:544:1 › failed cancellation remains retryable and ignores late output until stop is confirmed (373ms)
+  ✓  21 tests/workspace.spec.ts:576:1 › accepted empty analysis outcome says no new changes without an approval card (374ms)
+  ✓  22 tests/workspace.spec.ts:610:1 › review F1 keyboard paths retain spaces and newlines until explicit preview (297ms)
+  ✓  23 tests/workspace.spec.ts:635:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval (761ms)
+  ✓  24 tests/workspace.spec.ts:686:1 › review F2 root boot errors are immediately actionable without runtime-only advice (176ms)
+  ✓  25 tests/workspace.spec.ts:714:1 › review F3 dates only filter an explicit nonblank files or folder selection (207ms)
+  ✓  26 tests/workspace.spec.ts:736:1 › review F4 refresh of the same topic preserves chat draft and consent (661ms)
+  ✓  27 tests/workspace.spec.ts:765:1 › review F4 source inventory loading is distinct from an empty folder (223ms)
+  ✓  28 tests/workspace.spec.ts:787:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines (596ms)
+  ✓  29 tests/workspace.spec.ts:809:1 › review F4 include labels distinguish candidates of the same kind (356ms)
+
+  29 passed (11.2s)
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.453334ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (4.460958ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 49.93425
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-cli)
+    Finished `dev` profile [unoptimized] target(s) in 2.39s
+     Running `/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-DknLyI/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.28 kB
+dist/assets/index-CtLYaM_J.css           10.32 kB │ gzip:  2.97 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-C4anlefx.js           263.59 kB │ gzip: 80.65 kB
+✓ built in 548ms
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling libsqlite3-sys v0.36.0
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.1
+   Compiling objc2-core-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling objc2-javascript-core v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-core-text v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-security v0.3.2
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling window-vibrancy v0.8.1
+   Compiling muda v0.20.0
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-wdio-webdriver v1.5.1
+   Compiling tauri-plugin-wdio v1.5.1
+   Compiling topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 35.45s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (656.609917ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 704.481625
+
+Execution of 1 workers started at 2026-11-03T08:08:17.644Z
+
+[0-0] RUNNING in undefined - file:///tests/native/search.ts
+[0-0] PASSED in undefined - file:///tests/native/search.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 2b778172-9e84-4c6e-83e8-025b8dda05f3
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/search.ts
+[webkit 605.1.15 macos #0-0] Phase 0 real macOS app, real Rust store
+[webkit 605.1.15 macos #0-0]    ✓ searches synthetic notes through IPC and shows No matches
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] running app and independent CLI coherence
+[webkit 605.1.15 macos #0-0]    ✓ keeps the new root selected across watcher ticks and external edits
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 2 passing (3.4s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:04  
+
+
+Execution of 1 workers started at 2026-11-03T08:08:24.442Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: d03ef96e-d381-4d7e-86be-df72d83001d1
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (105ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+
+
+Execution of 1 workers started at 2026-11-03T08:08:27.704Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 8689680f-762e-4cf1-9915-2efd87675ffd
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (105ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+
+
+> @topics/desktop@0.1.0 test:native:workspace
+> node scripts/native-smoke.mjs --workspace
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.213292ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (3.184583ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53.589667
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.28 kB
+dist/assets/index-CtLYaM_J.css           10.32 kB │ gzip:  2.97 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-C4anlefx.js           263.59 kB │ gzip: 80.65 kB
+✓ built in 588ms
+   Compiling topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 4.79s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (701.3355ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 746.796375
+
+Execution of 1 workers started at 2026-11-03T08:08:39.233Z
+
+[0-0] RUNNING in undefined - file:///tests/native/workspace.ts
+[0-0] PASSED in undefined - file:///tests/native/workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 744ab89d-8cc8-47db-a322-6c9c48ab952f
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/workspace.ts
+[webkit 605.1.15 macos #0-0] Topic workspace native service journey
+[webkit 605.1.15 macos #0-0]    ✓ creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (1.4s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:02  
+
+
+Execution of 1 workers started at 2026-11-03T08:08:43.881Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 68e90a84-8687-4bd2-bf74-9a1a870421f4
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (104ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+
+
+Execution of 1 workers started at 2026-11-03T08:08:47.121Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 1f6ea83a-3e66-4040-9fef-73853f4b921d
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (103ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+
