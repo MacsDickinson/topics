@@ -1,0 +1,150 @@
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.817083ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (1.946125ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 54.525166
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-cli)
+    Finished `dev` profile [unoptimized] target(s) in 3.18s
+     Running `/Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-lMCLr3/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.28 kB
+dist/assets/index-CtLYaM_J.css           10.32 kB │ gzip:  2.97 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-C4anlefx.js           263.59 kB │ gzip: 80.65 kB
+✓ built in 576ms
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling libsqlite3-sys v0.36.0
+   Compiling topics-runtime v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-runtime)
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.1
+   Compiling objc2-core-foundation v0.3.2
+   Compiling block2 v0.6.2
+   Compiling objc2-javascript-core v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling objc2-core-text v0.3.2
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-security v0.3.2
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/code/prototypes/topics/crates/topics-store)
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-wdio v1.5.1
+   Compiling tauri-plugin-wdio-webdriver v1.5.1
+   Compiling topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 37.16s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (668.556542ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 714.692708
+
+Execution of 1 workers started at 2026-11-03T22:43:49.566Z
+
+[0-0] RUNNING in undefined - file:///tests/native/search.ts
+[0-0] PASSED in undefined - file:///tests/native/search.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 506f314f-c04d-4a66-8fbb-b40c00ffff43
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/search.ts
+[webkit 605.1.15 macos #0-0] Phase 0 real macOS app, real Rust store
+[webkit 605.1.15 macos #0-0]    ✓ searches synthetic notes through IPC and shows No matches
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] running app and independent CLI coherence
+[webkit 605.1.15 macos #0-0]    ✓ keeps the new root selected across watcher ticks and external edits
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 2 passing (3.6s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:04
+
+
+Execution of 1 workers started at 2026-11-03T22:43:56.752Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 57b27984-2b60-4d5e-8aa2-eda05d91b089
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (113ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00
+
+
+Execution of 1 workers started at 2026-11-03T22:44:00.029Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: e03ed653-973b-4a03-aecd-44d4abf90aa4
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (108ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00

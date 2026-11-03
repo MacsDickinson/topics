@@ -1,0 +1,70 @@
+
+> @topics/desktop@0.1.0 test:native:live
+> node scripts/native-live-smoke.mjs
+
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.28 kB
+dist/assets/index-CtLYaM_J.css           10.32 kB │ gzip:  2.97 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-C4anlefx.js           263.59 kB │ gzip: 80.65 kB
+✓ built in 550ms
+   Compiling topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 5.02s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-03T22:44:32.498Z
+
+[0-0] RUNNING in undefined - file:///tests/native/live-workspace.ts
+[0-0] Synthetic acceptance: discovery reviewed, correction reviewed, same-source reanalysis preserved topic/current revision IDs and source bytes.
+[0-0] PASSED in undefined - file:///tests/native/live-workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: e609da1f-d8f4-4dc5-88c2-42ca36716395
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/live-workspace.ts
+[webkit 605.1.15 macos #0-0] Genuine synthetic discovery and topic correction through real desktop IPC
+[webkit 605.1.15 macos #0-0]    ✓ discovers cited pending knowledge, accepts it, proposes a chat correction and accepts only by human action
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (50.6s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:51
+
+
+Execution of 1 workers started at 2026-11-03T22:45:26.684Z
+
+[0-0] RUNNING in undefined - file:///tests/native/live-restart.ts
+[0-0] PASSED in undefined - file:///tests/native/live-restart.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 01cf3f24-adff-4d05-84a0-e5cd93c04fd9
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/live-restart.ts
+[webkit 605.1.15 macos #0-0] Native accepted correction after process restart
+[webkit 605.1.15 macos #0-0]    ✓ recovers the same topic, current correction and source history from real services
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (530ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01

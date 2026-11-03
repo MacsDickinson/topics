@@ -1,0 +1,108 @@
+
+> @topics/desktop@0.1.0 test:native:workspace
+> node scripts/native-smoke.mjs --workspace
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.375125ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (1.908917ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 47.820375
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 43 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.28 kB
+dist/assets/index-CtLYaM_J.css           10.32 kB │ gzip:  2.97 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-C4anlefx.js           263.59 kB │ gzip: 80.65 kB
+✓ built in 571ms
+   Compiling topics-desktop v0.1.0 (/Users/macs/code/prototypes/topics/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 5.71s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (692.197709ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 735.615583
+
+Execution of 1 workers started at 2026-11-03T22:44:12.815Z
+
+[0-0] RUNNING in undefined - file:///tests/native/workspace.ts
+[0-0] PASSED in undefined - file:///tests/native/workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 6c626bcf-61a8-4f9d-8d64-ab23a2bcd0d6
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/workspace.ts
+[webkit 605.1.15 macos #0-0] Topic workspace native service journey
+[webkit 605.1.15 macos #0-0]    ✓ creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (1.5s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:02
+
+
+Execution of 1 workers started at 2026-11-03T22:44:17.589Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 664edf0e-c0ea-462e-9b05-8df04064f8ca
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (123ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00
+
+
+Execution of 1 workers started at 2026-11-03T22:44:20.908Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 3c03c69c-ffcb-49a1-8e77-1fdadce21a41
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (109ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00

@@ -1,0 +1,46 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --config /tmp/topics-playwright-isolated.config.ts
+
+[WebServer] (node:6567) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 29 tests using 3 workers
+
+(node:6577) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:6578) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (774ms)
+  ✓   2 tests/search.spec.ts:101:3 › Search shows results from the core (910ms)
+  ✓   4 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (345ms)
+  ✓   5 tests/search.spec.ts:101:3 › Empty results say so (378ms)
+  ✓   3 tests/async.spec.ts:35:1 › late responses cannot replace newer results or cleared input (1.8s)
+  ✓   6 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (975ms)
+  ✓   8 tests/workspace.spec.ts:198:1 › approval errors preserve edited candidates and rejected proposals never become topics (426ms)
+  ✓   7 tests/async.spec.ts:81:1 › IPC errors are visible and a subsequent search recovers (912ms)
+  ✓   9 tests/workspace.spec.ts:223:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (429ms)
+  ✓  10 tests/async.spec.ts:105:1 › hostile result markup stays inert while FTS highlights render (549ms)
+  ✓  11 tests/workspace.spec.ts:251:1 › changing root cancels run and clears old topic, proposal and delayed reads (382ms)
+  ✓  12 tests/workspace.spec.ts:277:1 › missing runtime leaves topic browsing and manual proposal capture available (211ms)
+  ✓  13 tests/workspace.spec.ts:293:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (244ms)
+  ✓  14 tests/workspace.spec.ts:328:1 › manual fallback stages a proposal and still needs explicit human approval (262ms)
+  ✓  15 tests/workspace.spec.ts:350:1 › omitted dependencies fail visibly and the exact edited subset stays reviewable (462ms)
+  ✓  16 tests/workspace.spec.ts:382:1 › late topic detail read after a root switch cannot reveal old-root evidence (554ms)
+  ✓  17 tests/workspace.spec.ts:424:1 › stale scope, runtime errors and malformed events stay actionable without accepting data (481ms)
+  ✓  18 tests/workspace.spec.ts:477:1 › an older list refresh cannot overwrite newer workspace data (420ms)
+  ✓  19 tests/workspace.spec.ts:519:1 › keyboard search works from topics and narrow screens keep controls reachable (337ms)
+  ✓  20 tests/workspace.spec.ts:544:1 › failed cancellation remains retryable and ignores late output until stop is confirmed (377ms)
+  ✓  21 tests/workspace.spec.ts:576:1 › accepted empty analysis outcome says no new changes without an approval card (388ms)
+  ✓  22 tests/workspace.spec.ts:610:1 › review F1 keyboard paths retain spaces and newlines until explicit preview (316ms)
+  ✓  23 tests/workspace.spec.ts:635:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval (783ms)
+  ✓  24 tests/workspace.spec.ts:686:1 › review F2 root boot errors are immediately actionable without runtime-only advice (160ms)
+  ✓  25 tests/workspace.spec.ts:714:1 › review F3 dates only filter an explicit nonblank files or folder selection (223ms)
+  ✓  26 tests/workspace.spec.ts:736:1 › review F4 refresh of the same topic preserves chat draft and consent (661ms)
+  ✓  27 tests/workspace.spec.ts:765:1 › review F4 source inventory loading is distinct from an empty folder (221ms)
+  ✓  28 tests/workspace.spec.ts:787:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines (608ms)
+  ✓  29 tests/workspace.spec.ts:809:1 › review F4 include labels distinguish candidates of the same kind (384ms)
+
+  29 passed (11.6s)
