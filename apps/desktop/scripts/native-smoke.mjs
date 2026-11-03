@@ -29,6 +29,9 @@ if (
   throw new Error('Usage: native-smoke.mjs [--startup-only] [--workspace]');
 const desktop = resolve(import.meta.dirname, '..');
 const repo = resolve(desktop, '../..');
+const buildTarget = process.env.CARGO_TARGET_DIR
+  ? resolve(process.env.CARGO_TARGET_DIR)
+  : join(repo, 'target');
 const fixture = mkdtempSync(join(tmpdir(), 'topics-native-'));
 const notes = join(fixture, 'notes');
 const newNotes = join(fixture, 'new-notes');
@@ -74,6 +77,7 @@ for (const file of workspace
 const sessionEnvironment = prepareNativeEnvironment(fixture);
 const env = {
   ...process.env,
+  CARGO_TARGET_DIR: buildTarget,
   TOPICS_TEST_HOME: sessionEnvironment.HOME,
   TOPICS_TEST_XDG_DATA: sessionEnvironment.XDG_DATA_HOME,
   TOPICS_APP_DATA_DIR: join(fixture, 'app-data'),
@@ -83,8 +87,8 @@ const env = {
   TOPICS_TEST_CODEX: join(fixture, 'missing-codex'),
   TOPICS_TEST_SANDBOX: fixture,
   TOPICS_TEST_NEW_ROOT: newNotes,
-  TOPICS_TEST_CLI: join(repo, 'target/debug/topics'),
-  TOPICS_TEST_REAL_APP_BINARY: join(repo, 'target/debug/topics-desktop'),
+  TOPICS_TEST_CLI: join(buildTarget, 'debug/topics'),
+  TOPICS_TEST_REAL_APP_BINARY: join(buildTarget, 'debug/topics-desktop'),
   TOPICS_TEST_APP_LAUNCHER: join(desktop, 'scripts/native-app-launcher.mjs'),
   PATH: `${join(desktop, 'node_modules/.bin')}:${process.env.PATH}`,
 };
