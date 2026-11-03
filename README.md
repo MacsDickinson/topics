@@ -1,40 +1,54 @@
 # Topics
 
-Topics is a local Markdown notes application. Phase 0 provides a read-only searchable index, people parsing and an isolated notes-root setting. Markdown is authoritative; the SQLite index can be deleted and rebuilt. Later product phases remain in [the plan](docs/plan.md).
+Topics is a local-first macOS app for ongoing people, projects and threads in Markdown notes. The topic-workspace prototype adds reviewed discovery and sourced understanding to the Phase 0 search foundation.
 
-Rust is pinned to stable 1.98.1. Install rustup, then run:
+- Analyse selected notes and review proposed topics, claims and connections.
+- Accept, edit or reject changes before they become current knowledge.
+- Open topics to inspect facts, evidence, uncertainty and revision history.
+- Correct facts through topic chat, then approve the replacement and its scoped correction rule.
+- Browse sources, set privacy labels, capture topics manually, and undo operations through History.
+
+The persistent task backlog and bullet-journal daily review are the next milestone. See the [agreed plan](docs/plan.md) and [milestone plan and scenarios](features/topic-workspace/PLAN.md) for scope and overnight build authorization.
+
+## Run
+
+The delivered local app is placed at `target/prototype/Topics.app`. Open it from Finder or from this checkout:
 
 ```sh
-scripts/check.sh --core-only
+open target/prototype/Topics.app
 ```
 
-On macOS, `scripts/check.sh` runs the full Rust, browser and real desktop checks. Core CI uses `--core-only`, excluding Tauri from the Linux build. See [contributing](docs/contributing.md) for crate boundaries, safety rules and an example UI-to-service call, and [the delivery report](docs/phase-0-report.md) for reviewed results.
-
-To run the desktop with your chosen existing notes folder:
+To run from source with the pinned Rust toolchain and project-local Node:
 
 ```sh
-cargo run --locked -p topics-cli -- use /absolute/path/to/notes
 cd apps/desktop
 npm ci
 npm run tauri dev
 ```
 
-CLI and desktop must share the same `TOPICS_APP_DATA_DIR` override, if one is set. Without an override they use the same default app data directory. The desktop installs its pinned Node LTS locally through `npm ci`; no global Node change is required. Press Cmd+K to focus search. More details are in [the desktop README](apps/desktop/README.md).
+Choose or create a notes folder in the app. Use Sources to inspect notes and label private files local-only. Choose Analyse notes, select files or folders, optionally filter by dates, and inspect the preview before confirming a cloud run. Dates filter the explicit selection; undated notes are excluded when dates are specified.
 
-Try the CLI with a new synthetic temporary folder (never point tests at personal notes):
+Review changes in Inbox, then open an accepted topic to inspect its understanding or ask for a correction. Chat requires an explicit human Cloud allowed label and confirmed source preview. Unknown-source consent applies to one run and cannot override local-only labels. Model-created topics start unknown.
+
+Chat uses the already signed-in, unmodified **Codex CLI 0.166.0**. Codex owns its credentials; Topics does not read tokens or implement a separate login. `TOPICS_CODEX_PATH` can select an absolute executable; the app also checks standard installation locations. The experimental protocol and tool catalog are pinned. Incompatible or unsupported runtime settings fail with guidance; source browsing, manual capture and accepted knowledge remain usable.
+
+## Data
+
+Original source and meeting notes are not rewritten. Accepted records live in small Markdown files under the notes root's app-owned `topics/` folder, with stable IDs and durable operation metadata. SQLite/FTS is a disposable source index; rebuilding preserves accepted knowledge and history. No Git repository is created inside notes.
+
+App writes retain previous bytes or an absence marker under Application Support. Recoverable operations, hash checks and preserved conflicts protect cooperating writes. History provides compensating undo with dependency checks; retain the app-data snapshots for undo. The [contributor guide](docs/contributing.md) documents formats, recovery and limits.
+
+All cloud calls use one scoped MCP service, through exactly two model tools with no approval/apply capability. Local-only data and unselected evidence are excluded at that boundary. The [runtime investigation](docs/research/codex-effective-tools-discovery.md) records the pinned configuration. The local app is ad-hoc signed.
+
+## Verification
 
 ```sh
-sandbox=$(mktemp -d)
-export TOPICS_APP_DATA_DIR="$sandbox/app-data"
-cargo run -p topics-cli --bin topics -- init "$sandbox/synthetic-notes"
-printf '# Synthetic ledger\nLedger migration example\n' > "$sandbox/synthetic-notes/memory/projects/ledger.md"
-cargo run -p topics-cli --bin topics -- index
-cargo run -p topics-cli --bin topics -- search ledger
-cargo run -p topics-cli --bin topics -- people
+bash scripts/check.sh --core-only
+bash scripts/check.sh
 ```
 
-Use `topics use <path>` to select an existing folder. `init` only accepts an empty or new folder and creates `memory/people`, `memory/projects`, `Meetings`, `Log` and `topics`; it refuses a non-empty folder. All commands emit JSON on success and exit nonzero on failure. No Git repository is required inside notes.
+The core-only command runs formatting, warning-denied Clippy, Rust tests and both BDD runners. The full macOS command adds browser tests and real native search/workspace suites. Four presentation/protocol scenarios are mapped to their native/runtime owners rather than counted as service BDD passes. Genuine model tests are separate explicit opt-ins; see [desktop verification](apps/desktop/README.md).
 
-Without `TOPICS_APP_DATA_DIR`, the CLI uses the OS application data location (`~/Library/Application Support/com.macsdickinson.topics` on macOS). The setting lives in `config.json`, and the disposable index in `index.sqlite3`. CLI and desktop share `topics_store::application_data_dir() -> Result<PathBuf>`. Windows defaults to roaming application data plus `com.macsdickinson.topics`; Linux uses `$XDG_DATA_HOME/com.macsdickinson.topics` (or `~/.local/share/com.macsdickinson.topics`). Overrides must be non-empty absolute paths; invalid overrides fail without falling back. Tests use isolated temporary overrides or a synthetic home. No notes location is assumed.
+Development and automated verification use synthetic temporary notes and an absolute isolated `TOPICS_APP_DATA_DIR`. Never point tests at personal notes or follow the repository's `notes` symlink. Normal app data defaults to `~/Library/Application Support/com.macsdickinson.topics`; CLI and desktop share configuration. Rust is pinned to 1.98.1 and desktop Node to 24.22.2 without changing global Node.
 
-[Core BDD evidence](docs/phase-0-core-evidence.md) records the red and green runs. [Persistence assessment](docs/persistence-assessment.md) explains the limited SQLite decision and future graph boundaries.
+[Phase 0 delivery](docs/phase-0-report.md) remains the foundation record. Milestone evidence and independent findings are retained in `features/topic-workspace/`, `crates/topics-runtime/evidence/`, `apps/desktop/evidence/` and `docs/reviews/`.
