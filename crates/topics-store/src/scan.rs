@@ -25,7 +25,17 @@ pub(crate) fn scan(root: &Path) -> Result<(Records, Vec<String>)> {
     available(root)?;
     let mut records = Vec::new();
     let mut warnings = Vec::new();
-    for entry in walkdir::WalkDir::new(root).follow_links(false) {
+    for entry in walkdir::WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| {
+            e.depth() != 1
+                || !e
+                    .file_name()
+                    .to_str()
+                    .is_some_and(|name| name.eq_ignore_ascii_case("topics"))
+        })
+    {
         let entry = match entry {
             Ok(entry) => entry,
             Err(error) => {
@@ -117,7 +127,17 @@ pub(crate) fn scan(root: &Path) -> Result<(Records, Vec<String>)> {
 pub(crate) fn snapshot(root: &Path) -> Result<Vec<String>> {
     available(root)?;
     let mut entries = vec![root.to_string_lossy().into_owned()];
-    for entry in walkdir::WalkDir::new(root).follow_links(false) {
+    for entry in walkdir::WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| {
+            e.depth() != 1
+                || !e
+                    .file_name()
+                    .to_str()
+                    .is_some_and(|name| name.eq_ignore_ascii_case("topics"))
+        })
+    {
         match entry {
             Ok(entry)
                 if entry.file_type().is_file()

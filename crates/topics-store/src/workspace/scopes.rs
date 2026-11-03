@@ -15,9 +15,63 @@ pub(super) struct Run {
 const MAX_SOURCES: usize = 100;
 const MAX_BYTES: usize = 2 * 1024 * 1024;
 
-pub(super) fn source_bytes(ctx: &Context, path: &str) -> WResult<Vec<u8>> {
+pub(super) fn canonical_relative(ctx: &Context, path: &str) -> WResult<String> {
     relative(path)?;
-    if path.split('/').next() == Some("topics") || !path.to_lowercase().ends_with(".md") {
+    let mut at = ctx.root.clone();
+    let mut parts = vec![];
+    for requested in path.split('/') {
+        let metadata = fs::symlink_metadata(at.join(requested))
+            .map_err(|_| error("stale_evidence", "Selected path is unavailable"))?;
+        if metadata.file_type().is_symlink() {
+            return Err(error("forbidden", "Source symlinks are excluded"));
+        }
+        let mut actual = None;
+        for entry in fs::read_dir(&at).map_err(internal)? {
+            let entry = entry.map_err(internal)?;
+            let same = entry.file_name() == requested || {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::MetadataExt;
+                    entry
+                        .metadata()
+                        .is_ok_and(|m| m.dev() == metadata.dev() && m.ino() == metadata.ino())
+                }
+                #[cfg(not(unix))]
+                {
+                    false
+                }
+            };
+            if same {
+                actual = entry.file_name().to_str().map(str::to_string);
+                break;
+            }
+        }
+        let actual = actual.ok_or_else(|| {
+            error(
+                "invalid_input",
+                "Selected path must have a UTF-8 filesystem identity",
+            )
+        })?;
+        if parts.is_empty() && actual.eq_ignore_ascii_case("topics") {
+            return Err(error(
+                "forbidden",
+                "App records are excluded from source selection",
+            ));
+        }
+        at.push(&actual);
+        parts.push(actual);
+    }
+    Ok(parts.join("/"))
+}
+pub(super) fn source_bytes(ctx: &Context, path: &str) -> WResult<Vec<u8>> {
+    let canonical = canonical_relative(ctx, path)?;
+    let path = canonical.as_str();
+    if path
+        .split('/')
+        .next()
+        .is_some_and(|p| p.eq_ignore_ascii_case("topics"))
+        || !path.to_lowercase().ends_with(".md")
+    {
         return Err(error(
             "forbidden",
             "Only selected source Markdown is readable",
@@ -83,6 +137,27 @@ pub(super) fn validate_source(ctx: &Context, state: &State, source: &SourceRef) 
     if hash(passage.as_bytes()) != source.passage_hash || passage != source.excerpt {
         return Err(stale());
     }
+    if let Some(heading) = &source.locator.heading {
+        let heading_at = text[..start].lines().rev().find_map(|line| {
+            line.strip_prefix('#')
+                .filter(|_| line.starts_with('#'))
+                .map(|_| line.trim_start_matches('#').trim())
+        });
+        let first = if start == 0 {
+            text.lines()
+                .next()
+                .filter(|l| l.starts_with('#'))
+                .map(|l| l.trim_start_matches('#').trim())
+        } else {
+            None
+        };
+        if heading_at.or(first) != Some(heading.as_str()) {
+            return Err(stale());
+        }
+    }
+    if canonical_relative(ctx, &source.path).map_err(|_| stale())? != source.path {
+        return Err(stale());
+    }
     Ok(())
 }
 pub(super) use topics_core::validate_date_range as validate_dates;
@@ -121,21 +196,33 @@ fn restricted_sources(state: &State) -> BTreeSet<Id> {
     }
     sources
 }
-fn path_sensitivity(state: &State, path: &str) -> Sensitivity {
-    let mut label = Sensitivity::Unknown;
-    for op in &state.operations {
-        for target in &op.targets {
-            for source in state.sources.values().filter(|s| s.path == path) {
-                if target.path == format!("topics/sources/{}.md", source.source_id)
-                    && state.hashes.get(&target.path) == Some(&Some(target.new_hash.clone()))
-                {
-                    label = source.sensitivity;
-                }
-            }
-        }
+pub(super) fn path_sensitivity(state: &State, path: &str) -> Sensitivity {
+    if state.source_integrity_unknown {
+        return Sensitivity::LocalOnly;
     }
-    label
+    state
+        .path_labels
+        .get(path)
+        .copied()
+        .unwrap_or(Sensitivity::Unknown)
 }
+fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
+    if state.source_integrity_unknown {
+        return Sensitivity::LocalOnly;
+    }
+    if let Some(label) = state.path_labels.get(path) {
+        return *label;
+    }
+    if state
+        .source_history
+        .iter()
+        .any(|s| s.hash == h && path_sensitivity(state, &s.path) == Sensitivity::LocalOnly)
+    {
+        return Sensitivity::LocalOnly;
+    }
+    Sensitivity::Unknown
+}
+
 pub(super) fn scope(ctx: &Context, id: &str) -> WResult<Scope> {
     valid_id(id)?;
     let scope: Scope = read_json(&ctx.partition.join("scopes").join(format!("{id}.json")))
@@ -188,6 +275,46 @@ pub(super) fn authorized(ctx: &Context, scope_id: &str, run_id: &str) -> WResult
     }
     scope(ctx, scope_id)
 }
+pub(super) fn endpoint_topic(state: &State, endpoint: &Endpoint) -> Option<Id> {
+    match endpoint {
+        Endpoint::Topic { id } => Some(id.clone()),
+        Endpoint::Claim { id } => state
+            .claims
+            .values()
+            .find(|c| &c.id == id || &c.revision_id == id)
+            .map(|c| c.subject_id.clone()),
+        _ => None,
+    }
+}
+pub(super) fn topic_restricted(state: &State, id: &str) -> bool {
+    if state.source_integrity_unknown
+        || state
+            .topics
+            .get(id)
+            .is_none_or(|t| t.sensitivity == Sensitivity::LocalOnly)
+    {
+        return true;
+    }
+    let restricted = |source: &SourceRef| {
+        state.sources.get(&source.source_id).is_none()
+            || path_sensitivity(state, &source.path) == Sensitivity::LocalOnly
+    };
+    state
+        .claims
+        .values()
+        .filter(|c| c.subject_id == id)
+        .flat_map(|c| &c.sources)
+        .any(|e| matches!(e,Evidence::Passage{source} if restricted(source)))
+        || state
+            .connections
+            .values()
+            .filter(|c| {
+                [&c.from, &c.to]
+                    .iter()
+                    .any(|e| endpoint_topic(state, e).as_deref() == Some(id))
+            })
+            .any(|c| c.sources.iter().any(restricted))
+}
 impl WorkspaceService {
     pub fn scope_preview(&self, request: ScopePreviewRequest) -> WResult<ScopePreview> {
         self.with(&request.root_id, |ctx| {
@@ -204,13 +331,27 @@ impl WorkspaceService {
             }
             for folder in &request.spec.folders {
                 relative(folder)?;
-                if folder.split('/').next() == Some("topics") {
+                if folder
+                    .split('/')
+                    .next()
+                    .is_some_and(|p| p.eq_ignore_ascii_case("topics"))
+                {
                     excluded.push(Exclusion {
                         path: folder.clone(),
                         reason: "App records are excluded".into(),
                     });
                     continue;
                 }
+                let folder = match canonical_relative(ctx, folder) {
+                    Ok(path) => path,
+                    Err(_) => {
+                        excluded.push(Exclusion {
+                            path: folder.clone(),
+                            reason: "Unsafe or reserved folder is excluded".into(),
+                        });
+                        continue;
+                    }
+                };
                 let mut at = ctx.root.clone();
                 let mut unsafe_path = false;
                 for part in folder.split('/') {
@@ -233,7 +374,11 @@ impl WorkspaceService {
                 for entry in walkdir::WalkDir::new(at)
                     .follow_links(false)
                     .into_iter()
-                    .filter_entry(|e| e.file_name() != "topics")
+                    .filter_entry(|e| {
+                        !e.file_name()
+                            .to_str()
+                            .is_some_and(|n| n.eq_ignore_ascii_case("topics"))
+                    })
                 {
                     let entry = entry.map_err(|_| {
                         error("invalid_input", "Selected folder cannot be enumerated")
@@ -261,8 +406,22 @@ impl WorkspaceService {
             let op = new_id();
             let mut records = vec![];
             let mut total = 0;
-            for path in files {
-                if path.split('/').next() == Some("topics") || !path.to_lowercase().ends_with(".md")
+            for requested in files {
+                let path = match canonical_relative(ctx, &requested) {
+                    Ok(path) => path,
+                    Err(_) => {
+                        excluded.push(Exclusion {
+                            path: requested,
+                            reason: "Unsafe, unavailable or app-owned source".into(),
+                        });
+                        continue;
+                    }
+                };
+                if path
+                    .split('/')
+                    .next()
+                    .is_some_and(|p| p.eq_ignore_ascii_case("topics"))
+                    || !path.to_lowercase().ends_with(".md")
                 {
                     excluded.push(Exclusion {
                         path,
@@ -301,6 +460,13 @@ impl WorkspaceService {
                     ));
                 }
                 let h = hash(&bytes);
+                if source_sensitivity(&state, &path, &h) == Sensitivity::LocalOnly {
+                    excluded.push(Exclusion {
+                        path,
+                        reason: "Local-only or unresolved same-content source identity".into(),
+                    });
+                    continue;
+                }
                 let text = std::str::from_utf8(&bytes).map_err(internal)?;
                 let d = crate::parse::document(&path, text, h.clone(), "0".into()).date;
                 if request.spec.date_from.is_some() || request.spec.date_to.is_some() {
@@ -458,22 +624,21 @@ impl WorkspaceService {
     pub fn source_context(&self, request: SourceContextRequest) -> WResult<TopicView> {
         self.with(&request.root_id,|ctx|{
         let selected=authorized(ctx,&request.scope_id,&request.run_id)?;let state=load(ctx)?;
-        let mut view=topic_view(ctx,&state,&request.topic_id)?;
-        if view.topic.sensitivity!=Sensitivity::CloudAllowed {return Err(error("forbidden","Topic context requires an explicit cloud-allowed label"));}
-        let allowed:BTreeSet<_>=selected.preview.sources.iter().map(|s|s.source_id.clone()).collect();
-        // A topic derived from a restricted source is denied as a unit, including its name.
-        if view.history.iter().flat_map(|c|&c.sources).any(|e|matches!(e,Evidence::Passage{source} if state.sources.get(&source.source_id).is_none_or(|s|s.sensitivity==Sensitivity::LocalOnly))) {return Err(error("forbidden","Topic context contains restricted evidence"));}
-        fn claim_allowed(c:&Claim,state:&State,allowed:&BTreeSet<Id>,topic:&str,depth:usize)->bool {
-            depth<100 && !c.sources.is_empty() && c.sources.iter().all(|e|match e {
-                Evidence::Passage{source}=>allowed.contains(&source.source_id),
-                Evidence::UserStatement{statement_id}=>state.statements.get(statement_id).is_some_and(|s|s.topic_id==topic)&&!c.supersedes.is_empty()&&c.supersedes.iter().all(|id|state.claims.get(id).is_some_and(|old|claim_allowed(old,state,allowed,topic,depth+1))),
-            })
-        }
-        let eligible=|c:&Claim|claim_allowed(c,&state,&allowed,&request.topic_id,0);
-        view.current_claims.retain(eligible);view.history.retain(eligible);
-        view.connections.retain(|c|c.sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok()) && endpoint_cloud(&state,&c.from) && endpoint_cloud(&state,&c.to));
-        view.unresolved.retain(|c|matches!(c,Candidate::UnresolvedIdentity{sources,candidates,..} if sources.iter().all(|s|allowed.contains(&s.source_id))&&candidates.iter().all(|id|state.topics.get(id).is_some_and(|t|t.sensitivity==Sensitivity::CloudAllowed))));
-        view.warnings.clear();Ok(view)
+        if state.topics.get(&request.topic_id).is_none_or(|t|t.sensitivity!=Sensitivity::CloudAllowed)||topic_restricted(&state,&request.topic_id){return Err(error("forbidden","Topic context is unavailable for this run"));}
+        let mut view=topic_view(ctx,&state,&request.topic_id)?;let allowed:BTreeSet<_>=selected.preview.sources.iter().map(|s|s.source_id.clone()).collect();
+        let eligible=|claim:&Claim|!claim.sources.is_empty()&&claim.sources.iter().all(|e|match e {Evidence::Passage{source}=>allowed.contains(&source.source_id)&&validate_source(ctx,&state,source).is_ok(),Evidence::UserStatement{statement_id}=>state.statements.get(statement_id).is_some_and(|s|s.topic_id==request.topic_id)});
+        let mut redacted=false;
+        view.current_claims.retain_mut(|claim|{
+            if eligible(claim){return true;}
+            if claim.sources.iter().any(|e|matches!(e,Evidence::UserStatement{statement_id} if state.statements.get(statement_id).is_some_and(|s|s.topic_id==request.topic_id))) {
+                claim.sources.clear();claim.supersedes.clear();claim.valid_from=None;claim.valid_to=None;claim.uncertainty=Some("Human-supported current value; evidence outside selected scope is redacted".into());redacted=true;return true;
+            }
+            false
+        });
+        view.history.retain(eligible);
+        view.connections.retain(|c|!c.sources.is_empty()&&c.sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok())&&endpoint_cloud(&state,&c.from)&&endpoint_cloud(&state,&c.to));
+        view.unresolved.retain(|c|matches!(c,Candidate::UnresolvedIdentity{sources,candidates,..} if candidates.contains(&request.topic_id)&&sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok())&&candidates.iter().all(|id|state.topics.get(id).is_some_and(|t|t.sensitivity==Sensitivity::CloudAllowed)&&!topic_restricted(&state,id))));
+        view.warnings.clear();if redacted{view.warnings.push("Current human-supported value included with out-of-scope evidence and metadata redacted".into());}Ok(view)
     })
     }
     pub fn chat_start(&self, request: ChatStartRequest) -> WResult<ChatStartResult> {
@@ -551,7 +716,13 @@ impl WorkspaceService {
             for entry in walkdir::WalkDir::new(&ctx.root)
                 .follow_links(false)
                 .into_iter()
-                .filter_entry(|e| e.depth() == 0 || e.file_name() != "topics")
+                .filter_entry(|e| {
+                    e.depth() == 0
+                        || !e
+                            .file_name()
+                            .to_str()
+                            .is_some_and(|n| n.eq_ignore_ascii_case("topics"))
+                })
             {
                 let entry = entry
                     .map_err(|_| error("invalid_input", "Cannot enumerate source inventory"))?;
@@ -575,7 +746,7 @@ impl WorkspaceService {
                 };
                 let h = hash(&bytes);
                 let id = source_identity(ctx, &state, path, &h);
-                let sensitivity = path_sensitivity(&state, path);
+                let sensitivity = source_sensitivity(&state, path, &h);
                 let source = SourceSummary {
                     source_id: id.clone(),
                     path: path.into(),
@@ -712,6 +883,7 @@ impl WorkspaceService {
                 ));
             }
             let sensitivity = if old.sensitivity == Sensitivity::LocalOnly
+                || source_sensitivity(&state, &request.path, &h) == Sensitivity::LocalOnly
                 || duplicates
                     .iter()
                     .any(|s| s.sensitivity == Sensitivity::LocalOnly)

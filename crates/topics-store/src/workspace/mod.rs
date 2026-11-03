@@ -207,16 +207,11 @@ impl WorkspaceService {
                 .into_iter()
                 .map(|c| c.operation)
                 .collect();
-            let dir = ctx.partition.join("journals");
-            if dir.exists() {
-                for entry in fs::read_dir(dir).map_err(internal)? {
-                    let j: Journal =
-                        read_json(&entry.map_err(internal)?.path().join("journal.json"))?;
-                    if j.status == "conflict" {
-                        let mut o = j.commit.operation;
-                        o.status = "conflict".into();
-                        operations.push(o);
-                    }
+            for (_, j) in journals(ctx)?.0 {
+                if j.status == "conflict" {
+                    let mut operation = j.commit.operation;
+                    operation.status = "conflict".into();
+                    operations.push(operation);
                 }
             }
             Ok(HistoryListResult { operations })
@@ -326,7 +321,7 @@ impl WorkspaceService {
             {
                 return Err(error("conflict", "Operation was already undone"));
             }
-            let ids: BTreeSet<_> = target
+            let mut ids: BTreeSet<_> = target
                 .targets
                 .iter()
                 .filter_map(|t| {
@@ -337,21 +332,15 @@ impl WorkspaceService {
                         .map(str::to_string)
                 })
                 .collect();
+            for record in target.targets.iter().filter_map(|t|t.record.as_ref()) {if record.record_kind=="claim"&&let Some(id)=record.data.get("id").and_then(Value::as_str){ids.insert(id.into());}}
+            let target_order=state.operations.iter().position(|c|c.operation.id==target.operation.id).unwrap();
+            let paths:BTreeSet<_>=target.targets.iter().map(|t|t.path.clone()).collect();
             let undone: BTreeSet<_> = state
                 .operations
                 .iter()
                 .filter_map(|c| c.undo_of.clone())
                 .collect();
-            let dependents: Vec<_> = state
-                .operations
-                .iter()
-                .filter(|c| {
-                    c.operation.id != target.operation.id
-                        && !undone.contains(&c.operation.id)
-                        && c.dependencies.iter().any(|d| ids.contains(d))
-                })
-                .map(|c| c.operation.id.clone())
-                .collect();
+            let dependents:Vec<_>=state.operations.iter().enumerate().filter(|(order,c)|*order>target_order&&c.undo_of.is_none()&&!undone.contains(&c.operation.id)&&(c.dependencies.iter().any(|d|ids.contains(d))||c.targets.iter().any(|t|paths.contains(&t.path)))).map(|(_,c)|c.operation.id.clone()).collect();
             if !dependents.is_empty() {
                 let mut e = error("conflict", "Undo dependent operations first");
                 e.details = Some(serde_json::json!({"dependent_operations":dependents}));
@@ -368,6 +357,7 @@ impl WorkspaceService {
             let mut tombstones = vec![];
             let mut expected = BTreeMap::new();
             for t in &journal.targets {
+                if state.conflicts.contains(&t.path){return Err(error("conflict","Committed target is damaged or rolled back; resolve its conflict before undo"));}
                 let current = bytes_optional(&target_path(&ctx.root, &t.path, false)?)?
                     .as_deref()
                     .map(hash);
@@ -433,6 +423,7 @@ fn commit_empty(
     let mut journal = Journal {
         commit: Commit {
             operation: operation.clone(),
+            sequence: next_sequence(ctx)?,
             targets: vec![],
             dependencies: vec![],
             tombstones,

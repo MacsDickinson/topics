@@ -82,6 +82,8 @@ pub(super) struct Target {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct Commit {
     pub operation: Operation,
+    #[serde(default)]
+    pub sequence: u64,
     pub targets: Vec<TargetMeta>,
     pub dependencies: Vec<Id>,
     pub tombstones: Vec<Id>,
@@ -103,6 +105,8 @@ pub(super) struct TargetMeta {
     pub path: String,
     pub expected_hash: Option<Hash>,
     pub new_hash: Hash,
+    #[serde(default)]
+    pub record: Option<Record>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct Journal {
@@ -266,14 +270,18 @@ pub(super) fn commit(
     }
     let metadata = Commit {
         operation: operation.clone(),
+        sequence: next_sequence(ctx)?,
         targets: targets
             .iter()
-            .map(|t| TargetMeta {
-                path: t.path.clone(),
-                expected_hash: t.expected_hash.clone(),
-                new_hash: t.new_hash.clone(),
+            .map(|t| {
+                Ok(TargetMeta {
+                    path: t.path.clone(),
+                    expected_hash: t.expected_hash.clone(),
+                    new_hash: t.new_hash.clone(),
+                    record: Some(Record::parse(&t.new_bytes)?),
+                })
             })
-            .collect(),
+            .collect::<WResult<Vec<_>>>()?,
         dependencies,
         tombstones,
         undo_of,
@@ -311,7 +319,16 @@ pub(super) fn preserve_conflict(ctx: &Context, dir: &Path, journal: &mut Journal
             &serde_json::json!({"path":t.path,"old_bytes":t.old_bytes,"staged_bytes":t.new_bytes,"current_bytes":current}),
         )?;
     }
-    save_json(&dir.join("journal.json"), journal)
+    save_json(&dir.join("journal.json"), journal)?;
+    for target in &journal.targets {
+        let path = target_path(&ctx.root, &target.path, false)?;
+        if let Some(old) = &target.old_bytes
+            && bytes_optional(&path)?.as_deref().map(hash) == Some(target.new_hash.clone())
+        {
+            atomic(&path, old)?;
+        }
+    }
+    Ok(())
 }
 pub(super) fn apply_journal(
     ctx: &Context,
@@ -362,29 +379,83 @@ pub(super) fn apply_journal(
     journal.status = "committed".into();
     save_json(&dir.join("journal.json"), journal)
 }
-pub(super) fn recover(ctx: &Context) -> WResult<()> {
+pub(super) fn json_entries(dir: &Path) -> WResult<Vec<PathBuf>> {
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut paths = vec![];
+    for entry in fs::read_dir(dir).map_err(internal)? {
+        let entry = entry.map_err(internal)?;
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if name.starts_with('.') || !entry.file_type().map_err(internal)?.is_file() {
+            continue;
+        }
+        if name
+            .strip_suffix(".json")
+            .is_some_and(|id| valid_id(id).is_ok())
+        {
+            paths.push(entry.path());
+        }
+    }
+    paths.sort();
+    Ok(paths)
+}
+pub(super) fn journals(ctx: &Context) -> WResult<(Vec<(PathBuf, Journal)>, Vec<String>)> {
     let base = ctx.partition.join("journals");
+    let mut out = vec![];
+    let mut warnings = vec![];
     if !base.exists() {
-        return Ok(());
+        return Ok((out, warnings));
     }
     for entry in fs::read_dir(base).map_err(internal)? {
         let entry = entry.map_err(internal)?;
-        if entry.file_type().map_err(internal)?.is_symlink() {
-            return Err(error("forbidden", "Invalid journal directory"));
+        if !entry.file_type().map_err(internal)?.is_dir()
+            || entry
+                .file_name()
+                .to_str()
+                .is_none_or(|id| valid_id(id).is_err())
+        {
+            continue;
         }
         let path = entry.path().join("journal.json");
         if !path.exists() {
             continue;
         }
-        let mut journal: Journal = read_json(&path)?;
-        valid_id(&journal.commit.operation.id)?;
-        if journal.status == "staged" {
-            // Conflicts are durable and inspectable; they never expose incomplete records.
-            if let Err(e) = apply_journal(ctx, &entry.path(), &mut journal, None)
-                && e.code != "conflict"
-            {
-                return Err(e);
+        match read_json::<Journal>(&path) {
+            Ok(j) if valid_id(&j.commit.operation.id).is_ok() => out.push((entry.path(), j)),
+            _ => warnings.push("Malformed operation journal retained for manual recovery".into()),
+        }
+    }
+    Ok((out, warnings))
+}
+pub(super) fn recover(ctx: &Context) -> WResult<()> {
+    for (dir, mut journal) in journals(ctx)?.0 {
+        if journal.status != "staged" {
+            continue;
+        }
+        let marker = target_path(
+            &ctx.root,
+            &format!("topics/operations/{}.md", journal.commit.operation.id),
+            false,
+        )?;
+        if let Some(bytes) = bytes_optional(&marker)? {
+            // A durable marker already committed these bytes. Never replay an old
+            // journal over a subsequent write, deletion, or external conflict.
+            if Record::parse(&bytes).is_ok_and(|r| {
+                r.operation_id == journal.commit.operation.id && r.record_kind == "operation"
+            }) {
+                journal.status = "committed".into();
+                save_json(&dir.join("journal.json"), &journal)?;
             }
+            continue;
+        }
+        if let Err(e) = apply_journal(ctx, &dir, &mut journal, None)
+            && e.code != "conflict"
+        {
+            return Err(e);
         }
     }
     Ok(())
@@ -402,187 +473,238 @@ pub(super) struct State {
     pub operations: Vec<Commit>,
     pub warnings: Vec<String>,
     pub hashes: BTreeMap<String, Option<Hash>>,
+    pub conflicts: BTreeSet<String>,
+    pub path_labels: BTreeMap<String, Sensitivity>,
+    pub source_history: Vec<SourceSummary>,
+    pub source_integrity_unknown: bool,
+    pub latest_operations: BTreeMap<String, Id>,
+}
+pub(super) fn next_sequence(ctx: &Context) -> WResult<u64> {
+    Ok(load(ctx)?
+        .operations
+        .iter()
+        .map(|c| c.sequence)
+        .max()
+        .unwrap_or(0)
+        + 1)
+}
+pub(super) fn undone(state: &State, id: &str) -> bool {
+    state
+        .operations
+        .iter()
+        .any(|c| c.undo_of.as_deref() == Some(id))
+}
+fn payload(
+    ctx: &Context,
+    target: &TargetMeta,
+    op: &str,
+    journals: &[(PathBuf, Journal)],
+) -> Option<Record> {
+    let matching =
+        |r: &Record| r.operation_id == op && r.bytes().is_ok_and(|b| hash(&b) == target.new_hash);
+    if let Some(record) = &target.record
+        && matching(record)
+    {
+        return Some(record.clone());
+    }
+    for (_, journal) in journals.iter().filter(|(_, j)| j.commit.operation.id == op) {
+        if let Some(t) = journal
+            .targets
+            .iter()
+            .find(|t| t.path == target.path && hash(&t.new_bytes) == target.new_hash)
+            && let Ok(record) = Record::parse(&t.new_bytes)
+            && matching(&record)
+        {
+            return Some(record);
+        }
+    }
+    let bytes = fs::read(target_path(&ctx.root, &target.path, false).ok()?).ok()?;
+    if hash(&bytes) != target.new_hash {
+        return None;
+    }
+    let record = Record::parse(&bytes).ok()?;
+    matching(&record).then_some(record)
 }
 pub(super) fn load(ctx: &Context) -> WResult<State> {
     let mut state = State::default();
-    let mut records = vec![];
-    for dir in [
-        "operations",
-        "topics",
-        "claims",
-        "connections",
-        "rules",
-        "sources",
-        "statements",
-        "unresolved",
-    ] {
-        let parent = ctx.root.join("topics").join(dir);
-        if !parent.exists() {
-            continue;
-        }
-        // Validate all ancestors before reading app-owned bytes.
+    let (journals, journal_warnings) = journals(ctx)?;
+    state.warnings.extend(journal_warnings);
+    let ops = ctx.root.join("topics/operations");
+    if ops.exists() {
         target_path(
             &ctx.root,
-            &format!("topics/{dir}/{}.md", uuid::Uuid::nil()),
+            &format!("topics/operations/{}.md", uuid::Uuid::nil()),
             false,
         )?;
-        for entry in fs::read_dir(parent).map_err(internal)? {
+        for entry in fs::read_dir(&ops).map_err(internal)? {
             let entry = entry.map_err(internal)?;
-            let Some(name) = entry.file_name().to_str().map(str::to_string) else {
-                state
-                    .warnings
-                    .push("Non UTF-8 record filename excluded".into());
+            let name = entry.file_name();
+            let Some(name) = name.to_str() else {
                 continue;
             };
             if name.starts_with('.') {
                 continue;
             }
-            let path = format!("topics/{dir}/{name}");
             let parsed = (|| {
-                let full = target_path(&ctx.root, &path, false)?;
-                let bytes = fs::read(full).map_err(internal)?;
-                let record = Record::parse(&bytes)?;
-                let expected_kind = match dir {
-                    "topics" => "topic",
-                    "claims" => "claim",
-                    "connections" => "connection",
-                    "rules" => "rule",
-                    "sources" => "source",
-                    "statements" => "statement",
-                    "operations" => "operation",
-                    _ => "unresolved",
-                };
-                if record.record_kind != expected_kind {
-                    return Err(error(
-                        "invalid_input",
-                        "Record kind differs from its directory",
-                    ));
+                let path = target_path(&ctx.root, &format!("topics/operations/{name}"), false)?;
+                let bytes = fs::read(&path).map_err(internal)?;
+                let r = Record::parse(&bytes)?;
+                let c: Commit = serde_json::from_value(r.data).map_err(internal)?;
+                valid_id(&c.operation.id)?;
+                if r.record_kind != "operation"
+                    || r.id != c.operation.id
+                    || r.operation_id != r.id
+                    || name != format!("{}.md", r.id)
+                    || c.operation.status != "committed"
+                {
+                    return Err(error("invalid_input", "Malformed operation marker"));
                 }
-                valid_id(&record.id)?;
-                valid_id(&record.operation_id)?;
-                if name != format!("{}.md", record.id) {
-                    return Err(error(
-                        "invalid_input",
-                        "Record identity differs from filename",
-                    ));
-                }
-                Ok((record, hash(&bytes)))
+                Ok(c)
             })();
             match parsed {
-                Ok((record, h)) => {
-                    state.hashes.insert(path.clone(), Some(h));
-                    records.push((path, record));
-                }
+                Ok(c) => state.operations.push(c),
                 Err(_) => state
                     .warnings
-                    .push(format!("Malformed or unsafe record excluded: {path}")),
+                    .push("Malformed or unsafe operation marker excluded".into()),
             }
         }
     }
-    for (_, r) in records.iter().filter(|(_, r)| r.record_kind == "operation") {
-        match serde_json::from_value::<Commit>(r.data.clone()) {
-            Ok(c) if c.operation.id == r.id && c.operation.status == "committed" => {
-                state.operations.push(c)
-            }
-            _ => state.warnings.push("Malformed operation excluded".into()),
-        }
-    }
-    state
-        .operations
-        .sort_by_key(|c| (c.operation.created_at.clone(), c.operation.id.clone()));
-    let committed: BTreeMap<_, _> = state
-        .operations
-        .iter()
-        .map(|c| (c.operation.id.clone(), c))
-        .collect();
-    let operation_order: BTreeMap<_, _> = state
-        .operations
-        .iter()
-        .enumerate()
-        .map(|(i, c)| (c.operation.id.clone(), i))
-        .collect();
+    state.operations.sort_by_key(|c| {
+        (
+            c.sequence,
+            c.operation.created_at.clone(),
+            c.operation.id.clone(),
+        )
+    });
+    let mut latest = BTreeMap::new();
     let mut tombstones = BTreeMap::new();
     for (order, commit) in state.operations.iter().enumerate() {
+        for target in &commit.targets {
+            if target_path(&ctx.root, &target.path, false).is_err() {
+                state
+                    .warnings
+                    .push("Unsafe committed target excluded".into());
+                continue;
+            }
+            latest.insert(target.path.clone(), (order, target));
+            if target.path.starts_with("topics/sources/")
+                && let Some(r) = payload(ctx, target, &commit.operation.id, &journals)
+                && let Ok(source) = serde_json::from_value::<SourceSummary>(r.data)
+            {
+                state
+                    .path_labels
+                    .insert(source.path.clone(), source.sensitivity);
+                state.source_history.push(source);
+            }
+        }
         for id in &commit.tombstones {
             tombstones.insert(id.clone(), order);
         }
     }
     let mut ids = BTreeSet::new();
-    let mut duplicates = BTreeSet::new();
-    for (_, r) in &records {
-        if r.record_kind != "operation" && !ids.insert(r.id.clone()) {
-            duplicates.insert(r.id.clone());
+    for (path, (order, target)) in latest {
+        let commit = &state.operations[order];
+        let filename = path.rsplit('/').next().unwrap_or("");
+        let id = filename.trim_end_matches(".md");
+        state
+            .latest_operations
+            .insert(path.clone(), commit.operation.id.clone());
+        let bytes = bytes_optional(&target_path(&ctx.root, &path, false)?)?;
+        let current_hash = bytes.as_deref().map(hash);
+        state.hashes.insert(path.clone(), current_hash.clone());
+        if tombstones.get(id).is_some_and(|t| *t >= order) {
+            continue;
         }
-    }
-    for (path, r) in records.iter().filter(|(_, r)| r.record_kind != "operation") {
-        if duplicates.contains(&r.id) {
+        let integrity = current_hash.as_ref() == Some(&target.new_hash);
+        if !integrity {
+            state.conflicts.insert(path.clone());
+            state.warnings.push(format!(
+                "Committed record missing, changed or rolled back: {path}"
+            ));
+        }
+        let Some(record) = payload(ctx, target, &commit.operation.id, &journals) else {
+            if path.starts_with("topics/sources/") {
+                state.source_integrity_unknown = true;
+            }
             state
                 .warnings
-                .push(format!("Duplicate record identity excluded: {}", r.id));
-            continue;
-        }
-        if tombstones.get(&r.id).is_some_and(|order| {
-            operation_order
-                .get(&r.operation_id)
-                .is_none_or(|record_order| order >= record_order)
-        }) {
-            continue;
-        }
-        let Some(op) = committed.get(&r.operation_id) else {
+                .push(format!("Committed record cannot be reconstructed: {path}"));
             continue;
         };
-        if !op
-            .targets
-            .iter()
-            .any(|t| t.path == *path && state.hashes.get(path) == Some(&Some(t.new_hash.clone())))
+        if record.id != id
+            || record.operation_id != commit.operation.id
+            || !ids.insert(record.id.clone())
         {
-            state
-                .warnings
-                .push(format!("Externally changed record excluded: {path}"));
+            state.warnings.push(format!(
+                "Duplicate or mismatched committed record excluded: {path}"
+            ));
+            if path.starts_with("topics/sources/") {
+                state.source_integrity_unknown = true;
+            }
             continue;
         }
-        let identity_field = match r.record_kind.as_str() {
+        let kind = match path.split('/').nth(1).unwrap_or("") {
+            "topics" => "topic",
+            "claims" => "claim",
+            "connections" => "connection",
+            "rules" => "rule",
+            "sources" => "source",
+            "statements" => "statement",
+            "unresolved" => "unresolved",
+            _ => "",
+        };
+        let key = match kind {
             "claim" => "revision_id",
             "source" => "source_id",
             "unresolved" => "",
             _ => "id",
         };
-        if !identity_field.is_empty()
-            && r.data.get(identity_field).and_then(Value::as_str) != Some(&r.id)
+        if record.record_kind != kind
+            || (!key.is_empty() && record.data.get(key).and_then(Value::as_str) != Some(id))
         {
-            state.warnings.push(format!(
-                "Record payload identity differs from filename: {path}"
-            ));
+            state
+                .warnings
+                .push(format!("Record payload identity mismatch: {path}"));
             continue;
         }
         macro_rules! insert {
             ($map:ident,$ty:ty) => {
-                match serde_json::from_value::<$ty>(r.data.clone()) {
-                    Ok(v) => {
-                        state.$map.insert(r.id.clone(), v);
+                match serde_json::from_value::<$ty>(record.data.clone()) {
+                    Ok(value) => {
+                        state.$map.insert(id.into(), value);
                     }
                     Err(_) => state
                         .warnings
-                        .push(format!("Invalid record data excluded: {path}")),
+                        .push(format!("Malformed committed record: {path}")),
                 }
             };
         }
-        match r.record_kind.as_str() {
-            "topic" => insert!(topics, Topic),
+        match kind {
+            "topic" => {
+                insert!(topics, Topic);
+                if !integrity && let Some(topic) = state.topics.get_mut(id) {
+                    topic.sensitivity = Sensitivity::LocalOnly;
+                }
+            }
+            "source" => {
+                insert!(sources, SourceSummary);
+                if !integrity && let Some(source) = state.sources.get_mut(id) {
+                    source.sensitivity = Sensitivity::LocalOnly;
+                    state
+                        .path_labels
+                        .insert(source.path.clone(), Sensitivity::LocalOnly);
+                }
+            }
             "claim" => insert!(claims, Claim),
             "connection" => insert!(connections, Connection),
             "rule" => insert!(rules, Rule),
-            "source" => insert!(sources, SourceSummary),
             "statement" => insert!(statements, UserStatement),
-            "unresolved" => match serde_json::from_value(r.data.clone()) {
-                Ok(c) => state.unresolved.push(c),
-                Err(_) => state
-                    .warnings
-                    .push("Invalid unresolved identity excluded".into()),
-            },
-            _ => state
-                .warnings
-                .push(format!("Unknown record kind excluded: {path}")),
+            "unresolved" => {
+                if let Ok(c) = serde_json::from_value(record.data.clone()) {
+                    state.unresolved.push(c);
+                }
+            }
+            _ => {}
         }
     }
     Ok(state)

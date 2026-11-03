@@ -19,29 +19,75 @@ fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
         return Ok(vec![]);
     }
     let mut out = vec![];
-    for e in fs::read_dir(dir).map_err(internal)? {
-        let e = e.map_err(internal)?;
-        if e.file_type().map_err(internal)?.is_symlink() {
-            return Err(error("forbidden", "Invalid proposal storage"));
+    let state = load(ctx)?;
+    for path in json_entries(&dir)? {
+        let Ok(mut p) = read_json::<SavedProposal>(&path) else {
+            continue;
+        };
+        if p.proposal.root_id != ctx.root_id {
+            continue;
         }
-        let p: SavedProposal = read_json(&e.path())?;
-        if p.proposal.root_id == ctx.root_id {
-            out.push(p);
+        if let Some(commit) = state
+            .operations
+            .iter()
+            .find(|c| c.operation.id == p.operation_id)
+        {
+            if undone(&state, &commit.operation.id) {
+                p.proposal.status = ProposalStatus::Conflict;
+            } else if let Some(decision) = &commit.proposal {
+                p.proposal.status = ProposalStatus::Accepted;
+                p.operation = Some(commit.operation.clone());
+                p.decision = Some(decision.decision.clone());
+                if !decision.applied_candidates.is_empty() {
+                    p.proposal.candidates = decision.applied_candidates.clone();
+                }
+            }
+        } else if p.proposal.status == ProposalStatus::Pending
+            && p.expected
+                .iter()
+                .any(|(path, h)| state.hashes.get(path) != Some(h))
+        {
+            p.proposal.status = ProposalStatus::Conflict;
         }
+        save_json(&path, &p)?;
+        out.push(p);
     }
     out.sort_by_key(|p| (p.proposal.created_at.clone(), p.proposal.id.clone()));
     Ok(out)
 }
 fn fingerprint(candidates: &[Candidate]) -> WResult<Hash> {
     let mut identities = BTreeMap::new();
+    let mut counts = BTreeMap::new();
+    for candidate in candidates {
+        if let Candidate::Topic { topic } = candidate {
+            *counts
+                .entry((topic.name.clone(), format!("{:?}", topic.topic_kind)))
+                .or_insert(0) += 1;
+        }
+    }
     for c in candidates {
         if let Candidate::Topic { topic } = c {
-            let mut v = json_value(topic)?;
-            v.as_object_mut().unwrap().remove("id");
-            identities.insert(
-                topic.id.clone(),
-                hash(serde_json::to_string(&v).map_err(internal)?.as_bytes()),
-            );
+            let referenced = candidates
+                .iter()
+                .any(|c| dependencies(std::slice::from_ref(c)).contains(&topic.id));
+            if referenced
+                && counts.get(&(topic.name.clone(), format!("{:?}", topic.topic_kind))) == Some(&1)
+            {
+                let mut v = json_value(topic)?;
+                v.as_object_mut().unwrap().remove("id");
+                identities.insert(
+                    topic.id.clone(),
+                    hash(serde_json::to_string(&v).map_err(internal)?.as_bytes()),
+                );
+            }
+        }
+    }
+    for c in candidates {
+        if let Candidate::Claim { claim } | Candidate::Correction { claim, .. } = c {
+            let key = serde_json::json!({"subject":identities.get(&claim.subject_id).unwrap_or(&claim.subject_id),"predicate":claim.predicate,"value":claim.value,"sources":claim.sources,"valid_from":claim.valid_from,"valid_to":claim.valid_to});
+            let token = hash(serde_json::to_string(&key).map_err(internal)?.as_bytes());
+            identities.insert(claim.id.clone(), token.clone());
+            identities.insert(claim.revision_id.clone(), token);
         }
     }
     let mut values = vec![];
@@ -54,7 +100,9 @@ fn fingerprint(candidates: &[Candidate]) -> WResult<Hash> {
             Candidate::UnresolvedIdentity { .. } => "",
         };
         if let Some(map) = v.get_mut(key).and_then(Value::as_object_mut) {
-            map.remove("id");
+            if !matches!(c,Candidate::Topic{topic} if !identities.contains_key(&topic.id)) {
+                map.remove("id");
+            }
             map.remove("revision_id");
             map.remove("recorded_at");
         }
@@ -415,10 +463,9 @@ fn validate_model_boundary(
 ) -> WResult<()> {
     validate_candidate_shapes(candidates)?;
     let allowed_topic = |id: &str| {
-        state
-            .topics
-            .get(id)
-            .is_none_or(|t| t.sensitivity == Sensitivity::CloudAllowed)
+        state.topics.get(id).is_none_or(|t| {
+            t.sensitivity != Sensitivity::LocalOnly && !scopes::topic_restricted(state, id)
+        })
     };
     let check_endpoint = |endpoint: &Endpoint| -> WResult<()> {
         let allowed=match endpoint {
@@ -436,6 +483,22 @@ fn validate_model_boundary(
         }
     };
     for candidate in candidates {
+        if let Origin::Chat { topic_id, .. } = origin {
+            let authorized = match candidate {
+                Candidate::Topic { topic } => &topic.id == topic_id,
+                Candidate::Connection { connection } => [&connection.from, &connection.to]
+                    .iter()
+                    .any(|e| scopes::endpoint_topic(state, e).as_ref() == Some(topic_id)),
+                Candidate::UnresolvedIdentity { candidates, .. } => candidates.contains(topic_id),
+                _ => true,
+            };
+            if !authorized {
+                return Err(error(
+                    "forbidden",
+                    "Chat mutation is outside its authorized topic",
+                ));
+            }
+        }
         if let Candidate::Claim { claim } | Candidate::Correction { claim, .. } = candidate {
             for evidence in &claim.sources {
                 if let Evidence::UserStatement { statement_id } = evidence
@@ -591,8 +654,10 @@ fn bound_model_run(
             let mut found = None;
             let dir = ctx.partition.join("runs");
             if dir.exists() {
-                for e in fs::read_dir(dir).map_err(internal)? {
-                    let r: Run = read_json(&e.map_err(internal)?.path())?;
+                for path in json_entries(&dir)? {
+                    let Ok(r) = read_json::<Run>(&path) else {
+                        continue;
+                    };
                     if r.message_id.as_ref() == Some(message_id)
                         && r.topic_id.as_ref() == Some(topic_id)
                         && r.active
@@ -609,6 +674,65 @@ fn bound_model_run(
     }
     Ok((selected, run))
 }
+fn same_claim(a: &Claim, b: &Claim) -> bool {
+    a.subject_id == b.subject_id
+        && a.predicate == b.predicate
+        && a.value == b.value
+        && a.valid_from == b.valid_from
+        && a.valid_to == b.valid_to
+}
+fn endpoint_identity(state: &State, e: &Endpoint) -> Endpoint {
+    match e {
+        Endpoint::Claim { id } => Endpoint::Claim {
+            id: state
+                .claims
+                .values()
+                .find(|c| &c.id == id || &c.revision_id == id)
+                .map(|c| c.id.clone())
+                .unwrap_or_else(|| id.clone()),
+        },
+        _ => e.clone(),
+    }
+}
+fn remap(candidates: &mut [Candidate], mapping: &BTreeMap<Id, Id>) -> WResult<()> {
+    fn replace(value: &mut Value, mapping: &BTreeMap<Id, Id>) {
+        match value {
+            Value::Object(map) => {
+                for (k, v) in map {
+                    if [
+                        "id",
+                        "revision_id",
+                        "subject_id",
+                        "topic_id",
+                        "source_revision_id",
+                    ]
+                    .contains(&k.as_str())
+                    {
+                        if let Value::String(id) = v
+                            && let Some(new) = mapping.get(id)
+                        {
+                            *id = new.clone();
+                        }
+                    } else {
+                        replace(v, mapping)
+                    }
+                }
+            }
+            Value::Array(items) => {
+                for item in items {
+                    replace(item, mapping)
+                }
+            }
+            _ => {}
+        }
+    }
+    for candidate in candidates {
+        let mut value = json_value(&*candidate)?;
+        replace(&mut value, mapping);
+        *candidate = serde_json::from_value(value).map_err(internal)?;
+    }
+    Ok(())
+}
 fn prepared_candidates(
     ctx: &Context,
     state: &State,
@@ -616,39 +740,169 @@ fn prepared_candidates(
     selected: Option<&BTreeSet<Id>>,
 ) -> WResult<Vec<Candidate>> {
     let mut candidates = request.candidates.clone();
-    // Inferred endpoints with ambiguous names stay reviewable as unresolved candidates.
-    if !matches!(request.origin, Origin::Manual) {
-        for candidate in &mut candidates {
-            if let Candidate::Connection { connection } = candidate {
-                let ambiguous = [&connection.from, &connection.to].iter().find_map(|ep| {
-                    if let Endpoint::Topic { id } = ep {
-                        let topic = state.topics.get(id)?;
-                        let ids: Vec<_> = state
-                            .topics
-                            .values()
-                            .filter(|t| t.name == topic.name)
-                            .map(|t| t.id.clone())
-                            .collect();
-                        (ids.len() > 1).then(|| (topic.name.clone(), ids))
-                    } else {
-                        None
+    if matches!(request.origin, Origin::Manual) {
+        taint(state, &mut candidates);
+        validate(ctx, state, &candidates, selected, false)?;
+        return Ok(candidates);
+    }
+    let mut mapping = BTreeMap::new();
+    let mut ambiguous = BTreeMap::<Id, (String, Vec<Id>)>::new();
+    for candidate in &candidates {
+        if let Candidate::Topic { topic } = candidate {
+            if let Some(accepted) = state.topics.get(&topic.id) {
+                if accepted.name != topic.name || accepted.topic_kind != topic.topic_kind {
+                    return Err(error(
+                        "invalid_input",
+                        "Existing topic echo differs from the accepted identity",
+                    ));
+                }
+                mapping.insert(topic.id.clone(), topic.id.clone());
+                continue;
+            }
+            let matches: Vec<_> = state
+                .topics
+                .values()
+                .filter(|t| {
+                    t.topic_kind == topic.topic_kind
+                        && (t.name == topic.name || t.aliases.contains(&topic.name))
+                })
+                .collect();
+            let referenced = candidates
+                .iter()
+                .any(|c| dependencies(std::slice::from_ref(c)).contains(&topic.id));
+            if matches.len() > 1 && referenced {
+                ambiguous.insert(
+                    topic.id.clone(),
+                    (
+                        topic.name.clone(),
+                        matches.iter().map(|t| t.id.clone()).collect(),
+                    ),
+                );
+                continue;
+            }
+            if matches.len() == 1 && referenced {
+                let accepted = matches[0];
+                let evidence_match = candidates.iter().any(|c| match c {
+                    Candidate::Claim { claim } | Candidate::Correction { claim, .. }
+                        if claim.subject_id == topic.id =>
+                    {
+                        state.claims.values().any(|old| {
+                            old.subject_id == accepted.id
+                                && old.predicate == claim.predicate
+                                && old.value == claim.value
+                        }) || state.rules.values().any(|rule| {
+                            rule.topic_id == accepted.id
+                                && rule.predicate == claim.predicate
+                                && rule.match_value == claim.value
+                        })
                     }
+                    Candidate::Connection { connection } => state.connections.values().any(|old| {
+                        old.relation == connection.relation
+                            && [&old.from, &old.to]
+                                .iter()
+                                .any(|e| matches!(e,Endpoint::Topic{id} if id==&accepted.id))
+                            && connection.sources.iter().any(|s| {
+                                old.sources.iter().any(|old| {
+                                    old.document_hash == s.document_hash
+                                        && old.passage_hash == s.passage_hash
+                                })
+                            })
+                    }),
+                    _ => false,
                 });
-                if let Some((name, ids)) = ambiguous {
-                    *candidate = Candidate::UnresolvedIdentity {
-                        name,
-                        candidates: ids,
-                        sources: connection.sources.clone(),
-                    };
+                if evidence_match {
+                    mapping.insert(topic.id.clone(), accepted.id.clone());
                 }
             }
         }
     }
-    candidates.retain(|c|!matches!(c,Candidate::Claim{claim} if state.rules.values().any(|r|rule_matches(r,claim))));
-    taint(state, &mut candidates);
-    validate(ctx, state, &candidates, selected, false)?;
-    Ok(candidates)
+    remap(&mut candidates, &mapping)?;
+    candidates.retain(|c|!matches!(c,Candidate::Topic{topic} if mapping.values().any(|id|id==&topic.id)||ambiguous.contains_key(&topic.id)));
+    for candidate in &mut candidates {
+        if let Candidate::Topic { topic } = candidate
+            && topic.sensitivity == Sensitivity::CloudAllowed
+        {
+            topic.sensitivity = Sensitivity::Unknown;
+        }
+    }
+    let mut prepared = vec![];
+    for candidate in candidates {
+        let mut ambiguity = None;
+        if !matches!(request.origin, Origin::Chat { .. }) {
+            for id in dependencies(std::slice::from_ref(&candidate)) {
+                if let Some(a) = ambiguous.get(&id) {
+                    ambiguity = Some(a.clone());
+                    break;
+                }
+                if let Some(topic) = state.topics.get(&id) {
+                    let ids: Vec<_> = state
+                        .topics
+                        .values()
+                        .filter(|t| t.name == topic.name && t.topic_kind == topic.topic_kind)
+                        .map(|t| t.id.clone())
+                        .collect();
+                    if ids.len() > 1 {
+                        ambiguity = Some((topic.name.clone(), ids));
+                        break;
+                    }
+                }
+            }
+        }
+        if let Some((name, ids)) = ambiguity {
+            let sources = evidence_refs(&candidate).into_iter().cloned().collect();
+            prepared.push(Candidate::UnresolvedIdentity {
+                name,
+                candidates: ids,
+                sources,
+            });
+            continue;
+        }
+        if matches!(&candidate,Candidate::Claim{claim} if state.rules.values().any(|rule|rule_matches(rule,claim)))
+        {
+            continue;
+        }
+        prepared.push(candidate);
+    }
+    let superseded: BTreeSet<_> = state
+        .claims
+        .values()
+        .flat_map(|c| c.supersedes.clone())
+        .collect();
+    let mut duplicates = BTreeMap::new();
+    prepared.retain(|candidate| match candidate {
+        Candidate::Claim { claim } => {
+            if let Some(old) = state
+                .claims
+                .values()
+                .find(|old| !superseded.contains(&old.revision_id) && same_claim(old, claim))
+            {
+                duplicates.insert(claim.id.clone(), old.id.clone());
+                duplicates.insert(claim.revision_id.clone(), old.revision_id.clone());
+                false
+            } else {
+                true
+            }
+        }
+        _ => true,
+    });
+    remap(&mut prepared, &duplicates)?;
+    prepared.retain(|candidate|!matches!(candidate,Candidate::Connection{connection} if state.connections.values().any(|old|old.relation==connection.relation&&endpoint_identity(state,&old.from)==endpoint_identity(state,&connection.from)&&endpoint_identity(state,&old.to)==endpoint_identity(state,&connection.to)&&old.valid_from==connection.valid_from&&old.valid_to==connection.valid_to)));
+    // Known echoes and suppression are successful no-change outcomes.
+    if prepared.is_empty() {
+        return Ok(prepared);
+    }
+    validate_model_boundary(
+        ctx,
+        state,
+        &prepared,
+        selected.ok_or_else(|| error("forbidden", "Model scope is required"))?,
+        &request.origin,
+    )?;
+    taint(state, &mut prepared);
+    validate(ctx, state, &prepared, selected, false)?;
+    Ok(prepared)
 }
+
 impl WorkspaceService {
     /// Validate one buffered tool call without publishing a proposal or consuming its run.
     pub fn validate_proposal(&self, request: StageProposalRequest) -> WResult<()> {
@@ -663,23 +917,6 @@ impl WorkspaceService {
                     selected,
                     &request.origin,
                 )?;
-            }
-            let fingerprint = fingerprint(&request.candidates)?;
-            if !matches!(request.origin, Origin::Manual)
-                && state.operations.iter().any(|c| {
-                    c.proposal
-                        .as_ref()
-                        .is_some_and(|p| p.fingerprint == fingerprint)
-                })
-            {
-                return Ok(());
-            }
-            if saved_proposals(ctx)?.iter().any(|p| {
-                p.proposal.fingerprint == fingerprint
-                    && (!matches!(request.origin, Origin::Manual)
-                        || p.proposal.candidates == request.candidates)
-            }) {
-                return Ok(());
             }
             prepared_candidates(ctx, &state, &request, selected.as_ref())?;
             Ok(())
@@ -728,51 +965,52 @@ impl WorkspaceService {
                     &request.origin,
                 )?;
             }
-            let fingerprint = fingerprint(&request.candidates)?;
-            if !matches!(request.origin, Origin::Manual)
-                && let Some(committed) = state
-                    .operations
-                    .iter()
-                    .find_map(|c| c.proposal.as_ref().filter(|p| p.fingerprint == fingerprint))
-            {
-                return Ok(Proposal {
-                    id: committed.proposal_id.clone(),
-                    root_id: ctx.root_id.clone(),
-                    scope_id: request.scope_id.clone(),
-                    origin: request.origin.clone(),
-                    status: ProposalStatus::Accepted,
-                    candidates: if !committed.applied_candidates.is_empty() {
-                        committed.applied_candidates.clone()
-                    } else {
-                        match &committed.decision {
-                            Decision::Approve { candidates } => candidates.clone(),
-                            Decision::Reject => vec![],
-                        }
-                    },
-                    fingerprint,
-                    created_at: now(),
-                });
-            }
+            let candidates = prepared_candidates(ctx, &state, &request, selected.as_ref())?;
+            let fingerprint = fingerprint(if candidates.is_empty() {
+                &request.candidates
+            } else {
+                &candidates
+            })?;
             if let Some(existing) = saved_proposals(ctx)?.into_iter().find(|p| {
-                p.proposal.fingerprint == fingerprint
+                p.proposal.status != ProposalStatus::Conflict
+                    && p.proposal.status == ProposalStatus::Pending
+                    && p.proposal.fingerprint == fingerprint
                     && (!matches!(request.origin, Origin::Manual)
                         || p.proposal.candidates == request.candidates)
             }) {
                 return Ok(existing.proposal);
             }
-            let candidates = prepared_candidates(ctx, &state, &request, selected.as_ref())?;
             let proposal = Proposal {
                 id: new_id(),
                 root_id: ctx.root_id.clone(),
                 scope_id: request.scope_id.clone(),
                 origin: request.origin.clone(),
-                status: ProposalStatus::Pending,
+                status: if candidates.is_empty() {
+                    ProposalStatus::Accepted
+                } else {
+                    ProposalStatus::Pending
+                },
                 candidates,
                 fingerprint,
                 created_at: now(),
             };
-            let expected_bytes = state
+            let dependency_ids: BTreeSet<_> =
+                dependencies(&proposal.candidates).into_iter().collect();
+            let expected: BTreeMap<_, _> = state
                 .hashes
+                .iter()
+                .filter(|(path, _)| {
+                    dependency_ids
+                        .iter()
+                        .any(|id| path.ends_with(&format!("/{id}.md")))
+                        || state.claims.values().any(|c| {
+                            dependency_ids.contains(&c.id)
+                                && path.ends_with(&format!("/{}.md", c.revision_id))
+                        })
+                })
+                .map(|(p, h)| (p.clone(), h.clone()))
+                .collect();
+            let expected_bytes = expected
                 .keys()
                 .map(|path| {
                     Ok((
@@ -783,10 +1021,14 @@ impl WorkspaceService {
                 .collect::<WResult<BTreeMap<_, _>>>()?;
             let saved = SavedProposal {
                 proposal: proposal.clone(),
-                expected: state.hashes,
+                expected,
                 expected_bytes,
                 operation_id: new_id(),
-                decision: None,
+                decision: if proposal.candidates.is_empty() {
+                    Some(Decision::Approve { candidates: vec![] })
+                } else {
+                    None
+                },
                 operation: None,
             };
             save_json(&proposal_file(ctx, &proposal.id)?, &saved)?;
@@ -794,6 +1036,24 @@ impl WorkspaceService {
         })
     }
     pub fn proposal_decide(&self, request: ProposalDecideRequest) -> WResult<ProposalDecideResult> {
+        let result = self.decide_inner(request.clone());
+        if result
+            .as_ref()
+            .is_err_and(|e| e.code == "conflict" || e.code == "stale_evidence")
+        {
+            let _ = self.with(&request.root_id, |ctx| {
+                let path = proposal_file(ctx, &request.proposal_id)?;
+                let mut saved: SavedProposal = read_json(&path)?;
+                if saved.proposal.status == ProposalStatus::Pending {
+                    saved.proposal.status = ProposalStatus::Conflict;
+                    save_json(&path, &saved)?;
+                }
+                Ok(())
+            });
+        }
+        result
+    }
+    fn decide_inner(&self, request: ProposalDecideRequest) -> WResult<ProposalDecideResult> {
         self.with(&request.root_id, |ctx| {
             let path = proposal_file(ctx, &request.proposal_id)?;
             let mut saved: SavedProposal =
@@ -810,7 +1070,9 @@ impl WorkspaceService {
                     "Proposal fingerprint changed; refresh review",
                 ));
             }
-            if let Some(commit)=load(ctx)?.operations.iter().find(|c|c.operation.id==saved.operation_id) {
+            let current_state=load(ctx)?;
+            if undone(&current_state,&saved.operation_id){return Err(error("conflict","Accepted operation was undone; create a fresh proposal"));}
+            if let Some(commit)=current_state.operations.iter().find(|c|c.operation.id==saved.operation_id) {
                 let durable=commit.proposal.as_ref().ok_or_else(||error("conflict","Operation identity collision"))?;
                 if durable.decision!=request.decision{return Err(error("conflict","Proposal already has a different durable decision"));}
                 saved.proposal.status=ProposalStatus::Accepted;if !durable.applied_candidates.is_empty(){saved.proposal.candidates=durable.applied_candidates.clone();}saved.operation=Some(commit.operation.clone());saved.decision=Some(request.decision.clone());save_json(&path,&saved)?;
@@ -841,12 +1103,6 @@ impl WorkspaceService {
                         "Edited approval cannot introduce unrelated record IDs",
                     ));
                 }
-                // Scope bytes remain a precondition even after the runtime capability closes.
-                if let Some(id) = &saved.proposal.scope_id {
-                    scopes::scope(ctx, id).map_err(|_| {
-                        error("stale_evidence", "Selection changed before approval")
-                    })?;
-                }
                 let mut approved = candidates.clone();
                 let private = taint(&state, &mut approved);
                 let op = saved.operation_id.clone();
@@ -855,10 +1111,21 @@ impl WorkspaceService {
                 for candidate in &mut approved {
                     if let Candidate::Claim{claim}|Candidate::Correction{claim,..}=candidate {
                         let original=saved.proposal.candidates.iter().find_map(|c|match c {Candidate::Claim{claim:old}|Candidate::Correction{claim:old,..} if old.revision_id==claim.revision_id=>Some(old),_=>None});
-                        if let Some(original)=original && (original.value!=claim.value||original.predicate!=claim.predicate||original.valid_from!=claim.valid_from||original.valid_to!=claim.valid_to||original.sources!=claim.sources) {
-                            let statement=UserStatement{id:new_id(),topic_id:claim.subject_id.clone(),text:format!("User edited proposed {} assertion from {:?} to {:?}.",claim.predicate,original.value,claim.value),recorded_at:now()};
+                        if let Some(original)=original && (original.value!=claim.value||original.subject_id!=claim.subject_id||original.uncertainty!=claim.uncertainty||original.predicate!=claim.predicate||original.valid_from!=claim.valid_from||original.valid_to!=claim.valid_to||original.sources!=claim.sources) {
+                            let statement=UserStatement{id:new_id(),topic_id:claim.subject_id.clone(),text:format!("User edited proposed assertion from {} to {}.",serde_json::to_string(original).map_err(internal)?,serde_json::to_string(&claim).map_err(internal)?),recorded_at:now()};
                             claim.sources.push(Evidence::UserStatement{statement_id:statement.id.clone()});
                             claim.uncertainty=Some(format!("{}; user edit recorded as evidence",claim.uncertainty.as_deref().unwrap_or("User-reviewed assertion")));
+                            records.push((format!("topics/statements/{}.md",statement.id),Record::new("statement",&statement.id,&op,&statement)?));state.statements.insert(statement.id.clone(),statement);
+                        }
+                    }
+                }
+                for candidate in &mut approved {
+                    if let Candidate::Connection{connection}=candidate {
+                        let original=saved.proposal.candidates.iter().find_map(|c|match c{Candidate::Connection{connection:old} if old.id==connection.id=>Some(old),_=>None});
+                        if let Some(original)=original&&original!=connection {
+                            let topic_id=scopes::endpoint_topic(&state,&connection.from).or_else(||scopes::endpoint_topic(&state,&connection.to)).or_else(||scopes::endpoint_topic(&state,&original.from)).or_else(||scopes::endpoint_topic(&state,&original.to)).unwrap_or_else(||connection.id.clone());
+                            let statement=UserStatement{id:new_id(),topic_id,text:format!("User edited connection {} from {} to {}.",connection.id,serde_json::to_string(original).map_err(internal)?,serde_json::to_string(&connection).map_err(internal)?),recorded_at:now()};
+                            connection.uncertainty=Some(format!("{}; HUMAN-EDITED relationship, statement {} (original passage is context, not support for the edited relation)",connection.uncertainty.as_deref().unwrap_or("User-reviewed relationship"),statement.id));
                             records.push((format!("topics/statements/{}.md",statement.id),Record::new("statement",&statement.id,&op,&statement)?));state.statements.insert(statement.id.clone(),statement);
                         }
                     }
