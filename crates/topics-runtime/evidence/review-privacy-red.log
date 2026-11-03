@@ -1,0 +1,30 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.60s
+     Running tests/review_privacy.rs (target/debug/deps/review_privacy-6673c21a39f9e704)
+
+running 2 tests
+test returned_non_ephemeral_thread_cannot_transmit ... FAILED
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... FAILED
+
+failures:
+
+---- returned_non_ephemeral_thread_cannot_transmit stdout ----
+
+thread 'returned_non_ephemeral_thread_cannot_transmit' (3371752) panicked at crates/topics-runtime/tests/review_privacy.rs:12:2:
+assertion failed: topics_runtime::protocol::validate_thread(&json!({"approvalPolicy":"never","sandbox":{"type":"readOnly","networkAccess":false},"cwd":"/synthetic","instructionSources":[],"thread":{"id":"thread","ephemeral":false}}),
+        std::path::Path::new("/synthetic")).is_err()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed stdout ----
+
+thread 'inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed' (3371751) panicked at crates/topics-runtime/tests/review_privacy.rs:7:39:
+unchecked field notify
+
+
+failures:
+    inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed
+    returned_non_ephemeral_thread_cannot_transmit
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p topics-runtime --test review_privacy`

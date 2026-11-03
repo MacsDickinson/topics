@@ -54,9 +54,9 @@ for line in sys.stdin:
  elif m=='config/read':
   servers={{'rogue':{{'enabled':not any('rogue.enabled=false' in a for a in sys.argv)}}}}
   if 'TOPICS_MCP_TOKEN' in os.environ:servers['topics']={{'enabled':True}}
-  result(i,{{'config':{{'web_search':'disabled','features':{{f:False for f in flags}},'mcp_servers':servers}}}})
+  c=json.loads('{{"openai_base_url":"https://api.openai.com/v1","chatgpt_base_url":"https://chatgpt.com/backend-api/","notify": [], "model_provider": "openai", "skills": {{"include_instructions": false}}, "agents": {{"enabled": false}}, "analytics": {{"enabled": false}}, "feedback": {{"enabled": false}}, "compact_prompt": "", "experimental_thread_store": {{"type": "local"}}, "otel": {{"exporter": "none", "trace_exporter": "none", "metrics_exporter": "none", "log_user_prompt": false, "log_agent_responses": false, "log_guardian_assessments": false}}}}');c.update({{'web_search':'disabled','features':{{f:False for f in flags}},'mcp_servers':servers}});result(i,{{'config':c}})
  elif m=='account/read':result(i,{{'account':{{'type':'chatgpt'}},'requiresOpenaiAuth':True}})
- elif m=='thread/start':result(i,{{'thread':{{'id':thread}},'cwd':p['cwd'],'approvalPolicy':'never','sandbox':{{'type':'readOnly','networkAccess':False}},'instructionSources':[],'modelProvider':'openai'}})
+ elif m=='thread/start':result(i,{{'thread':{{'id':thread,'ephemeral':True}},'cwd':p['cwd'],'approvalPolicy':'never','sandbox':{{'type':'readOnly','networkAccess':False}},'instructionSources':[],'modelProvider':'openai'}})
  elif m=='mcpServerStatus/list':result(i,{{'data':[{{'name':'topics','runtimeStatus':'connected','tools':tools,'resources':[],'resourceTemplates':[],'toolsError':None}},{{'name':'rogue','runtimeStatus':'connected' if mode=='rogue' else 'disabled','tools':{{}},'resources':[],'resourceTemplates':[]}}],'nextCursor':None}})
  elif m=='turn/start':
   open({marker:?},'w').write('turn_started')

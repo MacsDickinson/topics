@@ -1,0 +1,28 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.98s
+     Running tests/config_override_native.rs (target/debug/deps/config_override_native-678a2b4eed7ed493)
+
+running 1 test
+test installed_runtime_force_disables_notify_skills_and_telemetry_before_any_turn ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/review_privacy.rs (target/debug/deps/review_privacy-6673c21a39f9e704)
+
+running 2 tests
+test returned_non_ephemeral_thread_cannot_transmit ... ok
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-4b0894cc99f5dcf9)
+
+running 5 tests
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.57s
+

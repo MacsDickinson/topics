@@ -3,7 +3,7 @@ use serde_json::Value;
 
 pub const MAX_FRAME: usize = 512 * 1024;
 pub const MAX_OUTPUT: usize = 2 * 1024 * 1024;
-pub const DISABLED: [&str; 9] = [
+pub const DISABLED: &[&str] = &[
     "shell_tool",
     "unified_exec",
     "hooks",
@@ -13,6 +13,12 @@ pub const DISABLED: [&str; 9] = [
     "browser_use",
     "computer_use",
     "multi_agent",
+    "multi_agent_v2",
+    "sleep_tool",
+    "goals",
+    "tool_suggest",
+    "skill_search",
+    "image_generation",
 ];
 #[derive(Debug, PartialEq, Eq)]
 pub enum Outcome {
@@ -167,11 +173,12 @@ pub fn validate_inventory(value: &Value) -> Result<(), String> {
 }
 pub fn validate_config(value: &Value, inherited: &[String]) -> Result<(), String> {
     let c = &value["config"];
+    validate_privacy(c)?;
     if c["web_search"] != "disabled" {
         return Err("web_search_enabled".into());
     }
     for flag in DISABLED {
-        if c["features"][flag] != false {
+        if c["features"][*flag] != false {
             return Err("unsafe_feature".into());
         }
     }
@@ -196,7 +203,8 @@ pub fn validate_config(value: &Value, inherited: &[String]) -> Result<(), String
     Ok(())
 }
 pub fn validate_thread(value: &Value, cwd: &std::path::Path) -> Result<String, String> {
-    if value["approvalPolicy"] != "never"
+    if value["thread"]["ephemeral"] != true
+        || value["approvalPolicy"] != "never"
         || value["sandbox"]["type"] != "readOnly"
         || value["sandbox"]["networkAccess"] != false
         || value["cwd"].as_str() != cwd.to_str()
@@ -230,6 +238,92 @@ pub fn validate_event_context(frame: &Value, thread: &str, turn: &str) -> Result
         }
     } else if p.get("threadId").is_some_and(|id| id != thread) {
         return Err("wrong_thread_identity".into());
+    }
+    Ok(())
+}
+
+/// Known destinations and instruction/telemetry controls for the pinned runtime.
+/// Empty tables merge in Codex, so custom providers/files are rejected, not erased.
+pub const PRIVACY_OVERRIDES: &[&str] = &[
+    "notify=[]",
+    "chatgpt_base_url=\"https://chatgpt.com/backend-api/\"",
+    "openai_base_url=\"https://api.openai.com/v1\"",
+    "model_provider=\"openai\"",
+    "skills.include_instructions=false",
+    "agents.enabled=false",
+    "analytics.enabled=false",
+    "feedback.enabled=false",
+    "compact_prompt=\"\"",
+    "otel.exporter=\"none\"",
+    "otel.trace_exporter=\"none\"",
+    "otel.metrics_exporter=\"none\"",
+    "otel.log_user_prompt=false",
+    "otel.log_agent_responses=false",
+    "otel.log_guardian_assessments=false",
+    "experimental_thread_store.type=\"local\"",
+];
+pub fn validate_privacy(c: &Value) -> Result<(), String> {
+    if c["notify"].as_array().is_none_or(|a| !a.is_empty())
+        || c["model_provider"] != "openai"
+        || c["skills"]["include_instructions"] != false
+        || c["agents"]["enabled"] != false
+        || c["analytics"]["enabled"] != false
+        || c["feedback"]["enabled"] != false
+        || c["compact_prompt"] != ""
+        || c["experimental_thread_store"]["type"] != "local"
+    {
+        return Err("unsafe_privacy_controls".into());
+    }
+    for field in [
+        "experimental_thread_store_endpoint",
+        "experimental_compact_prompt_file",
+        "model_instructions_file",
+        "experimental_realtime_ws_base_url",
+        "experimental_realtime_webrtc_call_base_url",
+    ] {
+        if c.get(field).is_some_and(|v| !v.is_null()) {
+            return Err(format!("inherited_{field}_unsupported"));
+        }
+    }
+    if c.get("model_providers")
+        .is_some_and(|v| !v.is_null() && v.as_object().is_none_or(|o| !o.is_empty()))
+    {
+        return Err("custom_model_providers_unsupported".into());
+    }
+    if c["chatgpt_base_url"] != "https://chatgpt.com/backend-api/"
+        || c["openai_base_url"] != "https://api.openai.com/v1"
+    {
+        return Err("custom_provider_destination_unsupported".into());
+    }
+    let otel = c["otel"].as_object().ok_or("missing_telemetry_controls")?;
+    for key in ["exporter", "trace_exporter", "metrics_exporter"] {
+        if c["otel"][key] != "none" {
+            return Err("telemetry_export_unsupported".into());
+        }
+    }
+    for key in [
+        "log_user_prompt",
+        "log_agent_responses",
+        "log_guardian_assessments",
+    ] {
+        if c["otel"][key] != false {
+            return Err("telemetry_content_logging_unsupported".into());
+        }
+    }
+    for (key, value) in otel {
+        if ![
+            "exporter",
+            "trace_exporter",
+            "metrics_exporter",
+            "log_user_prompt",
+            "log_agent_responses",
+            "log_guardian_assessments",
+        ]
+        .contains(&key.as_str())
+            && !value.is_null()
+        {
+            return Err("inherited_telemetry_settings_unsupported".into());
+        }
     }
     Ok(())
 }

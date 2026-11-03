@@ -264,6 +264,7 @@ impl Runtime {
             // First process reads effective server NAMES only, never logs config.
             let mut discover=Process::spawn(self.command(&root,&cwd,&[],None))?;
             let discovery=async {discover.initialize().await?;let value=discover.request("config/read",json!({"cwd":cwd,"includeLayers":false})).await?;
+                protocol::validate_privacy(&value["config"]).map_err(runtime_error)?;
                 let names=value["config"]["mcp_servers"].as_object().map(|m|m.keys().cloned().collect::<Vec<_>>()).ok_or_else(||runtime_error("Codex configuration schema changed"))?;
                 if names.iter().any(|name|name=="topics" || name.is_empty() || !name.bytes().all(|b|b.is_ascii_alphanumeric() || b==b'_' || b==b'-')) { return Err(runtime_error("Inherited MCP server name cannot be safely disabled; rename it in Codex configuration and retry")); }
                 if names.len()>64{return Err(runtime_error("Too many inherited MCP servers"));}Ok(names)
@@ -299,9 +300,27 @@ impl Runtime {
         let mut cmd = isolation::command(root, &self.config.codex_path);
         cmd.current_dir(cwd);
         for flag in protocol::DISABLED {
-            cmd.args(["--disable", flag]);
+            cmd.args(["--disable", *flag]);
         }
         cmd.args(["-c", "web_search=\"disabled\""]);
+        for setting in protocol::PRIVACY_OVERRIDES {
+            cmd.args(["-c", *setting]);
+        }
+        for variable in [
+            "OPENAI_BASE_URL",
+            "CHATGPT_BASE_URL",
+            "CODEX_BACKEND_BASE_URL",
+            "CODEX_CHATGPT_BASE_URL",
+            "OPENAI_API_KEY",
+            "CODEX_API_KEY",
+            "OTEL_EXPORTER_OTLP_ENDPOINT",
+            "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+            "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+            "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+            "OTEL_EXPORTER_OTLP_HEADERS",
+        ] {
+            cmd.env_remove(variable);
+        }
         for name in inherited {
             // Codex CLI splits dotted keys literally (quotes are NOT unescaped).
             // Discovery rejects every name outside this safe single-segment alphabet.
