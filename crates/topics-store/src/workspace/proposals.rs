@@ -1065,7 +1065,24 @@ fn normalize_model_candidates(
             unique.push(candidate);
         }
     }
-    remap(&mut unique, &pending_ids)?;
+    // Preferring a later superseding revision can form C -> A -> B. Resolve
+    // every endpoint directly to the retained identity, never a discarded ID.
+    let mut retained_ids = BTreeMap::new();
+    for (id, target) in &pending_ids {
+        let mut target = target.clone();
+        let mut visited = BTreeSet::new();
+        while let Some(next) = pending_ids.get(&target) {
+            if next == &target {
+                break;
+            }
+            if !visited.insert(target.clone()) {
+                return Err(error("invalid_input", "Candidate identity remap cycle"));
+            }
+            target = next.clone();
+        }
+        retained_ids.insert(id.clone(), target);
+    }
+    remap(&mut unique, &retained_ids)?;
     let logical_ids: BTreeMap<_, _> = unique
         .iter()
         .filter_map(|c| match c {
