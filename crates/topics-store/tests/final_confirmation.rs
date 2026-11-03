@@ -1651,7 +1651,10 @@ fn r1_logical_and_revision_endpoints_keep_unrelated_facts_and_uniform_raw_errors
 #[test]
 fn r2_literal_raw_statement_value_is_usable_and_noop_correction_is_rejected() {
     let (f, t, old, _) = deal_fixture();
-    let text = format!("Confirmed: {}", old.value);
+    // Manager-approved stricter policy: even "Confirmed: VALUE" is not a
+    // literal-value grant. The entire trimmed statement must equal the value;
+    // retain the original whitespace in the human statement evidence.
+    let text = format!("  {} \n", old.value);
     let statement = f
         .service
         .user_statement(UserStatementRequest {
@@ -1823,4 +1826,163 @@ fn r5_source_label_cannot_release_topic_taint_and_preview_keeps_eligible_selecti
     f.label_topic(&t, Sensitivity::CloudAllowed);
     let preview = f.preview(vec!["M/a.md", "M/b.md"]);
     assert_eq!(preview.sources.len(), 2);
+}
+
+#[test]
+fn f1_short_value_zed_is_not_authorized_by_ask_zedekiah_in_legal() {
+    let (f, t, _, source) = deal_fixture();
+    let mut original = f.claim(&t, &source, "Zed");
+    original.predicate = "short_name".into();
+    f.accept(vec![cc(&original)]);
+    let statement = f
+        .service
+        .user_statement(UserStatementRequest {
+            root_id: f.root_id.clone(),
+            topic_id: t.id.clone(),
+            text: "ask Zedekiah in legal".into(),
+        })
+        .unwrap();
+    let mut questioned = fresh(&original);
+    questioned.predicate = "questioned_name".into();
+    questioned.sources = vec![Evidence::UserStatement {
+        statement_id: statement.id,
+    }];
+    f.accept(vec![cc(&questioned)]);
+    assert!(
+        !model_context_json(&f, &t).contains("Zed"),
+        "a substring of an instruction is not literal assertion authority"
+    );
+}
+
+#[test]
+fn f1_legal_metadata_value_is_not_authorized_by_check_with_legal() {
+    let (f, t, _, source) = deal_fixture();
+    let mut original = f.claim(&t, &source, "legal");
+    original.predicate = "department".into();
+    f.accept(vec![cc(&original)]);
+    let statement = f
+        .service
+        .user_statement(UserStatementRequest {
+            root_id: f.root_id.clone(),
+            topic_id: t.id.clone(),
+            text: "check with legal".into(),
+        })
+        .unwrap();
+    let mut metadata = original.clone();
+    metadata.revision_id = id();
+    metadata.supersedes = vec![original.revision_id];
+    metadata.uncertainty = Some("check with legal".into());
+    metadata.valid_from = Some("2026-03-01".into());
+    metadata.sources = vec![Evidence::UserStatement {
+        statement_id: statement.id,
+    }];
+    f.accept(vec![cc(&metadata)]);
+    assert!(
+        !model_context_json(&f, &t).contains("legal"),
+        "approval of metadata plus an instruction does not assert the unchanged transcript value"
+    );
+}
+
+#[test]
+fn f2_metadata_followups_retain_real_correction_authority_in_manual_and_chat_history() {
+    for chat in [false, true] {
+        let (f, t, old, _) = deal_fixture();
+        let (mut current, rule) = f.correct(&t, &old, "Yak");
+        f.accept(vec![Candidate::Correction {
+            claim: current.clone(),
+            rule,
+        }]);
+        assert!(model_context_json(&f, &t).contains("Yak"));
+        for date in ["2026-03-01", "2026-04-01"] {
+            let message = "check this date and uncertainty";
+            if chat {
+                let proposal = chat_revision(&f, &t, &current, message, |next, evidence| {
+                    next.valid_from = Some(date.into());
+                    next.uncertainty = Some("check date".into());
+                    next.sources = vec![evidence];
+                });
+                current = proposal
+                    .candidates
+                    .iter()
+                    .find_map(|c| {
+                        if let Candidate::Claim { claim } = c {
+                            Some(claim.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap();
+                f.approve(&proposal).unwrap();
+            } else {
+                let statement = f
+                    .service
+                    .user_statement(UserStatementRequest {
+                        root_id: f.root_id.clone(),
+                        topic_id: t.id.clone(),
+                        text: message.into(),
+                    })
+                    .unwrap();
+                let mut next = current.clone();
+                next.revision_id = id();
+                next.supersedes = vec![current.revision_id];
+                next.valid_from = Some(date.into());
+                next.uncertainty = Some("check date".into());
+                next.sources = vec![Evidence::UserStatement {
+                    statement_id: statement.id,
+                }];
+                f.accept(vec![cc(&next)]);
+                current = next;
+            }
+            let json = model_context_json(&f, &t);
+            assert!(
+                json.contains("Yak"),
+                "same-value metadata must retain the actual earlier human correction"
+            );
+            assert!(
+                !json.contains("Zed") && !json.contains("M/secret.md") && !json.contains(message)
+            );
+            assert_eq!(f.view(&t).unwrap().current_claims[0].value, "Yak");
+        }
+    }
+}
+
+#[test]
+fn f2_metadata_lineage_cannot_manufacture_passage_only_value_authority() {
+    for changed in [false, true] {
+        let (f, t, old, source) = deal_fixture();
+        let mut current = old.clone();
+        if changed {
+            current.revision_id = id();
+            current.supersedes = vec![old.revision_id];
+            current.value = "Yak".into();
+            current.sources = vec![Evidence::Passage {
+                source: source.clone(),
+            }];
+            f.accept(vec![cc(&current)]);
+        }
+        for date in ["2026-03-01", "2026-04-01"] {
+            let statement = f
+                .service
+                .user_statement(UserStatementRequest {
+                    root_id: f.root_id.clone(),
+                    topic_id: t.id.clone(),
+                    text: "check this with legal".into(),
+                })
+                .unwrap();
+            let mut next = current.clone();
+            next.revision_id = id();
+            next.supersedes = vec![current.revision_id];
+            next.valid_from = Some(date.into());
+            next.sources = vec![Evidence::UserStatement {
+                statement_id: statement.id,
+            }];
+            f.accept(vec![cc(&next)]);
+            current = next;
+            let json = model_context_json(&f, &t);
+            assert!(
+                !json.contains("Zed") && !json.contains("Yak"),
+                "a same-value history with no human value authority remains withheld"
+            );
+        }
+    }
 }
