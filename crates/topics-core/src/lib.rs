@@ -32,3 +32,6 @@ pub struct IndexReport {
     pub document_count: usize,
     pub warnings: Vec<String>,
 }
+
+pub mod workspace;
+pub use workspace::*;
