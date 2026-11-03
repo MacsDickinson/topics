@@ -1,4 +1,5 @@
 //! Tauri is an adapter: all source access and decisions go through the core service.
+use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::{
     collections::BTreeSet,
@@ -96,13 +97,24 @@ async fn blocking<T: Send + 'static>(
             )
         })?
 }
+// Decode inside the command so malformed/missing request fields also reject
+// with ApiError, rather than Tauri's untyped argument-deserialization string.
+fn decode_request<T: DeserializeOwned>(request: Option<Value>) -> WorkspaceResult<T> {
+    serde_json::from_value(request.unwrap_or(Value::Null)).map_err(|_| {
+        ApiError::new(
+            "invalid_input",
+            "The request fields are invalid or missing. Check the input and retry.",
+        )
+    })
+}
 macro_rules! service_command {
     ($name:ident, $request:ty, $result:ty, $method:ident) => {
         #[tauri::command]
         pub async fn $name(
-            request: $request,
+            request: Option<Value>,
             state: tauri::State<'_, WorkspaceState>,
         ) -> WorkspaceResult<$result> {
+            let request: $request = decode_request(request)?;
             blocking(state.inner().clone(), move |state| {
                 state.with(|service| service.$method(request))
             })
@@ -176,9 +188,10 @@ service_command!(
 
 #[tauri::command]
 pub async fn workspace_root_set(
-    request: RootSetRequest,
+    request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
 ) -> WorkspaceResult<RootSetResult> {
+    let request: RootSetRequest = decode_request(request)?;
     blocking(state.inner().clone(), move |state| {
         let _gate = state
             .lifecycle
@@ -191,10 +204,10 @@ pub async fn workspace_root_set(
 }
 #[tauri::command]
 pub async fn workspace_runtime_status(
-    request: RuntimeStatusRequest,
+    request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
 ) -> WorkspaceResult<RuntimeStatusResult> {
-    let _ = request;
+    let _: RuntimeStatusRequest = decode_request(request)?;
     blocking(state.inner().clone(), move |state| {
         state.ready()?;
         Ok(state.runtime()?.status())
@@ -203,9 +216,10 @@ pub async fn workspace_runtime_status(
 }
 #[tauri::command]
 pub async fn workspace_run_cancel(
-    request: RunCancelRequest,
+    request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
 ) -> WorkspaceResult<RunCancelResult> {
+    let request: RunCancelRequest = decode_request(request)?;
     blocking(state.inner().clone(), move |state| {
         let _gate = state
             .lifecycle
@@ -453,10 +467,11 @@ fn launch(state: &WorkspaceState, app: tauri::AppHandle, input: Launch) -> Works
 }
 #[tauri::command]
 pub async fn workspace_analysis_start(
-    request: AnalysisStartRequest,
+    request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
     app: tauri::AppHandle,
 ) -> WorkspaceResult<AnalysisStartResult> {
+    let request: AnalysisStartRequest = decode_request(request)?;
     blocking(state.inner().clone(), move |state| {
         let _gate = state.lifecycle.lock().map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
         let result = state.with(|service| service.analysis_start(request.clone()))?;
@@ -467,10 +482,11 @@ pub async fn workspace_analysis_start(
 }
 #[tauri::command]
 pub async fn workspace_chat_start(
-    request: ChatStartRequest,
+    request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
     app: tauri::AppHandle,
 ) -> WorkspaceResult<ChatStartResult> {
+    let request: ChatStartRequest = decode_request(request)?;
     blocking(state.inner().clone(), move |state| {
         let _gate = state.lifecycle.lock().map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
         let result = state.with(|service| service.chat_start(request.clone()))?;
@@ -543,6 +559,22 @@ mod tests {
             },
         };
         (fixture, state, host, candidate)
+    }
+    #[test]
+    fn invalid_request_shapes_keep_typed_api_errors_before_service_access() {
+        assert_eq!(
+            decode_request::<RootSetRequest>(None).unwrap_err().code,
+            "invalid_input"
+        );
+        assert_eq!(
+            decode_request::<RootSetRequest>(Some(
+                json!({"path":"/synthetic","create":false,"unexpected":true})
+            ))
+            .unwrap_err()
+            .code,
+            "invalid_input"
+        );
+        assert!(decode_request::<RootGetRequest>(Some(json!({}))).is_ok());
     }
     #[test]
     fn host_validates_without_staging_then_commits_pending_only() {

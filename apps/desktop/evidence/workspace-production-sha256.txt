@@ -1,1 +1,1 @@
-9c4c8ed1aa10d9402595179083db2e58db760374ed250c3a70e90db75a147bcd  target/release/bundle/macos/Topics.app/Contents/MacOS/topics-desktop
+6a10cce1348db2797e70bc6366c479fe5a6bc66e70f267996804f09b3d35e259  ../../target/release/bundle/macos/Topics.app/Contents/MacOS/topics-desktop

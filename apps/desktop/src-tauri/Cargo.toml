@@ -9,6 +9,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+serde = { version = "1" }
 serde_json = "1"
 topics-core = { path = "../../../crates/topics-core" }
 topics-runtime = { path = "../../../crates/topics-runtime" }

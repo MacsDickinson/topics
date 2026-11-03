@@ -2,8 +2,8 @@
 > @topics/desktop@0.1.0 test:native:workspace
 > node scripts/native-smoke.mjs --workspace
 
-✔ native WebKit is nonpersistent while production window config is unchanged (1.117667ms)
-✔ all app sessions receive an existing synthetic home and targeted fallback guard (1.936292ms)
+✔ native WebKit is nonpersistent while production window config is unchanged (1.547584ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (2.064667ms)
 ℹ tests 2
 ℹ suites 0
 ℹ pass 2
@@ -11,7 +11,7 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 47.95525
+ℹ duration_ms 54.771542
 
 > @topics/desktop@0.1.0 tauri
 > tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
@@ -33,41 +33,41 @@ dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
 dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
 dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
 dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
-dist/assets/index-C_8qw_fx.js           261.14 kB │ gzip: 79.87 kB
-✓ built in 595ms
+dist/assets/index-B9sgaf61.js           261.92 kB │ gzip: 80.04 kB
+✓ built in 578ms
    Compiling objc2-exception-helper v0.1.1
    Compiling objc2 v0.6.5
    Compiling libsqlite3-sys v0.36.0
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
    Compiling objc2-foundation v0.3.2
    Compiling wry v0.57.1
    Compiling objc2-core-foundation v0.3.2
    Compiling block2 v0.6.2
    Compiling objc2-javascript-core v0.3.2
    Compiling dispatch2 v0.3.1
-   Compiling objc2-core-text v0.3.2
+   Compiling rusqlite v0.38.0
    Compiling objc2-core-graphics v0.3.2
    Compiling objc2-core-video v0.3.2
+   Compiling objc2-core-text v0.3.2
    Compiling objc2-security v0.3.2
-   Compiling rusqlite v0.38.0
    Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
-   Compiling objc2-quartz-core v0.3.2
    Compiling objc2-cloud-kit v0.3.2
    Compiling objc2-core-image v0.3.2
+   Compiling objc2-quartz-core v0.3.2
    Compiling objc2-core-data v0.3.2
    Compiling objc2-app-kit v0.3.2
    Compiling objc2-web-kit v0.3.2
    Compiling tao v0.37.2
-   Compiling window-vibrancy v0.8.1
    Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
    Compiling tauri-runtime v2.12.2
    Compiling tauri-runtime-wry v2.12.3
    Compiling tauri v2.12.5
-   Compiling tauri-plugin-wdio v1.5.1
    Compiling tauri-plugin-wdio-webdriver v1.5.1
-   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
-    Finished `dev` profile [unoptimized] target(s) in 34.91s
+   Compiling tauri-plugin-wdio v1.5.1
+    Finished `dev` profile [unoptimized] target(s) in 36.65s
        Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
-✔ proxy dispatch exits before GUI, root discovery or personal configuration (699.40625ms)
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (808.936166ms)
 ℹ tests 1
 ℹ suites 0
 ℹ pass 1
@@ -75,9 +75,9 @@ dist/assets/index-C_8qw_fx.js           261.14 kB │ gzip: 79.87 kB
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 744.953292
+ℹ duration_ms 854.887375
 
-Execution of 1 workers started at 2026-11-03T04:13:17.168Z
+Execution of 1 workers started at 2026-11-03T04:23:31.194Z
 
 [0-0] RUNNING in undefined - file:///tests/native/workspace.ts
 [0-0] PASSED in undefined - file:///tests/native/workspace.ts
@@ -85,19 +85,19 @@ Execution of 1 workers started at 2026-11-03T04:13:17.168Z
  "spec" Reporter:
 ------------------------------------------------------------------
 [webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
-[webkit 605.1.15 macos #0-0] Session ID: e01ff0fe-4ef2-477a-a273-bd2e45e86843
+[webkit 605.1.15 macos #0-0] Session ID: c41a7b57-cb7d-4d34-b414-d2f5518845cc
 [webkit 605.1.15 macos #0-0]
 [webkit 605.1.15 macos #0-0] » tests/native/workspace.ts
 [webkit 605.1.15 macos #0-0] Topic workspace native service journey
 [webkit 605.1.15 macos #0-0]    ✓ creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex
 [webkit 605.1.15 macos #0-0]
-[webkit 605.1.15 macos #0-0] 1 passing (1.3s)
+[webkit 605.1.15 macos #0-0] 1 passing (1.4s)
 
 
 Spec Files:	 1 passed, 1 total (100% completed) in 00:00:02  
 
 
-Execution of 1 workers started at 2026-11-03T04:13:21.950Z
+Execution of 1 workers started at 2026-11-03T04:23:36.104Z
 
 [0-0] RUNNING in undefined - file:///tests/native/startup.ts
 [0-0] PASSED in undefined - file:///tests/native/startup.ts
@@ -105,19 +105,19 @@ Execution of 1 workers started at 2026-11-03T04:13:21.950Z
  "spec" Reporter:
 ------------------------------------------------------------------
 [webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
-[webkit 605.1.15 macos #0-0] Session ID: c692ea9a-ac60-4fab-868a-cd2579f6c7b0
+[webkit 605.1.15 macos #0-0] Session ID: e235e1a7-3773-49a1-8c2b-4860e07c5013
 [webkit 605.1.15 macos #0-0]
 [webkit 605.1.15 macos #0-0] » tests/native/startup.ts
 [webkit 605.1.15 macos #0-0] invalid app-data startup configuration
 [webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
 [webkit 605.1.15 macos #0-0]
-[webkit 605.1.15 macos #0-0] 1 passing (334ms)
+[webkit 605.1.15 macos #0-0] 1 passing (329ms)
 
 
 Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  
 
 
-Execution of 1 workers started at 2026-11-03T04:13:25.491Z
+Execution of 1 workers started at 2026-11-03T04:23:39.614Z
 
 [0-0] RUNNING in undefined - file:///tests/native/startup.ts
 [0-0] PASSED in undefined - file:///tests/native/startup.ts
@@ -125,13 +125,13 @@ Execution of 1 workers started at 2026-11-03T04:13:25.491Z
  "spec" Reporter:
 ------------------------------------------------------------------
 [webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
-[webkit 605.1.15 macos #0-0] Session ID: 11228326-33ff-4dd4-8d27-4c12ebc4b8cb
+[webkit 605.1.15 macos #0-0] Session ID: 5b7fe8e9-18b8-4d63-b0c6-d8530d517d52
 [webkit 605.1.15 macos #0-0]
 [webkit 605.1.15 macos #0-0] » tests/native/startup.ts
 [webkit 605.1.15 macos #0-0] invalid app-data startup configuration
 [webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
 [webkit 605.1.15 macos #0-0]
-[webkit 605.1.15 macos #0-0] 1 passing (337ms)
+[webkit 605.1.15 macos #0-0] 1 passing (327ms)
 
 
 Spec Files:	 1 passed, 1 total (100% completed) in 00:00:01  

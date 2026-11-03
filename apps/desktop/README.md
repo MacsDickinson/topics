@@ -6,7 +6,7 @@ The sidebar opens Topics, Search, Inbox, History and Sources. Choose or create a
 
 ## IPC and runtime boundary
 
-`src/workspace-types.ts` mirrors `topics_core::workspace`; canonical Rust values are imported rather than redeclared. All `workspace_*` calls use `{request: ...}` and reject typed `ApiError`. The legacy Phase 0 `search_notes({query})` remains compatible. Rust blocking service work runs off the WebView thread.
+`src/workspace-types.ts` mirrors `topics_core::workspace`; canonical Rust values are imported rather than redeclared. All `workspace_*` calls use `{request: ...}` and reject typed `ApiError`, including malformed request fields decoded into canonical core types inside the command boundary. The legacy Phase 0 `search_notes({query})` remains compatible. Rust blocking service work runs off the WebView thread.
 
 `src-tauri/src/workspace.rs` exposes root, scope, source inventory/read, sensitivity, manual proposal, analysis/chat, proposal decision, topic, persisted statement, history/undo and runtime-status commands. Source inventory/read and statement reads are human-only. The runtime host offers only `scope_sources` and validation-only `propose_changes`; it has no approval or arbitrary filesystem tool. A successful terminal turn alone calls the core staging service, which rechecks scope and dependencies. Only the human decision command applies accepted changes.
 

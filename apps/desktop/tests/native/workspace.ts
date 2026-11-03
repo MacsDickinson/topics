@@ -6,6 +6,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 // Real WebView + Rust IPC; runner creates only synthetic roots and app data.
 describe('Topic workspace native service journey', () => {
   it('creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex', async () => {
+    const malformed = await browser.execute(async () => { try { await (window as any).__TAURI__.core.invoke('workspace_root_set', { request: { path: '/synthetic', create: false, unexpected: true } }); return null; } catch (error) { return error; } });
+    expect(malformed).toEqual({ code: 'invalid_input', message: 'The request fields are invalid or missing. Check the input and retry.', details: null });
     const root = process.env.TOPICS_TEST_WORKSPACE_ROOT!;
     const rootInput = await $('#root-path');
     await rootInput.waitForDisplayed();
