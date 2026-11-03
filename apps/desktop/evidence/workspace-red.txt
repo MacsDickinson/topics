@@ -1,0 +1,228 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1
+
+[WebServer] (node:23165) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:23169) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/async.spec.ts:14:1 › late responses cannot replace newer results or cleared input (1.6s)
+  ✓   2 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (896ms)
+  ✓   3 tests/async.spec.ts:48:1 › hostile result markup stays inert while FTS highlights render (526ms)
+  ✓   4 tests/search.spec.ts:45:35 › Search shows results from the core (392ms)
+  ✓   5 tests/search.spec.ts:45:35 › Empty results say so (375ms)
+  ✘   6 tests/workspace.spec.ts:24:1 › create a fresh root and explain an honest empty workspace (10.0s)
+(node:24319) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   7 tests/workspace.spec.ts:33:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (10.1s)
+(node:25805) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   8 tests/workspace.spec.ts:47:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (10.1s)
+(node:26897) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   9 tests/workspace.spec.ts:74:1 › approval errors preserve edited candidates and rejected proposals never become topics (10.0s)
+(node:26957) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  10 tests/workspace.spec.ts:87:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (10.0s)
+(node:27191) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  11 tests/workspace.spec.ts:99:1 › changing root cancels run and clears old topic, proposal and delayed reads (10.0s)
+(node:27281) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  12 tests/workspace.spec.ts:110:1 › missing runtime leaves topic browsing and manual proposal capture available (5.2s)
+
+
+  1) tests/workspace.spec.ts:24:1 › create a fresh root and explain an honest empty workspace ──────
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.fill: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Notes folder path')
+
+
+      24 | test('create a fresh root and explain an honest empty workspace', async ({ page }) => {
+      25 |   await workspaceFixture(page, { empty: true });
+    > 26 |   await page.getByLabel('Notes folder path').fill('/synthetic/new-notes');
+         |                                              ^
+      27 |   await page.getByLabel('Create a new notes folder').check();
+      28 |   await page.getByRole('button', { name: 'Use notes folder' }).click();
+      29 |   await expect(page.getByText('Add Markdown notes to this folder, then analyse a selection.')).toBeVisible();
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:26:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-create-a-fresh-r-4e9dc-n-an-honest-empty-workspace/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-create-a-fresh-r-4e9dc-n-an-honest-empty-workspace/error-context.md
+
+  2) tests/workspace.spec.ts:33:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Analyse notes', exact: true })
+
+
+      3 |
+      4 | async function preview(page: Page) {
+    > 5 |   await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+        |                                                                          ^
+      6 |   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
+      7 |   await page.getByLabel('From date').fill('2026-11-01');
+      8 |   await page.getByLabel('Through date').fill('2026-11-02');
+        at preview (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:5:74)
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:35:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-bounded-date-pre-2f519-validates-on-selection-edit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-bounded-date-pre-2f519-validates-on-selection-edit/error-context.md
+
+  3) tests/workspace.spec.ts:47:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Analyse notes', exact: true })
+
+
+      3 |
+      4 | async function preview(page: Page) {
+    > 5 |   await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+        |                                                                          ^
+      6 |   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
+      7 |   await page.getByLabel('From date').fill('2026-11-01');
+      8 |   await page.getByLabel('Through date').fill('2026-11-02');
+        at preview (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:5:74)
+        at start (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:13:9)
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:49:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-discovery-cited--56911-t-diff-and-history-conflict/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-discovery-cited--56911-t-diff-and-history-conflict/error-context.md
+
+  4) tests/workspace.spec.ts:74:1 › approval errors preserve edited candidates and rejected proposals never become topics 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Analyse notes', exact: true })
+
+
+      3 |
+      4 | async function preview(page: Page) {
+    > 5 |   await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+        |                                                                          ^
+      6 |   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
+      7 |   await page.getByLabel('From date').fill('2026-11-01');
+      8 |   await page.getByLabel('Through date').fill('2026-11-02');
+        at preview (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:5:74)
+        at start (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:13:9)
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:75:39
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-approval-errors--e5a00-oposals-never-become-topics/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-approval-errors--e5a00-oposals-never-become-topics/error-context.md
+
+  5) tests/workspace.spec.ts:87:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Analyse notes', exact: true })
+
+
+      3 |
+      4 | async function preview(page: Page) {
+    > 5 |   await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+        |                                                                          ^
+      6 |   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
+      7 |   await page.getByLabel('From date').fill('2026-11-01');
+      8 |   await page.getByLabel('Through date').fill('2026-11-02');
+        at preview (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:5:74)
+        at start (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:13:9)
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:88:39
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-duplicate-sequen-0eb40-ams-cannot-update-workspace/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-duplicate-sequen-0eb40-ams-cannot-update-workspace/error-context.md
+
+  6) tests/workspace.spec.ts:99:1 › changing root cancels run and clears old topic, proposal and delayed reads 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Analyse notes', exact: true })
+
+
+      3 |
+      4 | async function preview(page: Page) {
+    > 5 |   await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+        |                                                                          ^
+      6 |   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
+      7 |   await page.getByLabel('From date').fill('2026-11-01');
+      8 |   await page.getByLabel('Through date').fill('2026-11-02');
+        at preview (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:5:74)
+        at start (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:13:9)
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:100:39
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-changing-root-ca-c68a5--proposal-and-delayed-reads/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-changing-root-ca-c68a5--proposal-and-delayed-reads/error-context.md
+
+  7) tests/workspace.spec.ts:110:1 › missing runtime leaves topic browsing and manual proposal capture available 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Codex is missing. Install Codex 0.166.0 and restart Topics.')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Codex is missing. Install Codex 0.166.0 and restart Topics.') with timeout 5000ms
+      - waiting for getByText('Codex is missing. Install Codex 0.166.0 and restart Topics.')
+
+
+      110 | test('missing runtime leaves topic browsing and manual proposal capture available', async ({ page }) => {
+      111 |   await workspaceFixture(page, { unavailable: true });
+    > 112 |   await expect(page.getByText('Codex is missing. Install Codex 0.166.0 and restart Topics.')).toBeVisible();
+          |                                                                                               ^
+      113 |   await expect(page.getByRole('button', { name: 'New topic', exact: true })).toBeEnabled();
+      114 |   await page.getByRole('button', { name: 'New topic', exact: true }).click();
+      115 |   await expect(page.getByLabel('Topic name', { exact: true })).toBeVisible();
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:112:95
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-missing-runtime--8ddd7--proposal-capture-available/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-missing-runtime--8ddd7--proposal-capture-available/error-context.md
+
+  7 failed
+    tests/workspace.spec.ts:24:1 › create a fresh root and explain an honest empty workspace ───────
+    tests/workspace.spec.ts:33:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit 
+    tests/workspace.spec.ts:47:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict 
+    tests/workspace.spec.ts:74:1 › approval errors preserve edited candidates and rejected proposals never become topics 
+    tests/workspace.spec.ts:87:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace 
+    tests/workspace.spec.ts:99:1 › changing root cancels run and clears old topic, proposal and delayed reads 
+    tests/workspace.spec.ts:110:1 › missing runtime leaves topic browsing and manual proposal capture available 
+  5 passed (1.5m)

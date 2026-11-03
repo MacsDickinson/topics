@@ -15,7 +15,7 @@ const appEnvironment = { ...sessionEnvironment, TOPICS_TEST_PROCESS_LOG: resolve
 export const config = {
   outputDir,
   runner: 'local',
-  specs: [process.env.TOPICS_TEST_STARTUP === '1' ? './tests/native/startup.ts' : './tests/native/search.ts'],
+  specs: [process.env.TOPICS_TEST_STARTUP === '1' ? './tests/native/startup.ts' : process.env.TOPICS_TEST_WORKSPACE === '1' ? './tests/native/workspace.ts' : './tests/native/search.ts'],
   maxInstances: 1,
   capabilities: [{ browserName: 'tauri', 'tauri:options': { application: appBinaryPath } }],
   services: [['@wdio/tauri-service', { driverProvider: 'embedded', appBinaryPath: appBinaryPath, env: appEnvironment, captureBackendLogs: true, captureFrontendLogs: true }]],

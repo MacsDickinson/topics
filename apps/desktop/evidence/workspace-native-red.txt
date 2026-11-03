@@ -1,0 +1,378 @@
+
+> @topics/desktop@0.1.0 test:native
+> node scripts/native-smoke.mjs
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.48ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (1.994459ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 52.056292
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling version_check v0.9.5
+   Compiling libc v0.2.191
+   Compiling find-msvc-tools v0.1.15
+   Compiling typenum v1.20.1
+   Compiling shlex v2.0.1
+   Compiling serde_core v1.0.229
+   Compiling cc v1.10.0
+   Compiling vcpkg v0.2.15
+   Compiling generic-array v0.14.7
+   Compiling pkg-config v0.3.34
+   Compiling zmij v1.0.23
+   Compiling foldhash v0.2.0
+   Compiling serde v1.0.229
+   Compiling hashbrown v0.16.1
+   Compiling serde_json v1.0.154
+   Compiling syn v3.0.9
+   Compiling thiserror v2.0.21
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling option-ext v0.2.0
+   Compiling libsqlite3-sys v0.36.0
+   Compiling digest v0.10.7
+   Compiling hashlink v0.11.1
+   Compiling itoa v1.0.18
+   Compiling fallible-iterator v0.3.0
+   Compiling smallvec v1.16.4
+   Compiling dirs-sys v0.5.0
+   Compiling cpufeatures v0.2.17
+   Compiling same-file v1.0.6
+   Compiling bitflags v2.13.2
+   Compiling cfg-if v1.0.5
+   Compiling memchr v2.8.3
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling sha2 v0.10.9
+   Compiling walkdir v2.5.0
+   Compiling directories v6.0.0
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-core)
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
+   Compiling topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-cli)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.21s
+     Running `target/debug/topics use /var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-DD5CfY/notes`
+{
+  "document_count": 1,
+  "warnings": []
+}
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 35 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-6wqP0hHp.css            0.86 kB │ gzip:  0.50 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-BaG_aF9j.js           224.85 kB │ gzip: 70.27 kB
+✓ built in 528ms
+   Compiling proc-macro2 v1.0.107
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling writeable v0.6.4
+   Compiling siphasher v1.0.4
+   Compiling litemap v0.8.3
+   Compiling utf_types v1.0.0
+   Compiling fastrand v2.5.0
+   Compiling phf_shared v0.13.1
+   Compiling utf8_iter v1.1.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling icu_properties_data v2.4.0
+   Compiling phf_generator v0.13.1
+   Compiling stable_deref_trait v1.2.1
+   Compiling serde v1.0.229
+   Compiling smallvec v1.16.4
+   Compiling objc2-encode v4.1.0
+   Compiling bytes v1.12.1
+   Compiling getrandom v0.4.3
+   Compiling objc2-exception-helper v0.1.1
+   Compiling time-core v0.1.9
+   Compiling objc2 v0.6.5
+   Compiling quote v1.0.47
+   Compiling http v1.5.0
+   Compiling num-conv v0.2.2
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling phf_codegen v0.13.1
+   Compiling serde_json v1.0.154
+   Compiling strsim v0.11.1
+   Compiling winnow v1.0.4
+   Compiling deranged v0.5.9
+   Compiling ident_case v1.0.1
+   Compiling powerfmt v0.2.1
+   Compiling bitflags v2.13.2
+   Compiling typeid v1.0.3
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling parking_lot_core v0.9.12
+   Compiling toml_writer v1.1.3+spec-1.1.0
+   Compiling erased-serde v0.4.11
+   Compiling aho-corasick v1.1.5
+   Compiling fnv v1.0.7
+   Compiling new_debug_unreachable v1.0.6
+   Compiling web-time v1.1.0
+   Compiling scopeguard v1.2.0
+   Compiling regex-syntax v0.8.11
+   Compiling lock_api v0.4.14
+   Compiling string_cache_codegen v0.6.1
+   Compiling precomputed-hash v0.1.1
+   Compiling alloc-no-stdlib v3.0.0
+   Compiling hashbrown v0.17.1
+   Compiling equivalent v1.0.3
+   Compiling alloc-stdlib v0.3.0
+   Compiling parking_lot v0.12.5
+   Compiling web_atoms v0.2.6
+   Compiling semver v1.0.28
+   Compiling indexmap v2.14.2
+   Compiling quick-xml v0.42.0
+   Compiling anyhow v1.0.104
+   Compiling base64 v0.23.1
+   Compiling synstructure v0.14.0
+   Compiling darling_core v0.24.1
+   Compiling regex-automata v0.4.18
+   Compiling string_cache v0.9.0
+   Compiling brotli-decompressor v6.2.0
+   Compiling objc2-core-foundation v0.3.2
+   Compiling serde_spanned v1.1.2
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling log v0.4.35
+   Compiling dunce v1.0.5
+   Compiling phf_macros v0.13.1
+   Compiling percent-encoding v2.3.2
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling serde_derive v1.0.229
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling thiserror-impl v2.0.21
+   Compiling phf v0.13.1
+   Compiling regex v1.13.1
+   Compiling zerofrom v0.1.8
+   Compiling dtoa v1.0.11
+   Compiling darling_macro v0.24.1
+   Compiling autocfg v1.5.1
+   Compiling yoke v0.8.4
+   Compiling darling v0.24.1
+   Compiling thiserror v2.0.21
+   Compiling indexmap v1.9.3
+   Compiling dtoa-short v0.3.5
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling form_urlencoded v1.2.2
+   Compiling serde_with_macros v3.24.0
+   Compiling cssparser-macros v0.7.1
+   Compiling derive_more-impl v2.1.1
+   Compiling brotli v9.1.1
+   Compiling toml v1.1.8+spec-1.1.0
+   Compiling tendril v0.5.1
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling uuid v1.29.0
+   Compiling icu_locale_core v2.4.0
+   Compiling selectors v0.38.0
+   Compiling ctor v1.0.13
+   Compiling icu_collections v2.4.0
+   Compiling glob v0.3.4
+   Compiling camino v1.2.6
+   Compiling swift-rs v1.0.9
+   Compiling markup5ever v0.39.0
+   Compiling derive_more v2.1.1
+   Compiling cssparser v0.37.0
+   Compiling icu_provider v2.4.0
+   Compiling serde_derive_internals v0.29.1
+   Compiling servo_arc v0.4.3
+   Compiling icu_properties v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling bit-vec v0.8.0
+   Compiling hashbrown v0.12.3
+   Compiling schemars v0.8.22
+   Compiling rustc-hash v2.1.3
+   Compiling bit-set v0.8.0
+   Compiling schemars_derive v0.8.22
+   Compiling html5ever v0.39.0
+   Compiling cfb v0.14.0
+   Compiling jsonptr v0.7.1
+   Compiling cargo-platform v0.1.9
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling block2 v0.6.2
+   Compiling url v2.5.8
+   Compiling time v0.3.55
+   Compiling dyn-clone v1.0.20
+   Compiling tauri-utils v2.10.2
+   Compiling base64 v0.21.7
+   Compiling foldhash v0.2.0
+   Compiling serde-untagged v0.1.9
+   Compiling dom_query v0.28.0
+   Compiling urlpattern v0.6.0
+   Compiling infer v0.22.0
+   Compiling cargo_metadata v0.19.2
+   Compiling json-patch v4.2.0
+   Compiling serde_with v3.24.0
+   Compiling objc2-foundation v0.3.2
+   Compiling simd-adler32 v0.3.10
+   Compiling plist v1.10.3
+   Compiling dirs v7.0.0
+   Compiling rustc_version v0.4.1
+   Compiling adler2 v2.0.1
+   Compiling crc32fast v1.5.4
+   Compiling pin-project-lite v0.2.17
+   Compiling embed-resource v3.0.12
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-core-text v0.3.2
+   Compiling heck v0.5.0
+   Compiling tauri-winres v0.3.7
+   Compiling miniz_oxide v0.9.1
+   Compiling cargo_toml v1.0.1
+   Compiling time-macros v0.2.32
+   Compiling once_cell v1.21.4
+   Compiling static_vcruntime v3.0.0
+   Compiling flate2 v1.1.10
+   Compiling miniz_oxide v0.8.9
+   Compiling fdeflate v0.3.7
+   Compiling crossbeam-utils v0.8.23
+   Compiling cookie v0.18.2
+   Compiling dpi v0.1.2
+   Compiling tokio-macros v2.7.2
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling futures-core v0.3.34
+   Compiling core-foundation-sys v0.8.7
+   Compiling raw-window-handle v0.6.2
+   Compiling core-foundation v0.10.1
+   Compiling tokio v1.54.1
+   Compiling objc2-security v0.3.2
+   Compiling foreign-types-macros v0.2.4
+   Compiling objc2-javascript-core v0.3.2
+   Compiling foreign-types-shared v0.3.1
+   Compiling foreign-types v0.5.0
+   Compiling crossbeam-channel v0.5.17
+   Compiling wry v0.57.1
+   Compiling core-graphics-types v0.2.0
+   Compiling png v0.18.1
+   Compiling http-body v1.1.0
+   Compiling tauri-runtime v2.12.2
+   Compiling byteorder v1.5.0
+   Compiling httparse v1.10.1
+   Compiling ico v0.6.0
+   Compiling core-graphics v0.25.0
+   Compiling tracing-core v0.1.36
+   Compiling dispatch2 v0.3.1
+   Compiling tracing-attributes v0.1.31
+   Compiling tauri-build v2.7.4
+   Compiling tauri-plugin v2.7.2
+   Compiling tower-service v0.3.3
+   Compiling mime v0.3.17
+   Compiling muda v0.20.0
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling getrandom v0.3.4
+   Compiling tracing v0.1.44
+   Compiling tauri-codegen v2.7.4
+   Compiling keyboard-types v0.8.3
+   Compiling serialize-to-javascript-impl v0.1.2
+   Compiling httpdate v1.0.3
+   Compiling futures-task v0.3.34
+   Compiling sync_wrapper v1.0.2
+   Compiling rustix v1.1.6
+   Compiling slab v0.4.12
+   Compiling atomic-waker v1.1.2
+   Compiling tower-layer v0.3.3
+   Compiling hyper v1.12.0
+   Compiling futures-util v0.3.34
+   Compiling serialize-to-javascript v0.1.2
+   Compiling libsqlite3-sys v0.36.0
+   Compiling http-body-util v0.1.5
+   Compiling serde_repr v0.1.21
+   Compiling errno v0.3.14
+   Compiling thiserror v1.0.69
+   Compiling embed_plist v1.2.2
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling axum-core v0.5.6
+   Compiling hyper-util v0.1.21
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling tower v0.5.3
+   Compiling thiserror-impl v1.0.69
+   Compiling serde_path_to_error v0.1.20
+   Compiling matchit v0.8.4
+   Compiling tempfile v3.27.0
+   Compiling axum v0.8.9
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-core)
+   Compiling async-trait v0.1.92
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-wdio-webdriver v1.5.1
+   Compiling tauri-macros v2.7.4
+   Compiling tauri-plugin-wdio v1.5.1
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/src-tauri)
+   Compiling rusqlite v0.38.0
+   Compiling base64 v0.22.1
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-desktop/crates/topics-store)
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling window-vibrancy v0.8.1
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 56.20s
+       Built application at: /Users/macs/orca/workspaces/topics/topics-m1-desktop/target/debug/topics-desktop
+
+Execution of 1 workers started at 2026-11-03T03:22:25.653Z
+
+[0-0] RUNNING in undefined - file:///tests/native/workspace.ts
+[0-0] Error in "Topic workspace native service journey.shows the selected synthetic root, bounded source preview and durable manual capture"
+Error: Can't call click on element with selector "button=Analyse notes" because element wasn't found
+    at async Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/native/workspace.ts:7:5)
+[0-0] FAILED in undefined - file:///tests/native/workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 36a0e315-d5da-4a3b-b1a3-767883fead0e
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/workspace.ts
+[webkit 605.1.15 macos #0-0] Topic workspace native service journey
+[webkit 605.1.15 macos #0-0]    ✖ shows the selected synthetic root, bounded source preview and durable manual capture
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 failing (10s)
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1) Topic workspace native service journey shows the selected synthetic root, bounded source preview and durable manual capture
+[webkit 605.1.15 macos #0-0] Can't call click on element with selector "button=Analyse notes" because element wasn't found
+[webkit 605.1.15 macos #0-0] Error: Can't call click on element with selector "button=Analyse notes" because element wasn't found
+[webkit 605.1.15 macos #0-0]     at async Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/native/workspace.ts:7:5)
+
+
+Spec Files:	 0 passed, 1 failed, 1 total (100% completed) in 00:00:11  
+
+file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-smoke.mjs:36
+  if (result.status !== 0) throw new Error(`${command} exited ${result.status}`);
+                                 ^
+
+Error: npm exited 1
+    at run (file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-smoke.mjs:36:34)
+    at file:///Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/scripts/native-smoke.mjs:42:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.2
