@@ -97,7 +97,11 @@ files and extra endpoint/telemetry settings are rejected. Every child starts wit
 values and forced RUST_LOG=off cross the boundary. Trace, custom CA, proxy, auth,
 API and OTEL knobs are excluded without enumerating their values; no global env/config
 is changed, and no login, token IO/copy, deliberate refresh or API-key fallback
-exists. All inherited feature names are disabled, and effective enabled/unknown
+exists. Before each child spawn, a metadata-only lstat check requires absence of
+effective CODEX_HOME/.env (default HOME/.codex/.env), because Codex reloads dotenv
+after env_clear. Any existing entry, including dangling symlink/directory, or
+metadata error blocks with configuration guidance. Topics never opens or changes
+that entry; same-user replacement after the check remains outside this boundary. All inherited feature names are disabled, and effective enabled/unknown
 features fail closed. All Codex MCP entries must be disabled with empty inventory.
 
 The returned thread must be ephemeral, empty instruction/workspace roots,
@@ -169,6 +173,7 @@ Catalog provenance: upstream OpenAI Codex commit
 SHA256 `63fd24dc2fff977b4ae4418e5ea2585ab88289784e8e1ddf8bbf84a9e3431672`.
 The upstream Apache-2.0 license is retained in `CODEX-CATALOG-LICENSE.txt`.
 
-Current bounded re-review fixes, 45 deterministic plus four explicit native tests,
+Final dotenv closure and current verification: [evidence/DOTENV-REMEDIATION.md](evidence/DOTENV-REMEDIATION.md).
+Prior bounded re-review fixes, 45 deterministic plus four explicit native tests,
 and frozen-source executable chronology: [evidence/REREVIEW-REMEDIATION.md](evidence/REREVIEW-REMEDIATION.md).
 Earlier review history: [evidence/REVIEW-REMEDIATION.md](evidence/REVIEW-REMEDIATION.md).
