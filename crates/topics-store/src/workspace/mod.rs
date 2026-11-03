@@ -459,7 +459,10 @@ fn topic_projection(state: &State, id: &str) -> WResult<TopicView> {
         .collect();
     let current_claims = history
         .iter()
-        .filter(|c| !superseded.contains(&c.revision_id))
+        .filter(|c| {
+            !superseded.contains(&c.revision_id)
+                && !state.orphan_superseded.contains(&c.revision_id)
+        })
         .cloned()
         .collect();
     let connections = state

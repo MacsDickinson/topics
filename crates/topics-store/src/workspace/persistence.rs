@@ -352,7 +352,15 @@ pub(super) fn commit(
         preserve_conflict(ctx, &dir, &mut journal)?;
         return Err(error(
             "conflict",
-            "Record changed since proposal review; snapshots and staged bytes preserved",
+            if journal
+                .targets
+                .iter()
+                .all(|t| t.path.starts_with("topics/sources/"))
+            {
+                "Source mapping ownership or history changed; restore or explicitly repair mappings; versions preserved"
+            } else {
+                "Record changed since proposal review; snapshots and staged bytes preserved"
+            },
         ));
     }
     apply_journal(ctx, &dir, &mut journal, ctx.interrupt_after)?;
@@ -527,7 +535,10 @@ pub(super) struct State {
     pub hashes: BTreeMap<String, Option<Hash>>,
     pub conflicts: BTreeSet<String>,
     pub path_labels: BTreeMap<String, Sensitivity>,
-    pub reviewed_paths: BTreeSet<String>,
+    pub reviewed_sources: BTreeMap<(String, Hash), (Sensitivity, u64)>,
+    pub private_hashes: BTreeMap<Hash, u64>,
+    pub orphan_superseded: BTreeSet<Id>,
+    pub orphan_topics: BTreeSet<Id>,
     pub source_history: Vec<SourceSummary>,
     pub source_integrity_unknown: bool,
     pub latest_operations: BTreeMap<String, Id>,
@@ -666,8 +677,25 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
                 && let Some(r) = payload(ctx, target, &commit.operation.id, &journals)
                 && let Ok(source) = serde_json::from_value::<SourceSummary>(r.data)
             {
-                if commit.operation.description == "Set sensitivity" {
-                    state.reviewed_paths.insert(source.path.clone());
+                // Consent is for these exact bytes. A review of the previous
+                // occupant of a destination path cannot declassify moved bytes.
+                let human_review = commit.operation.description == "Set sensitivity"
+                    || commit.undo_of.as_ref().is_some_and(|id| {
+                        state.operations.iter().any(|old| {
+                            &old.operation.id == id
+                                && old.operation.description == "Set sensitivity"
+                        })
+                    });
+                if human_review {
+                    state.reviewed_sources.insert(
+                        (source.path.clone(), source.hash.clone()),
+                        (source.sensitivity, commit.sequence),
+                    );
+                }
+                if source.sensitivity == Sensitivity::LocalOnly {
+                    state
+                        .private_hashes
+                        .insert(source.hash.clone(), commit.sequence);
                 }
                 state
                     .path_labels
@@ -806,6 +834,80 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
                 }
             }
             _ => {}
+        }
+    }
+    // Surviving correction records without either a commit marker or a known
+    // interrupted journal are evidence of lost history, never authority for a
+    // replacement. Quarantine the old head rather than resurrecting a false fact.
+    for (dir, kind) in [("claims", "claim"), ("rules", "rule")] {
+        let probe = format!("topics/{dir}/{}.md", uuid::Uuid::nil());
+        let safe = target_path(&ctx.root, &probe, false)?;
+        let parent = safe
+            .parent()
+            .ok_or_else(|| error("invalid_input", "Invalid record directory"))?;
+        if !parent.exists() {
+            continue;
+        }
+        for entry in fs::read_dir(parent).map_err(internal)? {
+            let entry = entry.map_err(internal)?;
+            let name = entry.file_name();
+            let Some(name) = name.to_str() else {
+                continue;
+            };
+            let Some(id) = name.strip_suffix(".md") else {
+                continue;
+            };
+            if valid_id(id).is_err() {
+                continue;
+            }
+            let path = target_path(&ctx.root, &format!("topics/{dir}/{name}"), false)?;
+            let Ok(bytes) = fs::read(path) else {
+                continue;
+            };
+            let Ok(record) = Record::parse(&bytes) else {
+                continue;
+            };
+            if record.id != id
+                || record.record_kind != kind
+                || state
+                    .operations
+                    .iter()
+                    .any(|c| c.operation.id == record.operation_id)
+                || journals
+                    .iter()
+                    .any(|(_, j)| j.commit.operation.id == record.operation_id)
+            {
+                continue;
+            }
+            if kind == "claim" {
+                if let Ok(claim) = serde_json::from_value::<Claim>(record.data) {
+                    if claim.supersedes.is_empty() {
+                        continue;
+                    }
+                    state.orphan_superseded.extend(claim.supersedes);
+                    state.orphan_topics.insert(claim.subject_id);
+                } else {
+                    continue;
+                }
+            } else if let Ok(rule) = serde_json::from_value::<Rule>(record.data) {
+                state.orphan_superseded.extend(
+                    state
+                        .claims
+                        .values()
+                        .filter(|c| {
+                            c.subject_id == rule.topic_id
+                                && c.predicate == rule.predicate
+                                && c.value == rule.match_value
+                        })
+                        .map(|c| c.revision_id.clone()),
+                );
+                state.orphan_topics.insert(rule.topic_id);
+            } else {
+                continue;
+            }
+            state.warnings.push(
+                "Orphan correction history requires recovery; prior assertion withheld".into(),
+            );
         }
     }
     Ok(state)

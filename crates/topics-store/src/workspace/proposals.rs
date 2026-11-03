@@ -223,8 +223,17 @@ fn validate(
     candidates: &[Candidate],
     selected: Option<&BTreeSet<Id>>,
     approval: bool,
+    server_derived: bool,
 ) -> WResult<()> {
-    validate_candidate_shapes(candidates)?;
+    // The raw model payload has already passed the public 200-candidate/2 MiB cap.
+    // Human-only ambiguity may add one bounded record per proposed topic.
+    if server_derived && !candidates.is_empty() && candidates.len() <= 400 {
+        for candidate in candidates {
+            validate_candidate_shapes(std::slice::from_ref(candidate))?;
+        }
+    } else {
+        validate_candidate_shapes(candidates)?;
+    }
     let ids = candidate_ids(candidates);
     let mut unique = BTreeSet::new();
     for id in &ids {
@@ -739,11 +748,36 @@ fn remap(candidates: &mut [Candidate], mapping: &BTreeMap<Id, Id>) -> WResult<()
     }
     Ok(())
 }
+fn merge_uncertainty(retained: &mut Option<String>, additional: &Option<String>) {
+    if let Some(value) = additional {
+        match retained {
+            None => *retained = Some(value.clone()),
+            Some(old) if old != value => {
+                old.push_str("; Additional candidate assessment: ");
+                old.push_str(value);
+            }
+            _ => {}
+        }
+    }
+}
+#[derive(Clone, Copy, PartialEq)]
+enum NormalizationMode {
+    Input,
+    Review,
+    Approval,
+}
+fn ambiguity_name(name: &str) -> String {
+    name.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
 fn normalize_model_candidates(
     state: &State,
     candidates: &[Candidate],
     origin: &Origin,
-    normalize_sensitivity: bool,
+    mode: NormalizationMode,
+    fallback: Option<&SourceRef>,
 ) -> WResult<Vec<Candidate>> {
     let mut candidates = candidates.to_vec();
     let mut mapping = BTreeMap::new();
@@ -760,28 +794,37 @@ fn normalize_model_candidates(
                 mapping.insert(topic.id.clone(), topic.id.clone());
                 continue;
             }
+            if mode == NormalizationMode::Input {
+                continue;
+            }
             let matches: Vec<_> = state
                 .topics
                 .values()
                 .filter(|t| {
-                    t.topic_kind == topic.topic_kind
-                        && (t.name == topic.name || t.aliases.contains(&topic.name))
+                    ambiguity_name(&t.name) == ambiguity_name(&topic.name)
+                        || t.aliases
+                            .iter()
+                            .any(|a| ambiguity_name(a) == ambiguity_name(&topic.name))
                 })
                 .collect();
             let referenced = candidates
                 .iter()
                 .any(|c| dependencies(std::slice::from_ref(c)).contains(&topic.id));
-            if matches.len() > 1 && referenced {
+            if matches.len() > 1 {
                 ambiguous.insert(
                     topic.id.clone(),
                     (
                         topic.name.clone(),
-                        matches.iter().map(|t| t.id.clone()).collect(),
+                        matches
+                            .iter()
+                            .map(|t| t.id.clone())
+                            .chain(std::iter::once(topic.id.clone()))
+                            .collect(),
                     ),
                 );
                 continue;
             }
-            if matches.len() == 1 && referenced {
+            if matches.len() == 1 {
                 let accepted = matches[0];
                 let same_aliases = topic.aliases.iter().collect::<BTreeSet<_>>()
                     == accepted.aliases.iter().collect::<BTreeSet<_>>();
@@ -821,7 +864,7 @@ fn normalize_model_candidates(
                         Endpoint::Source { .. } => Some(endpoint.clone()),
                     }
                 };
-                let evidence_match=same_aliases&&candidates.iter().any(|c|match c {
+                let evidence_match=referenced&&same_aliases&&accepted.name==topic.name&&accepted.topic_kind==topic.topic_kind&&!scopes::topic_restricted(state,&accepted.id)&&candidates.iter().any(|c|match c {
                     Candidate::Claim{claim}|Candidate::Correction{claim,..} if claim.subject_id==topic.id=>state.claims.values().any(|old|old.subject_id==accepted.id&&old.predicate==claim.predicate&&old.value==claim.value&&old.valid_from==claim.valid_from&&old.valid_to==claim.valid_to&&claim.sources.iter().any(|e|matches!(e,Evidence::Passage{source} if old.sources.iter().any(|old|matches!(old,Evidence::Passage{source:old} if old.document_hash==source.document_hash&&old.passage_hash==source.passage_hash))))),
                     Candidate::Connection{connection}=>state.connections.values().any(|old|old.relation==connection.relation&&old.valid_from==connection.valid_from&&old.valid_to==connection.valid_to&&prospective(&connection.from)==Some(endpoint_identity(state,&old.from))&&prospective(&connection.to)==Some(endpoint_identity(state,&old.to))&&connection.sources.iter().any(|s|old.sources.iter().any(|old|old.document_hash==s.document_hash&&old.passage_hash==s.passage_hash))),_=>false,
                 });
@@ -842,7 +885,7 @@ fn normalize_model_candidates(
     remap(&mut candidates, &mapping)?;
     candidates.retain(|c|!matches!(c,Candidate::Topic{topic} if mapping.values().any(|id|id==&topic.id)||ambiguous.get(&topic.id).is_some_and(|(_,ids)|!ids.contains(&topic.id))));
     for candidate in &mut candidates {
-        if normalize_sensitivity
+        if mode != NormalizationMode::Approval
             && let Candidate::Topic { topic } = candidate
             && topic.sensitivity == Sensitivity::CloudAllowed
         {
@@ -850,9 +893,26 @@ fn normalize_model_candidates(
         }
     }
     let mut prepared = vec![];
+    // Topic-only collisions also need a visible human identity decision. They must
+    // never silently establish a second current identity or merge a real second Joe.
+    if mode != NormalizationMode::Input {
+        for (id, (name, ids)) in &ambiguous {
+            if !candidates
+                .iter()
+                .any(|c| dependencies(std::slice::from_ref(c)).contains(id))
+                && let Some(source) = fallback
+            {
+                prepared.push(Candidate::UnresolvedIdentity {
+                    name: name.clone(),
+                    candidates: ids.clone(),
+                    sources: vec![source.clone()],
+                });
+            }
+        }
+    }
     for candidate in candidates {
         let mut ambiguity = None;
-        if !matches!(origin, Origin::Chat { .. }) {
+        if mode != NormalizationMode::Input && !matches!(origin, Origin::Chat { .. }) {
             for id in dependencies(std::slice::from_ref(&candidate)) {
                 if let Some(a) = ambiguous.get(&id) {
                     ambiguity = Some(a.clone());
@@ -862,7 +922,7 @@ fn normalize_model_candidates(
                     let ids: Vec<_> = state
                         .topics
                         .values()
-                        .filter(|t| t.name == topic.name && t.topic_kind == topic.topic_kind)
+                        .filter(|t| ambiguity_name(&t.name) == ambiguity_name(&topic.name))
                         .map(|t| t.id.clone())
                         .collect();
                     if ids.len() > 1 {
@@ -911,7 +971,58 @@ fn normalize_model_candidates(
     });
     remap(&mut prepared, &duplicates)?;
     prepared.retain(|candidate|!matches!(candidate,Candidate::Connection{connection} if state.connections.values().any(|old|old.relation==connection.relation&&endpoint_identity(state,&old.from)==endpoint_identity(state,&connection.from)&&endpoint_identity(state,&old.to)==endpoint_identity(state,&connection.to)&&old.valid_from==connection.valid_from&&old.valid_to==connection.valid_to)));
-    Ok(prepared)
+    // One pending set cannot establish two current copies of the same fact.
+    // Merge evidence and remap dependent endpoints to the retained identity.
+    let mut unique: Vec<Candidate> = vec![];
+    let mut pending_ids = BTreeMap::new();
+    for candidate in prepared {
+        if let Candidate::Claim { claim } = &candidate
+            && let Some(Candidate::Claim { claim: old }) = unique
+                .iter_mut()
+                .find(|c| matches!(c,Candidate::Claim{claim:old} if same_claim(old,claim)))
+        {
+            merge_uncertainty(&mut old.uncertainty, &claim.uncertainty);
+            pending_ids.insert(claim.id.clone(), old.id.clone());
+            pending_ids.insert(claim.revision_id.clone(), old.revision_id.clone());
+            for evidence in &claim.sources {
+                if !old.sources.contains(evidence) {
+                    old.sources.push(evidence.clone());
+                }
+            }
+        } else {
+            unique.push(candidate);
+        }
+    }
+    remap(&mut unique, &pending_ids)?;
+    let logical_ids: BTreeMap<_, _> = unique
+        .iter()
+        .filter_map(|c| match c {
+            Candidate::Claim { claim } | Candidate::Correction { claim, .. } => {
+                Some((claim.revision_id.clone(), claim.id.clone()))
+            }
+            _ => None,
+        })
+        .collect();
+    for candidate in &mut unique {
+        if let Candidate::Connection { connection } = candidate {
+            for endpoint in [&mut connection.from, &mut connection.to] {
+                if let Endpoint::Claim { id } = endpoint
+                    && let Some(logical) = logical_ids.get(id)
+                {
+                    *id = logical.clone();
+                }
+            }
+        }
+    }
+    let mut result: Vec<Candidate> = vec![];
+    for candidate in unique {
+        if let Candidate::Connection { connection } = &candidate
+            && let Some(Candidate::Connection { connection: old }) = result.iter_mut().find(|c| matches!(c,Candidate::Connection{connection:old} if old.relation==connection.relation&&endpoint_identity(state,&old.from)==endpoint_identity(state,&connection.from)&&endpoint_identity(state,&old.to)==endpoint_identity(state,&connection.to)&&old.valid_from==connection.valid_from&&old.valid_to==connection.valid_to)) {
+            merge_uncertainty(&mut old.uncertainty, &connection.uncertainty);
+            for source in &connection.sources { if !old.sources.contains(source) { old.sources.push(source.clone()); } }
+        } else { result.push(candidate); }
+    }
+    Ok(result)
 }
 fn prepared_candidates(
     ctx: &Context,
@@ -922,24 +1033,60 @@ fn prepared_candidates(
     let mut candidates = request.candidates.clone();
     if matches!(request.origin, Origin::Manual) {
         taint(state, &mut candidates);
-        validate(ctx, state, &candidates, selected, false)?;
+        validate(ctx, state, &candidates, selected, false, false)?;
         return Ok(candidates);
     }
-    let mut prepared =
-        normalize_model_candidates(state, &request.candidates, &request.origin, true)?;
+    // Validate only model-supplied identities at the cloud boundary. Validate
+    // their dependencies before looking up names, so a private name collision
+    // cannot change tool success/errors or conceal a malformed input locator.
+    let input = normalize_model_candidates(
+        state,
+        &request.candidates,
+        &request.origin,
+        NormalizationMode::Input,
+        None,
+    )?;
+    if !input.is_empty() {
+        validate(ctx, state, &input, selected, false, false)?;
+    }
+    let fallback = if let Some(source) = selected
+        .and_then(|ids| ids.iter().next())
+        .and_then(|id| state.sources.get(id))
+    {
+        let bytes = scopes::source_bytes(ctx, &source.path)?;
+        let text = std::str::from_utf8(&bytes).map_err(internal)?;
+        let mut end = text.len().min(512);
+        while !text.is_char_boundary(end) {
+            end -= 1;
+        }
+        (end > 0).then(|| SourceRef {
+            source_id: source.source_id.clone(),
+            path: source.path.clone(),
+            document_hash: source.hash.clone(),
+            locator: Locator {
+                start_byte: 0,
+                end_byte: end as u64,
+                heading: None,
+            },
+            passage_hash: hash(&bytes[..end]),
+            excerpt: text[..end].into(),
+        })
+    } else {
+        None
+    };
+    let mut prepared = normalize_model_candidates(
+        state,
+        &request.candidates,
+        &request.origin,
+        NormalizationMode::Review,
+        fallback.as_ref(),
+    )?;
     // Known echoes and suppression are successful no-change outcomes.
     if prepared.is_empty() {
         return Ok(prepared);
     }
-    validate_model_boundary(
-        ctx,
-        state,
-        &prepared,
-        selected.ok_or_else(|| error("forbidden", "Model scope is required"))?,
-        &request.origin,
-    )?;
     taint(state, &mut prepared);
-    validate(ctx, state, &prepared, selected, false)?;
+    validate(ctx, state, &prepared, selected, false, true)?;
     Ok(prepared)
 }
 
@@ -1262,9 +1409,9 @@ impl WorkspaceService {
                     save_json(&ctx.partition.join("conflicts").join(format!("{}.json",saved.proposal.id)),&serde_json::json!({"old_bytes":saved.expected_bytes,"current_bytes":current,"staged_records":records.iter().map(|(p,r)|Ok((p.clone(),r.bytes()?))).collect::<WResult<BTreeMap<_,_>>>()?}))?;
                     return Err(error("conflict","Referenced record changed since proposal review; versions preserved"));
                 }
-                validate(ctx, &state, candidates, None, true)?;
+                validate(ctx, &state, candidates, None, true, !matches!(saved.proposal.origin,Origin::Manual))?;
                 if !matches!(saved.proposal.origin,Origin::Manual) {
-                    let current=normalize_model_candidates(&state,candidates,&saved.proposal.origin,false)?;
+                    let current=normalize_model_candidates(&state,candidates,&saved.proposal.origin,NormalizationMode::Approval,None)?;
                     if fingerprint(&current)?!=fingerprint(candidates)? {return Err(error("conflict","Current identities, assertions or correction rules changed; refresh analysis before approval"));}
                 }
                 let operation = commit(ctx,"Approve reviewed proposal",records,CommitIntent{dependencies:dependencies(&approved),tombstones:vec![],undo_of:None,expected:Some(&expected),proposal:Some(CommittedDecision{proposal_id:saved.proposal.id.clone(),fingerprint:saved.proposal.fingerprint.clone(),decision:request.decision.clone(),applied_candidates:approved.clone(),proposed_candidates:saved.proposal.candidates.clone()})})?;

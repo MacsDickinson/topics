@@ -187,7 +187,7 @@ fn restricted_sources(state: &State) -> BTreeSet<Id> {
     let mut sources: BTreeSet<_> = state
         .sources
         .values()
-        .filter(|s| path_sensitivity(state, &s.path) == Sensitivity::LocalOnly)
+        .filter(|s| source_policy(state, &s.path, &s.hash) == Sensitivity::LocalOnly)
         .map(|s| s.source_id.clone())
         .collect();
     for c in state
@@ -221,26 +221,41 @@ pub(super) fn path_sensitivity(state: &State, path: &str) -> Sensitivity {
         .copied()
         .unwrap_or(Sensitivity::Unknown)
 }
+// Primitive policy deliberately excludes topic traversal so source-derived
+// topic taint cannot recurse through identical-content lineage.
+fn source_policy(state: &State, path: &str, h: &str) -> Sensitivity {
+    let own = path_sensitivity(state, path);
+    if own == Sensitivity::LocalOnly {
+        return own;
+    }
+    let review = state.reviewed_sources.get(&(path.into(), h.into()));
+    if let Some(private_sequence) = state.private_hashes.get(h)
+        && review.is_none_or(|(_, sequence)| sequence < private_sequence)
+    {
+        return Sensitivity::LocalOnly;
+    }
+    review.map(|(label, _)| *label).unwrap_or(own)
+}
 fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
-    if state.source_integrity_unknown {
-        return Sensitivity::LocalOnly;
+    let own = source_policy(state, path, h);
+    if own == Sensitivity::LocalOnly {
+        return own;
     }
-    let own = state.path_labels.get(path).copied();
-    if own == Some(Sensitivity::LocalOnly) {
-        return Sensitivity::LocalOnly;
-    }
-    if state.reviewed_paths.contains(path) {
-        return own.unwrap_or(Sensitivity::Unknown);
+    if state
+        .reviewed_sources
+        .contains_key(&(path.into(), h.into()))
+    {
+        return own;
     }
     let restricted = restricted_sources(state);
-    if state.source_history.iter().any(|s| {
-        s.hash == h
-            && (path_sensitivity(state, &s.path) == Sensitivity::LocalOnly
-                || restricted.contains(&s.source_id))
-    }) {
+    if state
+        .source_history
+        .iter()
+        .any(|s| (s.hash == h || s.path == path) && restricted.contains(&s.source_id))
+    {
         return Sensitivity::LocalOnly;
     }
-    own.unwrap_or(Sensitivity::Unknown)
+    own
 }
 
 pub(super) fn scope(ctx: &Context, id: &str) -> WResult<Scope> {
@@ -308,6 +323,7 @@ pub(super) fn endpoint_topic(state: &State, endpoint: &Endpoint) -> Option<Id> {
 }
 pub(super) fn topic_restricted(state: &State, id: &str) -> bool {
     if state.source_integrity_unknown
+        || state.orphan_topics.contains(id)
         || state
             .topics
             .get(id)
@@ -317,7 +333,7 @@ pub(super) fn topic_restricted(state: &State, id: &str) -> bool {
     }
     let restricted = |source: &SourceRef| {
         !state.sources.contains_key(&source.source_id)
-            || path_sensitivity(state, &source.path) == Sensitivity::LocalOnly
+            || source_policy(state, &source.path, &source.document_hash) == Sensitivity::LocalOnly
     };
     state
         .claims
@@ -391,15 +407,7 @@ impl WorkspaceService {
                 if !at.is_dir() {
                     return Err(error("invalid_input", "Selected folder is unavailable"));
                 }
-                for entry in walkdir::WalkDir::new(at)
-                    .follow_links(false)
-                    .into_iter()
-                    .filter_entry(|e| {
-                        !e.file_name()
-                            .to_str()
-                            .is_some_and(|n| n.eq_ignore_ascii_case("topics"))
-                    })
-                {
+                for entry in walkdir::WalkDir::new(at).follow_links(false).into_iter() {
                     let entry = entry.map_err(|_| {
                         error("invalid_input", "Selected folder cannot be enumerated")
                     })?;
@@ -450,12 +458,7 @@ impl WorkspaceService {
                     continue;
                 }
                 let sensitivity = path_sensitivity(&state, &path);
-                let restricted = restricted_sources(&state);
-                let tainted = state
-                    .sources
-                    .values()
-                    .any(|s| s.path == path && restricted.contains(&s.source_id));
-                if sensitivity == Sensitivity::LocalOnly || tainted {
+                if sensitivity == Sensitivity::LocalOnly {
                     excluded.push(Exclusion {
                         path,
                         reason: "Local-only source".into(),
@@ -669,13 +672,18 @@ impl WorkspaceService {
         let mut redacted=false;
         view.current_claims.retain_mut(|claim|{
             if eligible(claim){return true;}
-            if claim.sources.iter().any(|e|matches!(e,Evidence::UserStatement{statement_id} if state.statements.get(statement_id).is_some_and(|s|s.topic_id==request.topic_id))) {
+            if human_value_supported(&state,claim) {
                 claim.sources.clear();claim.supersedes.clear();claim.valid_from=None;claim.valid_to=None;claim.uncertainty=Some("Human-supported current value; evidence outside selected scope is redacted".into());redacted=true;return true;
             }
             false
         });
         view.history.retain(eligible);
-        view.connections.retain(|c|!c.sources.is_empty()&&c.sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok())&&endpoint_cloud(&state,&c.from)&&endpoint_cloud(&state,&c.to));
+        let endpoint_scoped = |endpoint: &Endpoint| match endpoint {
+            Endpoint::Source {source_id,..} => allowed.contains(source_id) && endpoint_cloud(&state,endpoint),
+            Endpoint::Claim {id} => state.claims.values().find(|c| &c.id==id || &c.revision_id==id).is_some_and(|c| scoped_claim(ctx,&state,c,&allowed,&c.subject_id,0)) && endpoint_cloud(&state,endpoint),
+            Endpoint::Topic {..} => endpoint_cloud(&state,endpoint),
+        };
+        view.connections.retain(|c|!c.sources.is_empty()&&c.sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok())&&endpoint_scoped(&c.from)&&endpoint_scoped(&c.to));
         view.unresolved.retain(|c|matches!(c,Candidate::UnresolvedIdentity{sources,candidates,..} if candidates.contains(&request.topic_id)&&sources.iter().all(|s|allowed.contains(&s.source_id)&&validate_source(ctx,&state,s).is_ok())&&candidates.iter().all(|id|state.topics.get(id).is_some_and(|t|t.sensitivity==Sensitivity::CloudAllowed)&&!topic_restricted(&state,id))));
         view.warnings.clear();if redacted{view.warnings.push("Current human-supported value included with out-of-scope evidence and metadata redacted".into());}Ok(view)
     })
@@ -721,21 +729,41 @@ impl WorkspaceService {
         })
     }
 }
+// Edit statements retain exact UI evidence, but metadata-only edits do not
+// make the transcript value human-authored. Authority comes from the durable
+// before/after decision, not the mere presence of a statement ID on a claim.
+fn human_value_supported(state: &State, claim: &Claim) -> bool {
+    claim.sources.iter().any(|e| {
+        let Evidence::UserStatement { statement_id } = e else { return false; };
+        if state.statements.get(statement_id).is_none_or(|s| s.topic_id != claim.subject_id) { return false; }
+        let path = format!("topics/statements/{statement_id}.md");
+        state.operations.iter().any(|operation| {
+            if !operation.targets.iter().any(|t| t.path == path) { return false; }
+            if operation.operation.description == "Record user statement" { return true; }
+            operation.proposal.as_ref().is_some_and(|decision| {
+                decision.applied_candidates.iter().any(|candidate| {
+                    let (Candidate::Claim {claim:applied} | Candidate::Correction {claim:applied,..}) = candidate else { return false; };
+                    applied.subject_id == claim.subject_id && applied.predicate == claim.predicate && applied.value == claim.value
+                        && applied.sources.contains(e)
+                        && decision.proposed_candidates.iter().any(|old| matches!(old,Candidate::Claim{claim:old}|Candidate::Correction{claim:old,..} if old.revision_id==applied.revision_id && old.value!=applied.value))
+                })
+            })
+        })
+    })
+}
 fn endpoint_cloud(state: &State, endpoint: &Endpoint) -> bool {
     match endpoint {
-        Endpoint::Topic { id } => state
-            .topics
-            .get(id)
-            .is_some_and(|t| t.sensitivity == Sensitivity::CloudAllowed),
+        Endpoint::Topic { id } => state.topics.get(id).is_some_and(|t| {
+            t.sensitivity == Sensitivity::CloudAllowed && !topic_restricted(state, &t.id)
+        }),
         Endpoint::Claim { id } => state
             .claims
             .values()
             .find(|c| &c.id == id || &c.revision_id == id)
             .is_some_and(|c| {
-                state
-                    .topics
-                    .get(&c.subject_id)
-                    .is_some_and(|t| t.sensitivity == Sensitivity::CloudAllowed)
+                state.topics.get(&c.subject_id).is_some_and(|t| {
+                    t.sensitivity == Sensitivity::CloudAllowed && !topic_restricted(state, &t.id)
+                })
             }),
         Endpoint::Source { source_id, .. } => state
             .sources
@@ -757,7 +785,7 @@ impl WorkspaceService {
                 .follow_links(false)
                 .into_iter()
                 .filter_entry(|e| {
-                    e.depth() == 0
+                    e.depth() != 1
                         || !e
                             .file_name()
                             .to_str()
