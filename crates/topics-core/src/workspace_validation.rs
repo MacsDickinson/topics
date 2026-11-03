@@ -82,6 +82,14 @@ pub fn validate_candidate_shapes(candidates: &[Candidate]) -> WorkspaceResult<()
                         "Unresolved identity requires evidence and at least two candidates",
                     ));
                 }
+                if candidates
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    != candidates.len()
+                {
+                    return Err(invalid("Unresolved identity candidates must be distinct"));
+                }
                 for id in candidates {
                     validate_workspace_id(id)?;
                 }

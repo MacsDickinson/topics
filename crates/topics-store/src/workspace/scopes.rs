@@ -325,7 +325,7 @@ impl WorkspaceService {
                         continue;
                     }
                 }
-                let id = stable_id(&format!("{}\n{path}\n{h}", ctx.root.display()));
+                let id = source_identity(ctx, &state, &path, &h);
                 let summary = SourceSummary {
                     source_id: id.clone(),
                     path,
@@ -574,7 +574,7 @@ impl WorkspaceService {
                     Err(_) => continue,
                 };
                 let h = hash(&bytes);
-                let id = stable_id(&format!("{}\n{path}\n{h}", ctx.root.display()));
+                let id = source_identity(ctx, &state, path, &h);
                 let sensitivity = path_sensitivity(&state, path);
                 let source = SourceSummary {
                     source_id: id.clone(),
@@ -649,6 +649,109 @@ impl WorkspaceService {
                 content,
                 citation,
             })
+        })
+    }
+}
+
+fn source_identity(ctx: &Context, state: &State, path: &str, h: &str) -> Id {
+    if let Some(source) = state
+        .sources
+        .values()
+        .find(|s| s.path == path && s.hash == h)
+    {
+        return source.source_id.clone();
+    }
+    let deterministic = stable_id(&format!("{}\n{path}\n{h}", ctx.root.display()));
+    if state.sources.contains_key(&deterministic) {
+        new_id()
+    } else {
+        deterministic
+    }
+}
+impl WorkspaceService {
+    /// Explicit human mapping repair. Existing citation paths/hashes never change.
+    pub fn source_identity_repair(&self, request: SourceRepairRequest) -> WResult<SourceSummary> {
+        self.with(&request.root_id, |ctx| {
+            valid_id(&request.source_id)?;
+            let state = load(ctx)?;
+            let old = state
+                .sources
+                .get(&request.source_id)
+                .ok_or_else(|| error("invalid_input", "Source identity does not exist"))?;
+            if old.path != request.path && ctx.root.join(&old.path).exists() {
+                return Err(error(
+                    "conflict",
+                    "Original source still exists; a rename repair requires an unambiguous move",
+                ));
+            }
+            let bytes = source_bytes(ctx, &request.path)?;
+            let h = hash(&bytes);
+            if h != request.expected_hash {
+                return Err(error(
+                    "stale_evidence",
+                    "Repair target changed; inspect it again",
+                ));
+            }
+            let duplicates: Vec<_> = state
+                .sources
+                .values()
+                .filter(|s| s.path == request.path && s.hash == h && s.source_id != old.source_id)
+                .collect();
+            if duplicates.iter().any(|s| {
+                state.operations.iter().any(|c| {
+                    c.dependencies.contains(&s.source_id)
+                        && !state
+                            .operations
+                            .iter()
+                            .any(|u| u.undo_of.as_ref() == Some(&c.operation.id))
+                })
+            }) {
+                return Err(error(
+                    "conflict",
+                    "Repair target identity has dependents; review citation revisions explicitly",
+                ));
+            }
+            let sensitivity = if old.sensitivity == Sensitivity::LocalOnly
+                || duplicates
+                    .iter()
+                    .any(|s| s.sensitivity == Sensitivity::LocalOnly)
+            {
+                Sensitivity::LocalOnly
+            } else {
+                old.sensitivity
+            };
+            let repaired = SourceSummary {
+                source_id: old.source_id.clone(),
+                path: request.path.clone(),
+                hash: h.clone(),
+                date: crate::parse::document(
+                    &request.path,
+                    std::str::from_utf8(&bytes).map_err(internal)?,
+                    h,
+                    "0".into(),
+                )
+                .date,
+                sensitivity,
+            };
+            if old == &repaired {
+                return Ok(repaired);
+            }
+            let op = new_id();
+            commit(
+                ctx,
+                "Repair source identity (citations remain stale)",
+                vec![(
+                    format!("topics/sources/{}.md", old.source_id),
+                    Record::new("source", &old.source_id, &op, &repaired)?,
+                )],
+                CommitIntent {
+                    dependencies: vec![old.source_id.clone()],
+                    tombstones: duplicates.iter().map(|s| s.source_id.clone()).collect(),
+                    expected: Some(&state.hashes),
+                    ..CommitIntent::default()
+                },
+            )?;
+            Ok(repaired)
         })
     }
 }

@@ -246,6 +246,7 @@ fn validate(
         }
     };
     let mut superseded = BTreeSet::new();
+    let mut logical_claims = BTreeSet::new();
     for c in candidates {
         for source in evidence_refs(c) {
             validate_source(ctx, state, source)?;
@@ -260,6 +261,21 @@ fn validate(
             Candidate::Topic { .. } => {}
             Candidate::Claim { claim } | Candidate::Correction { claim, .. } => {
                 valid_id(&claim.id)?;
+                if !logical_claims.insert(claim.id.clone())
+                    || topics.contains_key(&claim.id)
+                    || state.sources.contains_key(&claim.id)
+                    || state.connections.contains_key(&claim.id)
+                    || state.rules.contains_key(&claim.id)
+                    || state.statements.contains_key(&claim.id)
+                    || ids
+                        .iter()
+                        .any(|id| id == &claim.id && id != &claim.revision_id)
+                {
+                    return Err(error(
+                        "invalid_input",
+                        "Claim identity collides with another entity",
+                    ));
+                }
                 valid_id(&claim.revision_id)?;
                 valid_id(&claim.subject_id)?;
                 if !topics.contains_key(&claim.subject_id) {
@@ -725,9 +741,13 @@ impl WorkspaceService {
                     scope_id: request.scope_id.clone(),
                     origin: request.origin.clone(),
                     status: ProposalStatus::Accepted,
-                    candidates: match &committed.decision {
-                        Decision::Approve { candidates } => candidates.clone(),
-                        Decision::Reject => vec![],
+                    candidates: if !committed.applied_candidates.is_empty() {
+                        committed.applied_candidates.clone()
+                    } else {
+                        match &committed.decision {
+                            Decision::Approve { candidates } => candidates.clone(),
+                            Decision::Reject => vec![],
+                        }
                     },
                     fingerprint,
                     created_at: now(),
@@ -793,7 +813,7 @@ impl WorkspaceService {
             if let Some(commit)=load(ctx)?.operations.iter().find(|c|c.operation.id==saved.operation_id) {
                 let durable=commit.proposal.as_ref().ok_or_else(||error("conflict","Operation identity collision"))?;
                 if durable.decision!=request.decision{return Err(error("conflict","Proposal already has a different durable decision"));}
-                saved.proposal.status=ProposalStatus::Accepted;saved.operation=Some(commit.operation.clone());saved.decision=Some(request.decision.clone());save_json(&path,&saved)?;
+                saved.proposal.status=ProposalStatus::Accepted;if !durable.applied_candidates.is_empty(){saved.proposal.candidates=durable.applied_candidates.clone();}saved.operation=Some(commit.operation.clone());saved.decision=Some(request.decision.clone());save_json(&path,&saved)?;
             }
             if let Some(decision) = &saved.decision {
                 if decision == &request.decision {
@@ -808,7 +828,7 @@ impl WorkspaceService {
                 ));
             }
             if let Decision::Approve { candidates } = &request.decision {
-                let state = load(ctx)?;
+                let mut state = load(ctx)?;
                 let proposed: BTreeSet<_> = candidate_ids(&saved.proposal.candidates)
                     .into_iter()
                     .collect();
@@ -831,6 +851,18 @@ impl WorkspaceService {
                 let private = taint(&state, &mut approved);
                 let op = saved.operation_id.clone();
                 let mut records = vec![];
+                // A human edit is new provenance, never a fabricated transcript assertion.
+                for candidate in &mut approved {
+                    if let Candidate::Claim{claim}|Candidate::Correction{claim,..}=candidate {
+                        let original=saved.proposal.candidates.iter().find_map(|c|match c {Candidate::Claim{claim:old}|Candidate::Correction{claim:old,..} if old.revision_id==claim.revision_id=>Some(old),_=>None});
+                        if let Some(original)=original && (original.value!=claim.value||original.predicate!=claim.predicate||original.valid_from!=claim.valid_from||original.valid_to!=claim.valid_to||original.sources!=claim.sources) {
+                            let statement=UserStatement{id:new_id(),topic_id:claim.subject_id.clone(),text:format!("User edited proposed {} assertion from {:?} to {:?}.",claim.predicate,original.value,claim.value),recorded_at:now()};
+                            claim.sources.push(Evidence::UserStatement{statement_id:statement.id.clone()});
+                            claim.uncertainty=Some(format!("{}; user edit recorded as evidence",claim.uncertainty.as_deref().unwrap_or("User-reviewed assertion")));
+                            records.push((format!("topics/statements/{}.md",statement.id),Record::new("statement",&statement.id,&op,&statement)?));state.statements.insert(statement.id.clone(),statement);
+                        }
+                    }
+                }
                 let mut expected = saved.expected.clone();
                 for c in &approved {
                     match c {
@@ -887,8 +919,9 @@ impl WorkspaceService {
                     return Err(error("conflict","Referenced record changed since proposal review; versions preserved"));
                 }
                 validate(ctx, &state, candidates, None, true)?;
-                let operation = commit(ctx,"Approve reviewed proposal",records,CommitIntent{dependencies:dependencies(&approved),tombstones:vec![],undo_of:None,expected:Some(&expected),proposal:Some(CommittedDecision{proposal_id:saved.proposal.id.clone(),fingerprint:saved.proposal.fingerprint.clone(),decision:request.decision.clone()})})?;
+                let operation = commit(ctx,"Approve reviewed proposal",records,CommitIntent{dependencies:dependencies(&approved),tombstones:vec![],undo_of:None,expected:Some(&expected),proposal:Some(CommittedDecision{proposal_id:saved.proposal.id.clone(),fingerprint:saved.proposal.fingerprint.clone(),decision:request.decision.clone(),applied_candidates:approved.clone(),proposed_candidates:saved.proposal.candidates.clone()})})?;
                 saved.operation = Some(operation);
+                saved.proposal.candidates=approved;
                 saved.proposal.status = ProposalStatus::Accepted;
             } else {
                 saved.proposal.status = ProposalStatus::Rejected;

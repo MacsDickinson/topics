@@ -93,6 +93,10 @@ pub(super) struct CommittedDecision {
     pub proposal_id: Id,
     pub fingerprint: Hash,
     pub decision: Decision,
+    #[serde(default)]
+    pub applied_candidates: Vec<Candidate>,
+    #[serde(default)]
+    pub proposed_candidates: Vec<Candidate>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct TargetMeta {

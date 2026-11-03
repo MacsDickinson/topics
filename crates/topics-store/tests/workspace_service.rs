@@ -834,3 +834,137 @@ fn human_statement_retrieval_returns_persisted_text_after_restart() {
     assert_eq!(got, s);
     assert!(got.text.contains("they/them"));
 }
+
+#[test]
+fn approving_an_edited_claim_records_the_human_edit_as_persisted_provenance() {
+    let f = Fixture::new();
+    f.write("Meetings/one.md", "# Meeting\nLedger launch is Friday\n");
+    let source = f.source("Meetings/one.md");
+    let t = topic("Ledger");
+    let c = f.claim(&t, &source.citation, "Friday");
+    let p = f
+        .stage(vec![
+            Candidate::Topic { topic: t.clone() },
+            Candidate::Claim { claim: c.clone() },
+        ])
+        .unwrap();
+    let mut edited = c;
+    edited.value = "Monday".into();
+    let decision = Decision::Approve {
+        candidates: vec![
+            Candidate::Topic { topic: t.clone() },
+            Candidate::Claim { claim: edited },
+        ],
+    };
+    let first = f.decide(&p, decision.clone()).unwrap();
+    let retry = f.decide(&p, decision).unwrap();
+    assert_eq!(first.operation, retry.operation);
+    let view = f
+        .service
+        .topic_get(TopicGetRequest {
+            root_id: f.root_id.clone(),
+            topic_id: t.id,
+        })
+        .unwrap();
+    let c = &view.current_claims[0];
+    assert_eq!(c.value, "Monday");
+    assert!(
+        c.sources
+            .iter()
+            .any(|e| matches!(e,Evidence::Passage{source:s} if s.excerpt.contains("Friday")))
+    );
+    let statement = c
+        .sources
+        .iter()
+        .find_map(|e| {
+            if let Evidence::UserStatement { statement_id } = e {
+                Some(statement_id)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+    let text = f
+        .service
+        .statement_get(StatementGetRequest {
+            root_id: f.root_id.clone(),
+            statement_id: statement.clone(),
+        })
+        .unwrap();
+    assert!(text.text.contains("Friday") && text.text.contains("Monday"));
+    assert_eq!(
+        fs::read_to_string(f.root.join("Meetings/one.md")).unwrap(),
+        "# Meeting\nLedger launch is Friday\n"
+    );
+}
+
+#[test]
+fn explicit_source_repair_retains_identity_and_label_but_never_reanchors_old_citations() {
+    let f = Fixture::new();
+    f.write(
+        "Meetings/one.md",
+        "# Synthetic meeting\nOriginal assertion\n",
+    );
+    let source = f.source("Meetings/one.md");
+    let t = topic("Alex");
+    let c = f.claim(&t, &source.citation, "Original assertion");
+    f.accept(vec![
+        Candidate::Topic { topic: t.clone() },
+        Candidate::Claim { claim: c },
+    ]);
+    f.set_source(&source.summary, Sensitivity::LocalOnly);
+    fs::rename(
+        f.root.join("Meetings/one.md"),
+        f.root.join("Meetings/renamed.md"),
+    )
+    .unwrap();
+    let target = f.source("Meetings/renamed.md");
+    let repaired = f
+        .service
+        .source_identity_repair(SourceRepairRequest {
+            root_id: f.root_id.clone(),
+            source_id: source.summary.source_id.clone(),
+            path: target.summary.path.clone(),
+            expected_hash: target.summary.hash,
+        })
+        .unwrap();
+    assert_eq!(repaired.source_id, source.summary.source_id);
+    assert_eq!(repaired.sensitivity, Sensitivity::LocalOnly);
+    assert_eq!(
+        f.source("Meetings/renamed.md").summary.source_id,
+        repaired.source_id
+    );
+    let view = f
+        .service
+        .topic_get(TopicGetRequest {
+            root_id: f.root_id.clone(),
+            topic_id: t.id,
+        })
+        .unwrap();
+    assert!(view.warnings.iter().any(|w| w.contains("Stale citation")));
+    assert_eq!(
+        view.current_claims[0].sources[0],
+        Evidence::Passage {
+            source: source.citation
+        }
+    );
+}
+
+#[test]
+fn logical_claim_identity_cannot_collide_with_a_proposed_topic() {
+    let f = Fixture::new();
+    f.write("Meetings/one.md", "# Synthetic source\n");
+    let source = f.source("Meetings/one.md");
+    let t = topic("Alex");
+    let mut claim = f.claim(&t, &source.citation, "Leader");
+    claim.id = t.id.clone();
+    assert_eq!(
+        f.stage(vec![
+            Candidate::Topic { topic: t },
+            Candidate::Claim { claim }
+        ])
+        .unwrap_err()
+        .code,
+        "invalid_input"
+    );
+}

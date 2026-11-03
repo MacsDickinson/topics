@@ -306,3 +306,9 @@ value!(StatementGetRequest {
     root_id: Id,
     statement_id: Id
 });
+value!(SourceRepairRequest {
+    root_id: Id,
+    source_id: Id,
+    path: String,
+    expected_hash: Hash
+});
