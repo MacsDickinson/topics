@@ -1494,3 +1494,66 @@ fn guarded_success_duplicate_and_no_change_outcomes_all_use_the_publication_gate
         operations
     );
 }
+
+#[test]
+fn different_temporal_assertions_do_not_prove_that_same_name_people_are_the_same_identity() {
+    let f = F::new();
+    f.write("M/a.md", "Two people named Joe lead A on different dates\n");
+    let source = f.source("M/a.md");
+    let old = topic("Joe");
+    let project = topic("A");
+    let mut old_claim = f.claim(&old, &source.citation, "lead");
+    old_claim.valid_from = Some("2025-01-01".into());
+    old_claim.valid_to = Some("2025-12-31".into());
+    let mut old_connection = f.conn(&old, &project, &source.citation);
+    old_connection.valid_from = old_claim.valid_from.clone();
+    old_connection.valid_to = old_claim.valid_to.clone();
+    f.accept(vec![
+        tc(&old),
+        tc(&project),
+        cc(&old_claim),
+        Candidate::Connection {
+            connection: old_connection,
+        },
+    ]);
+    let second = topic("Joe");
+    let mut claim = f.claim(&second, &source.citation, "lead");
+    claim.valid_from = Some("2026-01-01".into());
+    claim.valid_to = Some("2026-12-31".into());
+    let p = f
+        .model_stage(vec!["M/a.md"], vec![tc(&second), cc(&claim)])
+        .unwrap();
+    assert!(
+        p.candidates
+            .iter()
+            .any(|c| matches!(c,Candidate::Topic{topic} if topic.id==second.id))
+    );
+    let third = topic("Joe");
+    let mut connection = f.conn(&third, &project, &source.citation);
+    connection.valid_from = claim.valid_from;
+    connection.valid_to = claim.valid_to;
+    let p = f
+        .model_stage(
+            vec!["M/a.md"],
+            vec![tc(&third), Candidate::Connection { connection }],
+        )
+        .unwrap();
+    // The same unresolved identity question may reuse an earlier pending
+    // provisional ID; it must never resolve to the accepted person by default.
+    assert_eq!(p.status, ProposalStatus::Pending);
+    assert!(
+        p.candidates
+            .iter()
+            .any(|c| matches!(c,Candidate::Topic{topic} if topic.id!=old.id))
+    );
+    assert!(
+        p.candidates
+            .iter()
+            .any(|c| matches!(c, Candidate::UnresolvedIdentity { .. }))
+    );
+    assert!(
+        !p.candidates
+            .iter()
+            .any(|c| matches!(c, Candidate::Connection { .. }))
+    );
+}

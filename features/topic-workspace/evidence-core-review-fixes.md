@@ -57,3 +57,84 @@ topics-reanalysis-red.log
     r17_context_must_not_include_other_topics_unresolved_identities
 test result: FAILED. 6 passed; 12 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.85s
 ```
+
+## Final implementation and checks
+
+Code milestones after the RED: `f56fb37` closes the privacy/reanalysis blockers; `d3202eb` adds final review regressions and the guarded publication seam. The final follow-up also requires matching temporal bounds for provisional identity proof and rechecks the actual returned scoped byte buffer against its confirmed hash. The working tree was held idle for the independent review before these corrections; no original reviewer scratch files were edited.
+
+Final actual commands, all exit 0 (all builds use this worktree's target, with incremental artifacts disabled):
+
+```text
+cargo fmt -p topics-core -p topics-store -p topics-cli -p topics-bdd --check
+CARGO_INCREMENTAL=0 cargo clippy --offline -p topics-core -p topics-store -p topics-cli -p topics-bdd --all-targets -- -D warnings
+CARGO_INCREMENTAL=0 cargo test --offline -p topics-core -p topics-store -p topics-cli -p topics-bdd --features topics-store/test-support --no-fail-fast
+  131 passed, 0 failed, 0 ignored
+CARGO_INCREMENTAL=0 cargo run --offline -p topics-bdd --bin workspace-bdd
+  4 features; 20 scenarios, 110 steps passed; zero skipped/undefined
+CARGO_INCREMENTAL=0 cargo run --offline -p topics-bdd -- --tags 'not @ui'
+  3 features; 15 scenarios, 78 steps passed; zero skipped/undefined
+```
+
+Breakdown: the prior 65 unit/integration regressions remain green; `review_probes` has 45 passing probes and `review_reanalysis` has 21. The original 53 reviewer probes are included, with one explicit human-label fixture change required by M8 (the model can no longer authorize CloudAllowed); p54/r14/r18 were strengthened from diagnostic/weak checks to actual assertions. Other additions cover redacted output bytes/metadata, missing commit markers, registered rename destinations, distinct same-name identities with changed evidence/endpoints/dates, edited-subset dependency narrowing, endpoint headings, useful human FTS, recovery-conflict reanalysis, unknown target preservation, and two guarded-publication tests. The unknown-target test was corrected to use a service-issued canonical source ID rather than an incorrect path-derived fixture ID; its initial fixture error is not counted as a product RED.
+
+Additional local RED results were actually observed before their local corrections: missing committed marker, previously registered unknown rename destination, two distinct same-name identity cases, out-of-scope statement-only redaction, omitted-subset dependencies, source-endpoint heading, recovery-conflict pending status, and temporal identity mismatch. Guarded publication follows the runtime review's F6 failure; this worker's tests prove the core callback boundary, not the actual runtime permit/process behavior.
+
+Both BDD runners retain `fail_on_skipped`. The four unchanged presentation/runtime-owned scenarios remain mapped in [the initial all-24 integration table](evidence-core-green.md); they are not counted as tested here. No feature text or Phase 0 step/snapshot suite was changed. Two workspace step assertions now correctly expect a successful empty no-change outcome and persisted Conflict status, matching the coordinator's approved review decisions rather than preserving the original bugs.
+
+## Finding disposition
+
+| Finding | Concrete correction and evidence |
+|---|---|
+| H1 | Safe provisional matching requires a unique accepted identity, compatible aliases, exact cited assertion or complete relationship endpoints, and matching temporal bounds; otherwise same-name identity stays unresolved. Rules then apply to the canonical identity. r02/r03/r12 and new distinct-person/temporal probes pass. |
+| H2 | Claim/connection dedupe uses current accepted records independently of whole candidate sets, retaining accepted IDs and user-statement provenance. Reused logical/revision/endpoint IDs work; p52/r06/r07/r08 pass. |
+| H3 | Latest target hashes and typed committed snapshots detect missing, edited and rolled-back mappings; recovered source/topic labels are restricted, not Unknown. Unknown/damaged target bytes are not silently overwritten by registration. p10/p11/p12 and target-preservation probe pass. |
+| H4 | Restrictive same-content identity history survives rename, including a destination already registered Unknown; explicit human review can release normal source labels. p20 and registered-destination probe pass. |
+| H5 | Selection resolves actual filesystem identity before policy, including APFS case aliases; reserved root topics spellings are denied. p21/p22 pass on this macOS synthetic filesystem. |
+| H6 | Expected hashes are limited to actual selected/edited dependencies. Conflict status invalidates stale pending dedupe; changed unrelated scope documents cannot strand approval/fresh analysis. p50/p51 and subset/recovery-refresh probes pass. |
+| H7 | Canonical UUID JSON readers ignore hidden atomic temp artifacts, including proposal/run directories; malformed disposable entries do not brick unrelated operations. p01 plus guarded staging tests pass. |
+| M1 | Undone operations reconcile as Conflict and are excluded from live decision dedupe; fresh provisional IDs can re-propose absent facts. p40 passes. Historical identifiers remain reserved. |
+| M2 | Recovery first preserves three versions, then restores only the app's still-matching staged replacements to prior accepted bytes. p04 passes without overwriting the external target. |
+| M3 | Projection uses latest committed targets and warns on missing/rollback; typed snapshots preserve the superseding revision. Retained committed journals also detect a missing/changed marker, preventing silent false-head revival. p13/p14 and marker-loss probe pass. |
+| M4 | Undo includes logical claim IDs and later target writes in dependencies. p41 passes. |
+| M5 | Subject/uncertainty edits attach persisted full before/after user provenance while preserving the submitted uncertainty. Relationship edits are visibly HUMAN-EDITED and link persisted statements or durable operation assertions. p30/p31 and existing edit-provenance regression pass. |
+| M6 | Claims as well as connections resolve ambiguous known/provisional names into unresolved candidates. Chat's explicitly selected identity remains scoped. p56/p57 pass. |
+| M7 | Topic-only second identities and ambiguous same-name graphs retain distinct fingerprints; names alone do not collapse entities. p54/p55 and distinct-evidence/endpoint/temporal probes pass. |
+| M8 | New model topics cannot self-grant CloudAllowed; human sensitivity decisions remain authoritative. p23 passes; context fixture now performs that explicit human action. |
+| M9 | Context checks current same-path labels and connection-only evidence before any redaction and denies tainted topics as a unit. r15/r16 plus redaction/taint probe pass. |
+| M10 | Human FTS excludes root app-owned topics records and retains source search, including human access to their own private notes. It is never an MCP retrieval surface. Human-search regression passes. |
+| M11 | Repair inherits restrictive target-path policy even when the target hash is not registered; label history survives duplicate tombstones/repair undo. p24/p25 pass. |
+| M12 | Empty/incomplete journals are ignored; malformed journals are retained with warnings. p02 passes. |
+| M13 | Proposal listing reconciles committed recovery and conflict journals without another decision request. p03 and recovery-refresh probe pass. |
+| M14 | Known topic echoes, already-known values and suppression-only outputs succeed; a zero-candidate accepted result creates no operation/knowledge. p58/r04/r05/r06/r11 and guarded no-change tests pass. |
+| M15 | Every chat candidate kind is checked against its authorized topic; unrelated topic creation/relationships/unresolved sets are denied. p26 passes. |
+| L1 | Undo cannot skip live intermediate target updates; compensation must correspond to the latest write. p42 and prior undo-order regression pass. |
+| L2 | Canonical fingerprints map provisional logical and revision claim endpoints. p53 passes. |
+| L3 | Model unresolved context is filtered to the requested topic, selected evidence and eligible candidates. r17 passes. |
+| L4 | Heading hints are verified for cited passages and source endpoints, including UTF-8 byte/range/hash checks. p32 and endpoint-heading probe pass. |
+| L5 | Missing/private context UUIDs return the same sanitized forbidden error; no name leaks. Strengthened r18 passes. |
+
+## Guarded publication and integration
+
+Exact runtime-independent API:
+
+```rust,ignore
+WorkspaceService::stage_proposal_guarded(
+    request: StageProposalRequest,
+    publisher: impl FnOnce(
+        &Proposal,
+        &mut dyn FnMut() -> WorkspaceResult<()>,
+    ) -> WorkspaceResult<()>,
+) -> WorkspaceResult<Proposal>
+```
+
+Preparation and flushed hidden JSON happen before the publisher. The publisher wraps only the final idempotent rename; denied publication drops the temp and creates no pending record. Ordinary staging calls the action unconditionally. Pending dedupe and accepted empty outcomes also traverse the permit. The caller passes `|proposal, action| permit.publish(vec![proposal.id.clone()], action)`. The runtime owns deadline/revocation arbitration and successful-terminal buffering; core does not import runtime types. The delayed callback test checks that a fully prepared temporary file exists while final visibility does not, then revokes the permit and confirms no pending/root knowledge appears. A success test also covers duplicate and empty outcomes, once-only visibility and no new accepted operation. Validation-only remains non-consuming/non-publishing.
+
+Pending caches are disposable; file bytes flush before publication and directory durability is best effort outside the gate. Accepted Markdown writes retain the snapshot/journal/marker protocol. Scope reads also compare the actual outgoing bytes with their confirmed hash, rather than relying only on an earlier validation read. No API/type changes beyond the requested Rust guarded staging method, no runtime dependency, no root manifest/check-script ownership change and no new dependencies were introduced.
+
+## Limits and remaining acceptance
+
+All data was synthetic temp-root/app-data data; no live notes, provider, personal config/auth or notes Git. Only the idle generated incremental cache in this exact worktree was removed with path/symlink guards; no other target/cache/source/evidence was cleaned. Remaining acceptance is the independent Opus re-run on the final diff and manager-owned native/runtime/integration checks. This self-verification is not an independent ACCEPT.
+
+The coordinator approved redacted current human-supported values for explicitly authorized nonprivate CloudAllowed topics: excluded evidence/source/path/superseded IDs and unrequested statement text are absent, history remains scoped, and taint is checked first. The analysis adapter must still select context only through eligible evidence, not an all-topic export. Plain edits do not create implicit rules; deterministic rules match exact predicates/values, and replacements always require review.
+
+New operation ordering is root-local monotonic; legacy ordering is retained for legacy records. Same-app-data cooperative locking, per-file replacement and snapshot retention remain required. There is no cross-file atomicity, universal uncooperative-writer/power-loss guarantee, arbitrary-copy recognition, cross-app-data writer coordination or conflict auto-merge. Missing/changed committed payloads are recoverable from surviving typed snapshots/journals with warnings; wholesale erasure of all later Markdown metadata and app-data history cannot be distinguished from a truly older root. Conservative private-history taint may require explicit source/citation review. Source/citation repair never silently reanchors old evidence.

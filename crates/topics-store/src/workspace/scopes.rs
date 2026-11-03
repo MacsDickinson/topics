@@ -624,6 +624,12 @@ impl WorkspaceService {
             for summary in s.preview.sources {
                 let content =
                     String::from_utf8(source_bytes(ctx, &summary.path)?).map_err(internal)?;
+                if hash(content.as_bytes()) != summary.hash {
+                    return Err(error(
+                        "stale_scope",
+                        "Selected source changed during retrieval; preview again",
+                    ));
+                }
                 let citation = SourceRef {
                     source_id: summary.source_id.clone(),
                     path: summary.path.clone(),

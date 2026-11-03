@@ -827,8 +827,8 @@ fn prepared_candidates(
                     }
                 };
                 let evidence_match=same_aliases&&candidates.iter().any(|c|match c {
-                    Candidate::Claim{claim}|Candidate::Correction{claim,..} if claim.subject_id==topic.id=>state.claims.values().any(|old|old.subject_id==accepted.id&&old.predicate==claim.predicate&&old.value==claim.value&&claim.sources.iter().any(|e|matches!(e,Evidence::Passage{source} if old.sources.iter().any(|old|matches!(old,Evidence::Passage{source:old} if old.document_hash==source.document_hash&&old.passage_hash==source.passage_hash))))),
-                    Candidate::Connection{connection}=>state.connections.values().any(|old|old.relation==connection.relation&&prospective(&connection.from)==Some(endpoint_identity(state,&old.from))&&prospective(&connection.to)==Some(endpoint_identity(state,&old.to))&&connection.sources.iter().any(|s|old.sources.iter().any(|old|old.document_hash==s.document_hash&&old.passage_hash==s.passage_hash))),_=>false,
+                    Candidate::Claim{claim}|Candidate::Correction{claim,..} if claim.subject_id==topic.id=>state.claims.values().any(|old|old.subject_id==accepted.id&&old.predicate==claim.predicate&&old.value==claim.value&&old.valid_from==claim.valid_from&&old.valid_to==claim.valid_to&&claim.sources.iter().any(|e|matches!(e,Evidence::Passage{source} if old.sources.iter().any(|old|matches!(old,Evidence::Passage{source:old} if old.document_hash==source.document_hash&&old.passage_hash==source.passage_hash))))),
+                    Candidate::Connection{connection}=>state.connections.values().any(|old|old.relation==connection.relation&&old.valid_from==connection.valid_from&&old.valid_to==connection.valid_to&&prospective(&connection.from)==Some(endpoint_identity(state,&old.from))&&prospective(&connection.to)==Some(endpoint_identity(state,&old.to))&&connection.sources.iter().any(|s|old.sources.iter().any(|old|old.document_hash==s.document_hash&&old.passage_hash==s.passage_hash))),_=>false,
                 });
                 if evidence_match {
                     mapping.insert(topic.id.clone(), accepted.id.clone());

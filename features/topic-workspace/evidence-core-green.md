@@ -1,4 +1,6 @@
-# Core verification and integration mapping
+# Core initial verification and integration mapping
+
+This records the initial 85e9b77 checks; the subsequent independent review found acceptance blockers. See [the review-fix evidence](evidence-core-review-fixes.md) for current results and limitations.
 
 Scenario baseline: `f3e1ed0`; all four `.feature` files and the complete Phase 0 scenario/step/snapshot suite are unchanged. Initial types `1b8ac16`, actual pre-production RED `ed401eb`, agreed human request types `cc402a6`, implementation `b91a0db`, scoped validator/statement/integrity follow-up `cbce881`. See [the actual RED record](evidence-core-red.md).
 
