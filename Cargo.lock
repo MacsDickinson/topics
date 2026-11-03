@@ -4571,10 +4571,14 @@ dependencies = [
 name = "topics-desktop"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-wdio",
  "tauri-plugin-wdio-webdriver",
+ "tempfile",
+ "topics-core",
+ "topics-runtime",
  "topics-store",
 ]
 

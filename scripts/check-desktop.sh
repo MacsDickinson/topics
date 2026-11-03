@@ -10,3 +10,4 @@ npm run build
 npm test
 # A missing macOS session or embedded provider fails this check; no skipped smoke.
 npm run test:native
+npm run test:native:workspace
