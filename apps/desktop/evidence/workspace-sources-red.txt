@@ -1,0 +1,40 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 --grep human source inventory
+
+[WebServer] (node:30088) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:30090) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/workspace.spec.ts:118:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (10.0s)
+
+
+  1) tests/workspace.spec.ts:118:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Meetings/private.md', exact: true })
+
+
+      119 |   await workspaceFixture(page);
+      120 |   await page.getByRole('button', { name: 'Sources', exact: true }).click();
+    > 121 |   await page.getByRole('button', { name: 'Meetings/private.md', exact: true }).click();
+          |                                                                                ^
+      122 |   await expect(page.getByText('Local-only', { exact: true })).toBeVisible();
+      123 |   await expect(page.getByText('<img src=x onerror=alert(1)> Ledger launch is Friday', { exact: true })).toBeVisible();
+      124 |   await expect(page.locator('img')).toHaveCount(0);
+        at /Users/macs/orca/workspaces/topics/topics-m1-desktop/apps/desktop/tests/workspace.spec.ts:121:80
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-human-source-inv-92667-xt-and-persists-sensitivity/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-human-source-inv-92667-xt-and-persists-sensitivity/error-context.md
+
+  1 failed
+    tests/workspace.spec.ts:118:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity 

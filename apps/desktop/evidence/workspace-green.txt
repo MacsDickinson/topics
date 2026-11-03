@@ -1,0 +1,24 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1
+
+[WebServer] (node:32847) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 17 tests using 1 worker
+
+(node:32849) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/async.spec.ts:14:1 › late responses cannot replace newer results or cleared input (1.6s)
+  ✓   2 tests/async.spec.ts:34:1 › IPC errors are visible and a subsequent search recovers (938ms)
+  ✓   3 tests/async.spec.ts:48:1 › hostile result markup stays inert while FTS highlights render (551ms)
+  ✓   4 tests/search.spec.ts:45:35 › Search shows results from the core (396ms)
+  ✓   5 tests/search.spec.ts:45:35 › Empty results say so (380ms)
+  ✓   6 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (249ms)
+  ✓   7 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (307ms)
+  ✓   8 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (1.0s)
+  ✓   9 tests/workspace.spec.ts:194:1 › approval errors preserve edited candidates and rejected proposals never become topics (460ms)
+  ✓  10 tests/workspace.spec.ts:219:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (407ms)
+  ✓  11 tests/workspace.spec.ts:247:1 › changing root cancels run and clears old topic, proposal and delayed reads (376ms)
+  ✓  12 tests/workspace.spec.ts:273:1 › missing runtime leaves topic browsing and manual proposal capture available (210ms)
+  ✓  13 tests/workspace.spec.ts:289:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (241ms)

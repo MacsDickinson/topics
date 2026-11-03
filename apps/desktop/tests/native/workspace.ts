@@ -13,7 +13,9 @@ describe('Topic workspace native service journey', () => {
     await $('button=New topic').click();
     await $('#topic-name').setValue('Synthetic Ledger');
     await $('button=Create proposal').click();
-    await expect($('input[aria-label="Topic name"]')).toHaveValue('Synthetic Ledger');
+    await expect($('input[aria-label="Topic name"]')).toHaveValue(
+      'Synthetic Ledger',
+    );
     await $('button=Approve selected changes').click();
     await $('button=Topics').click();
     await expect($('button=Synthetic Ledger')).toBeDisplayed();
