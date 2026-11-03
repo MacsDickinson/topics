@@ -1,0 +1,54 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.00s
+     Running unittests src/lib.rs (target/debug/deps/topics_runtime-c7bbe7ae3eff4175)
+
+running 7 tests
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running unittests src/bin/topics-mcp-proxy.rs (target/debug/deps/topics_mcp_proxy-e7c34a4594fffd7a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance.rs (target/debug/deps/acceptance-70b520fe78dd3dcb)
+
+running 7 tests
+test cancel_and_late_events_discard_buffer ... ok
+test failed_unknown_and_duplicate_terminal_never_publish ... ok
+test malformed_model_output_and_authority_fields_are_rejected ... ok
+test only_successful_matching_terminal_publishes_once ... ok
+test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... ok
+test unknown_effective_tool_surface_blocks_selected_bytes ... ok
+test native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/live_codex.rs (target/debug/deps/live_codex-633ecd3d167c4b5a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (target/debug/deps/scripted_runtime-c18ee9fd55c41491)
+
+running 2 tests
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+   Doc-tests topics_runtime
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,517 @@
+{
+  "type": "object",
+  "properties": {
+    "candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Candidate"
+      },
+      "minItems": 1,
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "candidates"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Locator": {
+      "type": "object",
+      "properties": {
+        "start_byte": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_byte": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "heading": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "start_byte",
+        "end_byte",
+        "heading"
+      ],
+      "additionalProperties": false
+    },
+    "SourceRef": {
+      "type": "object",
+      "properties": {
+        "source_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "document_hash": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/$defs/Locator"
+        },
+        "passage_hash": {
+          "type": "string"
+        },
+        "excerpt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "path",
+        "document_hash",
+        "locator",
+        "passage_hash",
+        "excerpt"
+      ],
+      "additionalProperties": false
+    },
+    "Evidence": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "passage"
+            },
+            "source": {
+              "$ref": "#/$defs/SourceRef"
+            }
+          },
+          "required": [
+            "kind",
+            "source"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "user_statement"
+            },
+            "statement_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "statement_id"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Topic": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "topic_kind": {
+          "enum": [
+            "person",
+            "project",
+            "thread"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sensitivity": {
+          "enum": [
+            "cloud_allowed",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "topic_kind",
+        "name",
+        "aliases",
+        "sensitivity"
+      ],
+      "additionalProperties": false
+    },
+    "Claim": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "revision_id": {
+          "type": "string"
+        },
+        "subject_id": {
+          "type": "string"
+        },
+        "predicate": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "uncertainty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          }
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recorded_at": {
+          "type": "string"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "revision_id",
+        "subject_id",
+        "predicate",
+        "value",
+        "uncertainty",
+        "sources",
+        "supersedes",
+        "recorded_at",
+        "valid_from",
+        "valid_to"
+      ],
+      "additionalProperties": false
+    },
+    "Endpoint": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "topic"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "claim"
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "source"
+            },
+            "source_id": {
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/$defs/Locator"
+            }
+          },
+          "required": [
+            "kind",
+            "source_id",
+            "locator"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Connection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/Endpoint"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "to": {
+          "$ref": "#/$defs/Endpoint"
+        },
+        "uncertainty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          }
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "from",
+        "relation",
+        "to",
+        "uncertainty",
+        "sources",
+        "valid_from",
+        "valid_to"
+      ],
+      "additionalProperties": false
+    },
+    "RuleScope": {
+      "type": "object",
+      "properties": {
+        "source_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "source_paths",
+        "context"
+      ],
+      "additionalProperties": false
+    },
+    "Rule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "topic_id": {
+          "type": "string"
+        },
+        "predicate": {
+          "type": "string"
+        },
+        "match_value": {
+          "type": "string"
+        },
+        "replacement": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/RuleScope"
+        },
+        "source_revision_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "topic_id",
+        "predicate",
+        "match_value",
+        "replacement",
+        "scope",
+        "source_revision_id"
+      ],
+      "additionalProperties": false
+    },
+    "Candidate": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "topic"
+            },
+            "topic": {
+              "$ref": "#/$defs/Topic"
+            }
+          },
+          "required": [
+            "kind",
+            "topic"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "claim"
+            },
+            "claim": {
+              "$ref": "#/$defs/Claim"
+            }
+          },
+          "required": [
+            "kind",
+            "claim"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "connection"
+            },
+            "connection": {
+              "$ref": "#/$defs/Connection"
+            }
+          },
+          "required": [
+            "kind",
+            "connection"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "correction"
+            },
+            "claim": {
+              "$ref": "#/$defs/Claim"
+            },
+            "rule": {
+              "$ref": "#/$defs/Rule"
+            }
+          },
+          "required": [
+            "kind",
+            "claim",
+            "rule"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "unresolved_identity"
+            },
+            "name": {
+              "type": "string"
+            },
+            "candidates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/SourceRef"
+              }
+            }
+          },
+          "required": [
+            "kind",
+            "name",
+            "candidates",
+            "sources"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

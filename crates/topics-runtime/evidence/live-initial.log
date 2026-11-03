@@ -1,0 +1,45 @@
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-m1-runtime/crates/topics-runtime)
+warning: unreachable pattern
+   --> crates/topics-runtime/tests/live_codex.rs:201:17
+    |
+201 |                 _ => {}
+    |                 ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> crates/topics-runtime/tests/live_codex.rs:201:17
+    |
+193 |                 RunEvent::Completed => {
+    |                 ------------------- matches some of the same values
+...
+197 |                 RunEvent::Error { error } => panic!("sanitized runtime failure: {}", error),
+    |                 ------------------------- matches some of the same values
+198 |                 RunEvent::Cancelled => panic!("unexpected cancellation"),
+    |                 ------------------- matches some of the same values
+199 |                 RunEvent::Proposal { .. } => proposals += 1,
+    |                 ------------------------- matches some of the same values
+200 |                 RunEvent::TextDelta{text}=>diagnostic_text.push_str(&text),
+201 |                 _ => {}
+    |                 ^ ...and 1 other patterns collectively make this unreachable
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: `topics-runtime` (test "live_codex") generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.96s
+     Running tests/live_codex.rs (target/debug/deps/live_codex-aad73d19f2345725)
+
+running 1 test
+
+thread 'subscription_codex_production_sdk_bridge_discovers_cited_candidate_and_corrects' (3170808) panicked at crates/topics-runtime/tests/live_codex.rs:205:9:
+assertion `left == right` failed: reads=0 staged=0
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test subscription_codex_production_sdk_bridge_discovers_cited_candidate_and_corrects ... FAILED
+
+failures:
+
+failures:
+    subscription_codex_production_sdk_bridge_discovers_cited_candidate_and_corrects
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.74s
+
+error: test failed, to rerun pass `-p topics-runtime --test live_codex`
