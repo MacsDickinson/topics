@@ -749,6 +749,38 @@ impl WorkspaceService {
 // make the transcript value human-authored. Authority comes from the durable
 // before/after decision, not the mere presence of a statement ID on a claim.
 fn human_value_supported(state: &State, claim: &Claim) -> bool {
+    // Metadata revisions may preserve earlier value authority, but never cross
+    // a value/identity change to revive authority for an old transcript value.
+    // A visited set bounds both cycles and total queued history to 100 records.
+    const MAX_VALUE_LINEAGE: usize = 100;
+    let mut pending = vec![claim];
+    let mut visited = BTreeSet::from([claim.revision_id.clone()]);
+    while let Some(current) = pending.pop() {
+        if direct_human_value_supported(state, current) {
+            return true;
+        }
+        for id in &current.supersedes {
+            let Some(old) = state.claims.get(id) else {
+                continue;
+            };
+            if old.id != claim.id
+                || old.subject_id != claim.subject_id
+                || old.predicate != claim.predicate
+                || old.value.trim() != claim.value.trim()
+            {
+                continue;
+            }
+            if visited.insert(old.revision_id.clone()) {
+                if visited.len() > MAX_VALUE_LINEAGE {
+                    return false;
+                }
+                pending.push(old);
+            }
+        }
+    }
+    false
+}
+fn direct_human_value_supported(state: &State, claim: &Claim) -> bool {
     claim.sources.iter().any(|e| {
         let Evidence::UserStatement { statement_id } = e else { return false; };
         if state.statements.get(statement_id).is_none_or(|s| s.topic_id != claim.subject_id) { return false; }
@@ -758,9 +790,11 @@ fn human_value_supported(state: &State, claim: &Claim) -> bool {
             if operation.operation.description == "Record user statement" {
                 // Approval of a question or metadata revision does not author
                 // the unchanged transcript value. A raw statement supports an
-                // actual changed value, or a literal value it itself supplied.
-                let changed_value = claim.supersedes.iter().any(|id| state.claims.get(id).is_some_and(|old| old.value.trim() != claim.value.trim()));
-                let literal_value = state.statements.get(statement_id).is_some_and(|statement| !claim.value.trim().is_empty() && statement.text.contains(claim.value.trim()));
+                // actual changed value, or the entire literal value itself.
+                // Substrings, instructions and token/semantic guesses grant no
+                // authority even if the candidate was subsequently approved.
+                let changed_value = claim.supersedes.iter().any(|id| state.claims.get(id).is_some_and(|old| old.id == claim.id && old.subject_id == claim.subject_id && old.predicate == claim.predicate && old.value.trim() != claim.value.trim()));
+                let literal_value = state.statements.get(statement_id).is_some_and(|statement| !claim.value.trim().is_empty() && statement.text.trim() == claim.value.trim());
                 return changed_value || literal_value;
             }
             operation.proposal.as_ref().is_some_and(|decision| {
