@@ -1,0 +1,11 @@
+✔ app-owned root records do not mask changes to synthetic source notes (12.50525ms)
+✔ the reserved path cannot bypass the symlink guard (0.63925ms)
+✔ a root file named topics is still guarded (0.52375ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 61.184334
