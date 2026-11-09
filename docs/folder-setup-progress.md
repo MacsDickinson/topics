@@ -2,6 +2,8 @@
 
 2026-11-09. **Implemented and packaged for development; not accepted for delivery.**
 
+**Latest checkpoint:** the bounded genuine native journey passes, including exact corrected-revision lineage, supplemental context, unchanged source hashes and fresh-process SQLite rebuild. Hosted Linux/macOS checks passed the prototype snapshot `8e7d0c9`. Final assembled verification, a Finder executable-discovery repair and the user-required Claude reviews remain outstanding. Earlier investigation checkpoints below retain the failures and source identities that led to this result.
+
 The approved milestone adds local notes-folder inventory and role suggestions, exact-manifest consent, bounded resumable analysis, a sourced topic graph/list, group baseline save and topic-centred review. Imported assertions remain “From your notes”. Explicit confirmation, correction and supplemental context are separate operations; added context does not verify facts. Original source notes remain unchanged, and approved app records and receipts live under the root's reserved `topics/` folder.
 
 ## Source and local app
@@ -18,7 +20,7 @@ Main includes accepted redesign and approval repair `cfbb694`, native test repai
 
 The first assembled native failure compared the entire notes root and mistook new app-owned inventory/journal records for source changes. Reproduction proved the original Markdown hash unchanged. The repaired guard excludes only the reserved root `topics/` directory, still protects nested directories named topics, and rejects symlinks. A later search test treated an empty-state heading as a search result; it now waits for the exact result title and path. Legacy native selectors were reconciled to controls' actual associated labels/IDs. These failures and subsequent native passes are retained in `apps/desktop/evidence/`.
 
-## Genuine provider acceptance is failing
+## Earlier genuine provider failures
 
 The real installed pinned Codex 0.166.0 was invoked only with fictional notes, explicit source consent and isolated Topics/WebKit data. Codex alone retained its existing HOME to own authentication; credentials were not inspected or copied. The user's current Codex 0.167.0 executable was not changed.
 
@@ -41,3 +43,11 @@ Independent interim review found and closed two P2 issues: valid-shaped arbitrar
 A later native attempt narrowed its failure to `host/validation_denied`. An actual-host scratch probe then captured a fictional claim with `recorded_at: 2026-11-09`; core requires a full RFC3339 UTC timestamp. Three same-capability offline replays reproduced the precise error. In copied synthetic app data, changing only that field to a valid UTC timestamp passed full core validation without publishing. This establishes the scratch attempt's cause, not the discarded payload of every earlier native failure. A minimal prompt-format clarification and captured-fixture regression are authorized; schema, validator, coercion, privacy and acceptance rules remain unchanged. No further genuine journey is accepted.
 
 Committed source `1cfd6f5568afecb38bbec6dbd11fda8ba9cc9450` is backed up on the personal remote branch `folder-setup-prototype-2026-11-09`. Hosted checks for that exact WIP source are being monitored; no CI result or final acceptance is implied. The newer timestamp fix will need separate integration and validation.
+
+## Passing genuine checkpoint
+
+The timestamp-format guidance and captured-fixture regression passed focused independent review. The first native follow-up extracted and saved a valid baseline, then exposed an asynchronous WebDriver collection bug in the harness. Its repair and explicit scripted rehearsal passed independent review; the rehearsal exercised the exact shared genuine setup/restart specifications without a provider call.
+
+The final genuine run freshly built source `ec9f2e64e800a80679c10d6040bda65b846b168f`, merging main `eda6b8f`. With scripted flags unset, actual installed Codex 0.166.0 processed the same 110-byte synthetic note in one model call under one explicit manifest authorization. The native tests passed baseline approval/From your notes, exact replacement-head supersession, statement provenance, persisted correction rule, no extra confirmation from context, source-byte preservation and fresh-process comparison after SQLite deletion. Evidence is in `apps/desktop/evidence/live-setup-acceptance/REPORT.md`; its earlier failures remain historical, not the current outcome.
+
+Core and Desktop both passed hosted CI at `8e7d0c9` (runs `42563820546` and `42563820387`). This snapshot predates the final harness/default-rehearsal additions and must not be represented as final-head CI. A new complete local check includes the strict scripted rehearsal and helper tests. The current production bundle was built from `2208024`; production source remained unchanged through the passing genuine run. A subsequent Finder usability repair is necessary because normal executable discovery otherwise selects updated Codex 0.167.0 instead of the already installed pinned 0.166.0; it will retain explicit overrides and inspect only known executable metadata. No user Codex installation, credentials or notes are changed.
