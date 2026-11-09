@@ -1,9 +1,19 @@
 // Only canonical synthetic job graph, closed diagnostic pairs and counters cross this boundary.
 export function safeObservation(job) {
-  const allowed = new Set(['turn:model_terminal_failed', 'publication:scope_not_read']);
+  const allowed = new Set([
+    'preflight:version_check_failed', 'preflight:layout_denied', 'preflight:native_denied',
+    'startup:setup_failed', 'discovery:discovery_failed', 'discovery:discovery_deadline',
+    'transport:transport_failed', 'transport:read_deadline', 'transport:protocol_denied',
+    'mcp:session_failed', 'mcp:inventory_denied', 'mcp:request_failed', 'mcp:request_deadline',
+    'callback:authorization_denied', 'candidate:schema_denied',
+    'host:validation_denied', 'host:call_deadline', 'host:host_failed',
+    'execution:validation_denied', 'execution:execution_deadline',
+    'publication:preparation_failed', 'publication:preparation_deadline',
+    'turn:model_terminal_failed', 'publication:scope_not_read',
+  ]);
   const batches = (job.batches || []).map((batch) => {
     const details = batch.error?.details;
-    const pair = details && Object.keys(details).length === 2 && allowed.has(`${details.phase}:${details.reason}`)
+    const pair = details && typeof details === 'object' && !Array.isArray(details) && Object.keys(details).length === 2 && typeof details.phase === 'string' && typeof details.reason === 'string' && allowed.has(`${details.phase}:${details.reason}`)
       ? { phase: details.phase, reason: details.reason } : null;
     return { status: batch.status, attempt: batch.attempt, diagnostic: pair, diagnostic_status: pair ? 'known' : 'unknown' };
   });
