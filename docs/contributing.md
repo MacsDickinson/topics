@@ -1,5 +1,7 @@
 # Contributing
 
+For UI work, follow the [design system](design-system.md), including its same-change requirement for missing tokens, components, states and patterns.
+
 ## Crates and dependency direction
 
 - `topics-core`: foundation document/search values plus canonical workspace wire values and deterministic UUID/date/candidate validation. It has no filesystem, SQL, UI or network behavior.

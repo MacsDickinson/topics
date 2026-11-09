@@ -10,6 +10,8 @@ Topics is a local-first macOS app for ongoing people, projects and threads in Ma
 
 The persistent task backlog and bullet-journal daily review are the next milestone. See the [agreed plan](docs/plan.md) and [milestone plan and scenarios](features/topic-workspace/PLAN.md) for scope and overnight build authorization.
 
+UI contributors: follow the [design system](docs/design-system.md) for tokens, components, patterns and review requirements.
+
 ## Run
 
 The delivered local app is placed at `target/prototype/Topics.app`. Open it from Finder or from this checkout:
