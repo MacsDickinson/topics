@@ -660,3 +660,40 @@ test("date picker cancels drafts, returns focus, and handles keyboard dismissal"
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
 });
+
+test("BoardUI calendar exposes its month panel and editable date chip", async ({ page }) => {
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await page.getByRole("button", { name: "From date: Select date" }).click();
+  await expect(page.locator(".board-month-panel")).toBeVisible();
+  await expect(page.locator(".board-month-panel svg")).toHaveCount(2);
+  await expect(page.locator(".board-date-chip")).toBeVisible();
+});
+
+test("empty date draft cannot apply an old value", async ({ page }) => {
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await page.getByRole("button", { name: "From date: Select date" }).click();
+  await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-01-01");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByRole("button", { name: "From date: 2026-01-01" }).click();
+  await page.getByLabel("From date date (YYYY-MM-DD)").fill("");
+  await expect(page.getByRole("button", { name: "Apply" })).toBeDisabled();
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(page.getByRole("button", { name: "From date: Select date" })).toBeFocused();
+});
+
+test("BoardUI nonmodal role select navigates with keyboard and dismisses outside", async ({ page }) => {
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  const trigger = page.getByRole("button", { name: "Suggested role for Meetings" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("listbox")).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await page.getByRole("heading", { name: "Choose notes to analyse" }).click();
+  await expect(page.getByRole("listbox")).toHaveCount(0);
+});
