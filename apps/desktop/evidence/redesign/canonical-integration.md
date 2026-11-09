@@ -94,6 +94,10 @@ The current authorized 41ed1c0 default is 256 KiB; no replacement type, handler 
 unsupplied backend patch has been invented here. Final validation/completion must
 follow that commit. The coordinator reports installed Codex 0.167.0 versus pinned
 0.166.0; runtime compatibility was not changed or repinned here.
+The feature coordinator also verified a retained pinned 0.166.0 executable at
+`/Users/macs/.codex/packages/standalone/releases/0.166.0-aarch64-apple-darwin/bin/codex`.
+Their coordinated native/genuine acceptance can select that exact path without
+changing the user's current executable; this worker did not launch those suites.
 Native fixture/package acceptance remains coordinated with
 the feature manager; imported native green logs describe their runs, not a new run
 performed by this worker. Screen-reader/actual WebView zoom and genuine runtime
