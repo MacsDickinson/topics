@@ -109,6 +109,16 @@ for line in sys.stdin:
                     'candidates': [topic['topic']['id'] for topic in topics], 'sources': citations}]
             else:
                 candidates = topics + [connection]
+            if mode == 'graph_claim':
+                candidates.append({'kind': 'claim', 'claim': {
+                    'id': '10000000-0000-4000-8000-000000000004',
+                    'revision_id': '10000000-0000-4000-8000-000000000005',
+                    'subject_id': topics[0]['topic']['id'],
+                    'predicate': 'responsibility', 'value': 'leads Ledger',
+                    'uncertainty': None,
+                    'sources': [{'kind': 'passage', 'source': source} for source in citations],
+                    'supersedes': [], 'recorded_at': '2026-11-09T00:00:00Z',
+                    'valid_from': None, 'valid_to': None}})
             if mode == 'split_calls':
                 call(101, 'propose_changes', {'candidates': topics})
                 call(102, 'propose_changes', {'candidates': [connection]})

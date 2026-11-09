@@ -12,6 +12,8 @@ use topics_core::*;
 use topics_runtime::{Runtime, RuntimeConfig};
 use topics_setup::SetupCoordinator;
 use topics_store::WorkspaceService;
+#[path = "support/render.rs"]
+mod renderer;
 
 // Run runtime-bearing tests in a child with a synthetic Codex home so the
 // runtime's environment checks never inspect personal configuration metadata.
@@ -51,8 +53,8 @@ struct Fixture {
 }
 impl Fixture {
     fn new(documents: usize, mode: &str) -> Self {
-        use std::os::unix::fs::PermissionsExt;
         let temp = tempfile::tempdir().unwrap();
+        renderer::render(temp.path(), mode).unwrap();
         let notes = temp.path().join("notes");
         fs::create_dir_all(notes.join("profiles")).unwrap();
         fs::create_dir_all(notes.join("meetings")).unwrap();
@@ -76,22 +78,6 @@ impl Fixture {
             .unwrap()
             .root;
         let script = temp.path().join("scripted-codex");
-        let source = include_str!("support/scripted_child.py")
-            .replace(
-                "@SETTINGS@",
-                &serde_json::to_string(&temp.path().join("mode")).unwrap(),
-            )
-            .replace(
-                "@LOG@",
-                &serde_json::to_string(&temp.path().join("transmissions.jsonl")).unwrap(),
-            )
-            .replace(
-                "@FLAGS@",
-                &serde_json::to_string(topics_runtime::protocol::DISABLED).unwrap(),
-            );
-        fs::write(&script, source).unwrap();
-        fs::set_permissions(&script, fs::Permissions::from_mode(0o700)).unwrap();
-        fs::write(temp.path().join("mode"), mode).unwrap();
         let runtime = Arc::new(Runtime::new(RuntimeConfig {
             codex_path: script,
             proxy_path: PathBuf::from("/usr/bin/false"), // Direct-mode compatibility field; unused.
@@ -1151,6 +1137,58 @@ fn historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting
                     .issues
                     .iter()
                     .any(|i| i.issue_kind == SetupIssueKind::Contradiction)
+            );
+            assert!(
+                f.service
+                    .lock()
+                    .unwrap()
+                    .topics_list(RootRequest {
+                        root_id: f.root.root_id.clone()
+                    })
+                    .unwrap()
+                    .topics
+                    .is_empty()
+            );
+        },
+    );
+}
+
+#[test]
+fn graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it() {
+    isolated(
+        "graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it",
+        || {
+            let f = Fixture::new(2, "graph_claim");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            let claim = done
+                .graph
+                .items
+                .iter()
+                .find_map(|item| match &item.candidate {
+                    Candidate::Claim { claim } if claim.predicate == "responsibility" => {
+                        Some(claim)
+                    }
+                    _ => None,
+                })
+                .expect("graph_claim fixture must stage a canonical cited responsibility claim");
+            assert_eq!(claim.subject_id, "10000000-0000-4000-8000-000000000001");
+            assert_eq!(claim.value, "leads Ledger");
+            assert_ne!(claim.id, claim.revision_id);
+            assert_eq!(claim.sources.len(), 2);
+            assert!(
+                claim
+                    .sources
+                    .iter()
+                    .all(|e| matches!(e, Evidence::Passage { .. }))
+            );
+            assert!(
+                done.graph
+                    .items
+                    .iter()
+                    .all(|i| i.disposition == DraftDisposition::Pending)
             );
             assert!(
                 f.service

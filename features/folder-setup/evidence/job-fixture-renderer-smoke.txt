@@ -1,0 +1,6 @@
+Renderer example smoke: PASS
+Caller-created empty synthetic directory containing spaces, apostrophe and Unicode.
+JSON executable/mode/log paths confined to that directory.
+Executable returns pinned fake version codex-cli 0.166.0.
+Existing nonempty directory refused without changing mode.
+No provider, token, personal configuration or notes access.
