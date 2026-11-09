@@ -22,4 +22,6 @@ Independent Codex reviews accepted the window changes and setup tip `e9c7e9f`; t
 
 [Hosted Core passed](https://github.com/MacsDickinson/topics/actions/runs/42722393635) source `17cdb27`. [Hosted Desktop failed](https://github.com/MacsDickinson/topics/actions/runs/42722393676) its light / 1180px first-Tab skip-link assertion, with 132 browser cases passing. A separate worker is investigating the initial keyboard-focus cause; the local result does not supersede that failure.
 
+The test-only follow-up `bd596f7` waits for the disconnected workspace, foregrounds the browser page, verifies initial document/body focus, and then retains the original single Tab, skip-link geometry and Enter assertions. Independent review accepted this ready-foreground test contract; 40 repeated review cases passed, in addition to the implementer's 80 repeated keyboard cases and 15 focused window/redesign cases. A controlled early-input probe showed a plausible timing mechanism, but did not prove the original hosted cause. Product code and the signed candidate remain unchanged. Hosted verification of the revised test is pending.
+
 The user's required Claude review remains blocked by expired CLI OAuth authentication. The additional Codex reviews do not replace that requirement. This is a development candidate with these checks open.
