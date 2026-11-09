@@ -94,7 +94,11 @@ for line in sys.stdin:
                     'candidates': [topic['topic']['id'] for topic in topics], 'sources': citations}]
             else:
                 candidates = topics + [connection]
-            call(101, 'propose_changes', {'candidates': candidates})
+            if mode == 'split_calls':
+                call(101, 'propose_changes', {'candidates': topics})
+                call(102, 'propose_changes', {'candidates': [connection]})
+            else:
+                call(101, 'propose_changes', {'candidates': candidates})
         emit({'method': 'item/agentMessage/delta', 'params': {
             'threadId': 'thread', 'turnId': 'turn', 'itemId': 'text', 'delta': 'Synthetic turn buffered'}})
         if mode == 'hold_second' and count == 2:

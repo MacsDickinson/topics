@@ -802,3 +802,23 @@ fn restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids() {
         },
     );
 }
+
+#[test]
+fn multiple_tool_calls_validate_the_runtime_combined_buffer_once() {
+    isolated(
+        "multiple_tool_calls_validate_the_runtime_combined_buffer_once",
+        || {
+            let f = Fixture::new(2, "split_calls");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            assert_eq!(
+                done.graph.items.len(),
+                3,
+                "host must validate combined buffer without appending prior tool calls again"
+            );
+            assert_eq!(done.batches[0].proposal_ids.len(), 1);
+        },
+    );
+}

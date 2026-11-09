@@ -214,3 +214,60 @@ fn root_switch_denies_real_prepared_publication_and_clears_context() {
         || publication_race(true),
     );
 }
+
+#[test]
+fn host_scope_cannot_be_widened_and_human_decisions_are_not_model_tools() {
+    use topics_runtime::HostTools;
+    let temp = tempfile::tempdir().unwrap();
+    let service = Arc::new(Mutex::new(
+        WorkspaceService::open(temp.path().join("app-data")).unwrap(),
+    ));
+    // Never launched: these denied requests must fail before any service read.
+    let runtime = Arc::new(Runtime::new(RuntimeConfig {
+        codex_path: "/usr/bin/false".into(),
+        proxy_path: "/usr/bin/false".into(),
+        app_data: temp.path().join("app-data"),
+    }));
+    let coordinator = SetupCoordinator::new(service, runtime, Arc::new(Mutex::new(())));
+    let capability = SetupBatchCapability {
+        root_id: "10000000-0000-4000-8000-000000000001".into(),
+        job_id: "10000000-0000-4000-8000-000000000002".into(),
+        batch_id: "10000000-0000-4000-8000-000000000003".into(),
+        scope_id: "10000000-0000-4000-8000-000000000004".into(),
+        run_id: "10000000-0000-4000-8000-000000000005".into(),
+        manifest_fingerprint: "synthetic".into(),
+        attempt: 1,
+    };
+    let host = host::SetupHost::new(
+        coordinator.inner.clone(),
+        capability.clone(),
+        Arc::new(AtomicBool::new(false)),
+        64,
+    );
+    for (tool, args) in [
+        (
+            "scope_sources",
+            serde_json::json!({"scope_id":capability.scope_id,"path":"private.md"}),
+        ),
+        (
+            "scope_sources",
+            serde_json::json!({"scope_id":"10000000-0000-4000-8000-000000000006"}),
+        ),
+        (
+            "setup_draft_context",
+            serde_json::json!({"job_id":capability.job_id}),
+        ),
+        ("setup_decide", serde_json::json!({"approve":true})),
+        ("workspace_proposal_decide", serde_json::json!({})),
+        (
+            "sensitivity_set",
+            serde_json::json!({"sensitivity":"cloud_allowed"}),
+        ),
+    ] {
+        assert_eq!(
+            host.call(tool, args).unwrap_err().code,
+            "forbidden",
+            "{tool}"
+        );
+    }
+}
