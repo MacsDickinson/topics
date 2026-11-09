@@ -8,8 +8,10 @@ test "$(node --version)" = "v24.22.2"
 npm exec -- playwright install chromium
 npm exec -- node scripts/setup-types.mjs --check
 npm run build
+npm exec -- node --test scripts/live-setup-observation.test.mjs scripts/live-setup-lineage.test.mjs
 npm test
 # A missing macOS session or embedded provider fails this check; no skipped smoke.
 npm run test:native
 npm run test:native:workspace
 npm run test:native:setup
+TOPICS_SCRIPTED_REHEARSAL=1 npm run test:native:setup:rehearsal
