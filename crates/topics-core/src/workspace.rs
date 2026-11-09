@@ -13,6 +13,7 @@ fn required<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Resu
 
 macro_rules! value {
     ($name:ident { $($field:ident : $ty:ty),* $(,)? }) => {
+        #[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
         #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
         #[serde(deny_unknown_fields)]
         pub struct $name { $(#[serde(deserialize_with="required")] pub $field: $ty),* }
@@ -31,6 +32,7 @@ value!(SourceRef {
     passage_hash: Hash,
     excerpt: String
 });
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Evidence {
@@ -50,6 +52,7 @@ value!(Exclusion {
     path: String,
     reason: String
 });
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Sensitivity {
@@ -57,6 +60,7 @@ pub enum Sensitivity {
     LocalOnly,
     Unknown,
 }
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TopicKind {
@@ -65,6 +69,7 @@ pub enum TopicKind {
     Thread,
 }
 value!(Topic { id: Id, topic_kind: TopicKind, name: String, aliases: Vec<String>, sensitivity: Sensitivity });
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Endpoint {
@@ -84,6 +89,7 @@ value!(Rule {
     source_revision_id: Id
 });
 value!(RuleScope { source_paths: Vec<String>, context: Option<String> });
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Candidate {
@@ -106,6 +112,7 @@ pub enum Candidate {
         sources: Vec<SourceRef>,
     },
 }
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Origin {
@@ -113,6 +120,7 @@ pub enum Origin {
     Chat { topic_id: Id, message_id: Id },
     Manual,
 }
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProposalStatus {
@@ -145,6 +153,7 @@ impl std::fmt::Display for ApiError {
     }
 }
 impl std::error::Error for ApiError {}
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Decision {
@@ -216,6 +225,7 @@ value!(UndoRequest {
 });
 value!(RuntimeStatusRequest {});
 value!(RuntimeStatusResult { available: bool, version: Option<String>, message: String });
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum RunEvent {

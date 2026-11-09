@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 fn required<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Result<T, D::Error> { T::deserialize(d) }
 macro_rules! value {
     ($name:ident { $($field:ident : $ty:ty),* $(,)? }) => {
+        #[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
         #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
         #[serde(deny_unknown_fields)]
         pub struct $name { $(#[serde(deserialize_with="required")] pub $field: $ty),* }
@@ -12,6 +13,7 @@ macro_rules! value {
 }
 macro_rules! choices {
     ($name:ident { $($variant:ident),* }) => {
+        #[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
         #[serde(rename_all="snake_case")]
         pub enum $name { $($variant),* }

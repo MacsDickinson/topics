@@ -27,6 +27,7 @@ pub struct SearchResult {
     /// FTS5 excerpt. Match spans use <mark> tags; render as text unless safely sanitized.
     pub snippet: String,
 }
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IndexReport {
     pub document_count: usize,
