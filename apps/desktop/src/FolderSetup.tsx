@@ -14,7 +14,7 @@ import type { SourceRef } from "./generated/SourceRef";
 import "./folder-setup.css";
 
 const limits = {
-  max_files_per_batch: 100,
+  max_files_per_batch: 20,
   max_bytes_per_batch: 2097152,
   max_batches: 100,
   max_candidates_per_turn: 200,
