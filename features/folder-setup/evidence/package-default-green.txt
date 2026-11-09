@@ -1,0 +1,30 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Finished `test` profile [unoptimized] target(s) in 4.07s
+     Running tests/setup_service.rs (/tmp/topics-setup-core-target/debug/deps/setup_service-228bc6443596a6b1)
+
+running 22 tests
+test a_later_batch_cannot_reuse_an_edited_draft_revision_identity ... ok
+test current_root_and_scope_provenance_are_not_rebased ... ok
+test confirmation_hashes_reject_changed_revision_and_preserve_other_groups ... ok
+test explicitly_deferred_items_are_not_reselected_by_default_baseline_save ... ok
+test explicit_correction_survives_app_cache_loss_and_keeps_exact_statement ... ok
+test baseline_is_not_human_value_authority_but_exact_confirmation_is ... ok
+test legacy_acceptance_does_not_invent_verification ... ok
+test identical_refreshed_manifest_reuses_pending_questions_without_new_calls ... ok
+test inventory_excludes_hidden_symlinks_and_private_manifest_metadata ... ok
+test exact_manifest_multibatch_dedupe_save_confirm_rebuild ... ok
+test legacy_statement_reference_does_not_invent_personal_verification ... ok
+test model_local_only_draft_labels_remain_restrictive ... ok
+test concurrent_known_subject_duplicate_is_no_change_and_new_evidence_is_deferred ... ok
+test prior_completed_context_is_job_scoped_and_rechecks_current_privacy ... ok
+test metadata_draft_edit_records_history_without_confirming_value ... ok
+test partial_selection_closes_endpoints_without_sibling_claims ... ok
+test revoked_publisher_cannot_attach_draft_or_reuse_attempt ... ok
+test model_validation_is_not_a_private_identity_oracle ... ok
+test stale_source_invalidates_receipt_and_preserves_draft ... ok
+test verbatim_passages_in_different_documents_are_not_independent_confirmation ... ok
+test undo_can_be_followed_by_new_consent_for_a_fresh_setup_job ... ok
+test receipt_operation_count_includes_retained_human_edit_history ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.65s
+

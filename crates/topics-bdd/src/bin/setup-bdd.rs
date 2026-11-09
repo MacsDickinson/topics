@@ -378,7 +378,7 @@ fn step_21(w: &mut SetupWorld) {
 }
 #[then("the changed selection and exclusions can be previewed for renewed consent")]
 fn step_22(w: &mut SetupWorld) {
-    let before=w.job().clone();
+    let before = w.job().clone();
     w.f.preview(1);
     assert!(
         w.f.manifest
@@ -393,12 +393,21 @@ fn step_22(w: &mut SetupWorld) {
         w.f.manifest.as_ref().unwrap().fingerprint,
         w.job().manifest.fingerprint
     );
-    let manifest=w.f.manifest.as_ref().unwrap();
-    w.f.job=Some(w.f.service.setup_job_reconsent(SetupJobReconsentRequest{root_id:w.f.root_id.clone(),job_id:before.job_id.clone(),expected_revision:w.job().revision,manifest_id:manifest.manifest_id.clone(),expected_fingerprint:manifest.fingerprint.clone()}).unwrap());
-    assert_eq!(w.job().job_id,before.job_id);
-    assert_eq!(w.job().prior_consents[0].manifest,before.manifest);
-    assert_eq!(w.job().coverage.processed,before.coverage.processed);
-
+    let manifest = w.f.manifest.as_ref().unwrap();
+    w.f.job = Some(
+        w.f.service
+            .setup_job_reconsent(SetupJobReconsentRequest {
+                root_id: w.f.root_id.clone(),
+                job_id: before.job_id.clone(),
+                expected_revision: w.job().revision,
+                manifest_id: manifest.manifest_id.clone(),
+                expected_fingerprint: manifest.fingerprint.clone(),
+            })
+            .unwrap(),
+    );
+    assert_eq!(w.job().job_id, before.job_id);
+    assert_eq!(w.job().prior_consents[0].manifest, before.manifest);
+    assert_eq!(w.job().coverage.processed, before.coverage.processed);
 }
 #[then("unaffected completed draft results remain available")]
 fn step_23(w: &mut SetupWorld) {
@@ -1397,6 +1406,29 @@ fn step_107(w: &mut SetupWorld) {
 #[given("I have previewed an exact group save or confirmation receipt")]
 fn step_108(w: &mut SetupWorld) {
     w.prepare_groups();
+    let job = w.job();
+    let harbour = w.f.topics[2].id.clone();
+    let ids = job
+        .graph
+        .items
+        .iter()
+        .filter(|item| {
+            matches!(&item.candidate,Candidate::Topic{topic} if topic.id==harbour)
+                || matches!(&item.candidate,Candidate::Claim{claim} if claim.subject_id==harbour)
+        })
+        .map(|item| item.item_id.clone())
+        .collect();
+    w.f.job = Some(
+        w.f.service
+            .setup_draft_disposition(SetupDraftDispositionRequest {
+                root_id: w.f.root_id.clone(),
+                job_id: job.job_id.clone(),
+                expected_revision: job.revision,
+                item_ids: ids,
+                disposition: DraftDisposition::Deferred,
+            })
+            .unwrap(),
+    );
     w.f.all_receipt();
 }
 #[when("a referenced source, dependency or claim revision changes")]
@@ -1451,7 +1483,7 @@ fn step_111(w: &mut SetupWorld) {
 fn step_112(w: &mut SetupWorld) {
     assert!(w.job().graph.items.iter().any(
         |i| matches!(&i.candidate,Candidate::Topic{topic} if topic.name=="Harbour")
-            && i.disposition == DraftDisposition::Pending
+            && i.disposition == DraftDisposition::Deferred
     ));
 }
 #[given("I saved a starting map and personally corrected one fact")]
@@ -1639,8 +1671,25 @@ fn step_130(w: &mut SetupWorld) {
     assert_eq!(w.job().coverage.processed.len(), 100);
     assert_eq!(w.job().coverage.model_calls, 5);
     assert_eq!(w.f.seen.len(), 100);
+    let eligible_bytes: u64 = w
+        .job()
+        .manifest
+        .batches
+        .iter()
+        .flat_map(|batch| &batch.sources)
+        .map(|source| source.bytes)
+        .sum::<u64>();
+    assert_eq!(
+        eligible_bytes,
+        w.f.seen
+            .iter()
+            .map(|source| source.content.len() as u64)
+            .sum::<u64>()
+    );
     println!(
-        "synthetic corpus=100 documents; batches/model attempts=5; transmission consents=1; save actions=1; elapsed_ms={}",w.f.started.elapsed().as_millis()
+        "synthetic corpus=100 documents; eligible_bytes={}; batches/model attempts=5; transmission consents=1; save actions=1; elapsed_ms={}",
+        eligible_bytes,
+        w.f.started.elapsed().as_millis()
     );
 }
 #[tokio::main]
