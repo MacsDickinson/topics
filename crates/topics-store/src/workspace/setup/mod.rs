@@ -1,23 +1,161 @@
-//! Folder setup persistence and group decisions.
+//! Human folder setup services; all model publications remain capability guarded.
+mod graph;
+mod inventory;
+mod jobs;
+mod review;
+use super::proposals as proposal;
+use super::scopes::{Run, Scope};
 use super::*;
-fn pending<T>() -> WResult<T> { Err(error("not_implemented", "Folder setup implementation pending")) }
-impl WorkspaceService {
-    pub fn setup_inventory(&self, _request: SetupInventoryRequest) -> WResult<SetupInventory> { pending() }
-    pub fn setup_manifest_preview(&self, _request: SetupManifestPreviewRequest) -> WResult<SetupManifest> { pending() }
-    pub fn setup_job_create(&self, _request: SetupJobCreateRequest) -> WResult<SetupJob> { pending() }
-    pub fn setup_job_get(&self, _request: SetupJobRequest) -> WResult<SetupJob> { pending() }
-    pub fn setup_jobs_list(&self, _request: RootRequest) -> WResult<Vec<SetupJob>> { pending() }
-    pub fn setup_job_control(&self, _request: SetupJobControlRequest) -> WResult<SetupJob> { pending() }
-    pub fn setup_batch_start(&self, _request: SetupBatchStartRequest) -> WResult<SetupBatchCapability> { pending() }
-    pub fn setup_batch_validate(&self, _request: SetupBatchStageRequest) -> WResult<()> { pending() }
-    pub fn setup_batch_stage_guarded(&self, _request: SetupBatchStageRequest, _publisher: impl FnOnce(&Proposal, &mut dyn FnMut() -> WResult<()>) -> WResult<()>) -> WResult<SetupJob> { pending() }
-    pub fn setup_batch_fail(&self, _request: SetupBatchFailRequest) -> WResult<SetupJob> { pending() }
-    pub fn setup_draft_context(&self, _request: SetupDraftContextRequest) -> WResult<SetupDraftContext> { pending() }
-    pub fn setup_draft_edit(&self, _request: SetupDraftEditRequest) -> WResult<SetupJob> { pending() }
-    pub fn setup_draft_disposition(&self, _request: SetupDraftDispositionRequest) -> WResult<SetupJob> { pending() }
-    pub fn setup_save_preview(&self, _request: SetupSavePreviewRequest) -> WResult<SetupReceipt> { pending() }
-    pub fn setup_confirm_preview(&self, _request: SetupConfirmPreviewRequest) -> WResult<SetupReceipt> { pending() }
-    pub fn setup_correction_preview(&self, _request: SetupCorrectionPreviewRequest) -> WResult<SetupCorrectionPreview> { pending() }
-    pub fn setup_decide(&self, _request: SetupDecisionRequest) -> WResult<SetupDecisionResult> { pending() }
-    pub fn setup_topic_review(&self, _request: TopicGetRequest) -> WResult<SetupTopicReview> { pending() }
+
+const SCHEMA: u32 = 1;
+const MAX_RECORDS: usize = 100;
+fn digest(value: &impl Serialize) -> WResult<Hash> {
+    Ok(hash(&serde_json::to_vec(value).map_err(internal)?))
+}
+fn setup_dir(ctx: &Context) -> PathBuf {
+    ctx.partition.join("setup-v1")
+}
+fn job_path(ctx: &Context, id: &str) -> WResult<PathBuf> {
+    valid_id(id)?;
+    Ok(setup_dir(ctx).join("jobs").join(format!("{id}.json")))
+}
+#[derive(Clone, Serialize, Deserialize)]
+struct DraftEdit {
+    before: Candidate,
+    after: Candidate,
+    statement: UserStatement,
+}
+#[derive(Clone, Serialize, Deserialize)]
+struct Checkpoint {
+    owner: Id,
+    job: SetupJob,
+    edits: Vec<DraftEdit>,
+}
+fn checkpoint(ctx: &Context, id: &str) -> WResult<Checkpoint> {
+    read_json(&job_path(ctx, id)?).map_err(|_| {
+        error(
+            "invalid_input",
+            "Setup job unavailable; select an existing job",
+        )
+    })
+}
+fn get_job(ctx: &Context, id: &str) -> WResult<SetupJob> {
+    let mut saved = checkpoint(ctx, id)?;
+    if saved.job.schema != SCHEMA
+        || saved.job.root_id != ctx.root_id
+        || saved.job.manifest.root_id != ctx.root_id
+    {
+        return Err(error(
+            "stale_scope",
+            "Setup belongs to another root generation; preview the current folder again",
+        ));
+    }
+    if saved.owner != ctx.instance_id
+        && saved
+            .job
+            .batches
+            .iter()
+            .any(|b| b.status == SetupBatchStatus::Running)
+    {
+        for b in &mut saved.job.batches {
+            if b.status == SetupBatchStatus::Running {
+                if let Some(id) = &b.run_id {
+                    revoke(ctx, id)?;
+                }
+                b.status = SetupBatchStatus::Cancelled;
+            }
+        }
+        saved.job.status = SetupJobStatus::Paused;
+        coverage(&mut saved.job);
+        bump(&mut saved.job)?;
+        saved.owner = ctx.instance_id.clone();
+        save_json(&job_path(ctx, id)?, &saved)?;
+    }
+    Ok(saved.job)
+}
+fn save_job(ctx: &Context, job: &SetupJob) -> WResult<()> {
+    let edits = if job_path(ctx, &job.job_id)?.exists() {
+        checkpoint(ctx, &job.job_id)?.edits
+    } else {
+        vec![]
+    };
+    save_json(
+        &job_path(ctx, &job.job_id)?,
+        &Checkpoint {
+            owner: ctx.instance_id.clone(),
+            job: job.clone(),
+            edits,
+        },
+    )
+}
+fn jobs(ctx: &Context) -> WResult<Vec<SetupJob>> {
+    let dir = setup_dir(ctx).join("jobs");
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut out = vec![];
+    for p in json_entries(&dir)? {
+        if let Ok(saved) = read_json::<Checkpoint>(&p)
+            && saved.job.schema == SCHEMA
+            && saved.job.root_id == ctx.root_id
+        {
+            out.push(get_job(ctx, &saved.job.job_id)?);
+        }
+    }
+    out.sort_by_key(|j| j.created_at.clone());
+    Ok(out)
+}
+fn revision(job: &SetupJob, expected: u64) -> WResult<()> {
+    if job.revision != expected {
+        Err(error(
+            "conflict",
+            "Draft changed; refresh the map and preview the exact decision again",
+        ))
+    } else {
+        Ok(())
+    }
+}
+fn bump(job: &mut SetupJob) -> WResult<()> {
+    job.revision = job
+        .revision
+        .checked_add(1)
+        .ok_or_else(|| error("conflict", "Setup revision exhausted"))?;
+    Ok(())
+}
+fn revoke(ctx: &Context, id: &str) -> WResult<()> {
+    let p = ctx.partition.join("runs").join(format!("{id}.json"));
+    let mut run: Run = read_json(&p)?;
+    run.active = false;
+    save_json(&p, &run)
+}
+fn coverage(job: &mut SetupJob) {
+    let mut processed = vec![];
+    let mut failed = vec![];
+    let mut outstanding = vec![];
+    for (spec, batch) in job.manifest.batches.iter().zip(&job.batches) {
+        let to = match batch.status {
+            SetupBatchStatus::Completed => &mut processed,
+            SetupBatchStatus::Failed => &mut failed,
+            _ => &mut outstanding,
+        };
+        to.extend(spec.sources.iter().map(|s| s.source.path.clone()));
+    }
+    job.coverage.processed = processed;
+    job.coverage.failed = failed;
+    job.coverage.outstanding = outstanding;
+    job.coverage.complete = job.coverage.failed.is_empty()
+        && job.coverage.outstanding.is_empty()
+        && job.coverage.excluded.is_empty();
+    if job.batches.iter().all(|b| {
+        matches!(
+            b.status,
+            SetupBatchStatus::Completed | SetupBatchStatus::Failed
+        )
+    }) {
+        job.status = if job.coverage.complete {
+            SetupJobStatus::Finished
+        } else {
+            SetupJobStatus::FinishedWithGaps
+        };
+    }
 }

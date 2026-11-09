@@ -1,0 +1,281 @@
+use super::*;
+fn check_sources(ctx: &Context, sources: &[SetupManifestSource]) -> WResult<()> {
+    let state = load(ctx)?;
+    for s in sources {
+        let bytes = scopes::source_bytes(ctx, &s.source.path).map_err(|_| {
+            error(
+                "stale_scope",
+                "Reviewed source unavailable; preview changed selection for renewed consent",
+            )
+        })?;
+        if hash(&bytes) != s.source.hash
+            || bytes.len() as u64 != s.bytes
+            || scopes::source_sensitivity(&state, &s.source.path, &s.source.hash)
+                != s.source.sensitivity
+            || s.source.sensitivity == Sensitivity::LocalOnly
+        {
+            return Err(error(
+                "stale_scope",
+                "Reviewed source bytes or privacy changed; preview changed selection for renewed consent",
+            ));
+        }
+    }
+    Ok(())
+}
+pub(super) fn capability(
+    ctx: &Context,
+    cap: &SetupBatchCapability,
+) -> WResult<(SetupJob, BTreeSet<Id>)> {
+    let job = get_job(ctx, &cap.job_id)?;
+    if cap.root_id != ctx.root_id
+        || job.status != SetupJobStatus::Running
+        || cap.manifest_fingerprint != job.manifest.fingerprint
+    {
+        return Err(error(
+            "forbidden",
+            "Setup capability is inactive or out of scope",
+        ));
+    }
+    let batch = job
+        .batches
+        .iter()
+        .find(|b| b.batch_id == cap.batch_id)
+        .ok_or_else(|| error("forbidden", "Setup batch is unavailable"))?;
+    if batch.status != SetupBatchStatus::Running
+        || batch.scope_id.as_ref() != Some(&cap.scope_id)
+        || batch.run_id.as_ref() != Some(&cap.run_id)
+        || batch.attempt != cap.attempt
+    {
+        return Err(error(
+            "forbidden",
+            "Setup attempt is inactive or out of scope",
+        ));
+    }
+    let scope = scopes::authorized(ctx, &cap.scope_id, &cap.run_id)?;
+    let expected = job
+        .manifest
+        .batches
+        .iter()
+        .find(|b| b.batch_id == cap.batch_id)
+        .ok_or_else(|| error("forbidden", "Manifest batch unavailable"))?;
+    check_sources(ctx, &expected.sources)?;
+    if scope.preview.sources
+        != expected
+            .sources
+            .iter()
+            .map(|s| s.source.clone())
+            .collect::<Vec<_>>()
+    {
+        return Err(error(
+            "forbidden",
+            "Batch scope differs from reviewed manifest",
+        ));
+    }
+    let ids = scope
+        .preview
+        .sources
+        .iter()
+        .map(|s| s.source_id.clone())
+        .collect();
+    Ok((job, ids))
+}
+impl WorkspaceService {
+    pub fn setup_job_create(&self, request: SetupJobCreateRequest) -> WResult<SetupJob> {
+        self.with(&request.root_id, |ctx| {
+            valid_id(&request.manifest_id)?;
+            let manifest: SetupManifest = read_json(
+                &setup_dir(ctx)
+                    .join("manifests")
+                    .join(format!("{}.json", request.manifest_id)),
+            )?;
+            if manifest.schema != SCHEMA
+                || manifest.root_id != ctx.root_id
+                || manifest.fingerprint != request.expected_fingerprint
+            {
+                return Err(error(
+                    "conflict",
+                    "Reviewed manifest changed; preview it before authorizing",
+                ));
+            }
+            let mut original = manifest.clone();
+            original.fingerprint.clear();
+            if digest(&original)? != manifest.fingerprint {
+                return Err(error(
+                    "conflict",
+                    "Reviewed manifest integrity changed; preview again",
+                ));
+            }
+            for job in jobs(ctx)? {
+                if job.manifest.manifest_id == manifest.manifest_id {
+                    return Ok(job);
+                }
+            }
+            for batch in &manifest.batches {
+                check_sources(ctx, &batch.sources)?;
+            }
+            if manifest.batches.is_empty() {
+                return Err(error(
+                    "invalid_input",
+                    "No eligible documents; add notes or capture a topic locally",
+                ));
+            }
+            let batches = manifest
+                .batches
+                .iter()
+                .map(|b| SetupBatch {
+                    batch_id: b.batch_id.clone(),
+                    status: SetupBatchStatus::Waiting,
+                    scope_id: None,
+                    run_id: None,
+                    attempt: 0,
+                    error: None,
+                    proposal_ids: vec![],
+                })
+                .collect();
+            let coverage = SetupCoverage {
+                selected: manifest
+                    .batches
+                    .iter()
+                    .map(|b| b.sources.len() as u64)
+                    .sum(),
+                processed: vec![],
+                failed: vec![],
+                outstanding: vec![],
+                excluded: manifest.excluded.clone(),
+                complete: false,
+                model_calls: 0,
+                transmission_authorizations: 1,
+            };
+            let mut job = SetupJob {
+                schema: SCHEMA,
+                job_id: new_id(),
+                root_id: ctx.root_id.clone(),
+                manifest,
+                status: SetupJobStatus::Ready,
+                revision: 0,
+                batches,
+                graph: DraftGraph {
+                    items: vec![],
+                    issues: vec![],
+                    canonical_ids: BTreeMap::new(),
+                },
+                coverage,
+                created_at: now(),
+            };
+            coverage_refresh(&mut job);
+            save_job(ctx, &job)?;
+            Ok(job)
+        })
+    }
+    pub fn setup_job_get(&self, request: SetupJobRequest) -> WResult<SetupJob> {
+        self.with(&request.root_id, |ctx| get_job(ctx, &request.job_id))
+    }
+    pub fn setup_jobs_list(&self, request: RootRequest) -> WResult<Vec<SetupJob>> {
+        self.with(&request.root_id, jobs)
+    }
+    pub fn setup_job_control(&self, request: SetupJobControlRequest) -> WResult<SetupJob> {
+        self.with(&request.root_id, |ctx| {
+            let mut job = get_job(ctx, &request.job_id)?;
+            revision(&job, request.expected_revision)?;
+            match request.action {
+                SetupJobAction::Pause | SetupJobAction::Cancel => {
+                    for b in &mut job.batches {
+                        if b.status == SetupBatchStatus::Running {
+                            if let Some(run) = &b.run_id {
+                                revoke(ctx, run)?;
+                            }
+                            b.status = SetupBatchStatus::Cancelled;
+                        }
+                    }
+                    job.status = if request.action == SetupJobAction::Pause {
+                        SetupJobStatus::Paused
+                    } else {
+                        SetupJobStatus::Cancelled
+                    };
+                }
+                SetupJobAction::Resume | SetupJobAction::RetryFailed => {
+                    for (spec, b) in job.manifest.batches.iter().zip(&mut job.batches) {
+                        if b.status != SetupBatchStatus::Completed {
+                            if let Err(e) = check_sources(ctx, &spec.sources) {
+                                b.status = SetupBatchStatus::NeedsConsent;
+                                job.status = SetupJobStatus::NeedsConsent;
+                                b.error = Some(e.clone());
+                                bump(&mut job)?;
+                                coverage_refresh(&mut job);
+                                save_job(ctx, &job)?;
+                                return Err(e);
+                            }
+                            if b.status != SetupBatchStatus::Failed
+                                || request.action == SetupJobAction::RetryFailed
+                            {
+                                b.status = SetupBatchStatus::Waiting;
+                                b.error = None;
+                            }
+                        }
+                    }
+                    job.status = SetupJobStatus::Ready;
+                }
+            }
+            bump(&mut job)?;
+            coverage_refresh(&mut job);
+            save_job(ctx, &job)?;
+            Ok(job)
+        })
+    }
+    pub fn setup_batch_start(
+        &self,
+        request: SetupBatchStartRequest,
+    ) -> WResult<SetupBatchCapability> {
+        self.with(&request.root_id,|ctx|{
+  let mut job=get_job(ctx,&request.job_id)?;
+  if !matches!(job.status,SetupJobStatus::Ready|SetupJobStatus::Running)||job.batches.iter().any(|b|b.status==SetupBatchStatus::Running){return Err(error("conflict","Resume setup and wait for its current bounded batch"))}
+  let i=job.batches.iter().position(|b|b.batch_id==request.batch_id).ok_or_else(||error("invalid_input","Batch not in reviewed manifest"))?;
+  if !matches!(job.batches[i].status,SetupBatchStatus::Waiting|SetupBatchStatus::Cancelled){return Err(error("conflict","Batch is completed, failed or needs consent; select an outstanding authorized batch"))}
+  if job.batches[i].attempt>=job.manifest.limits.max_turns_per_batch{return Err(error("conflict","Batch attempt budget exhausted; review a new manifest"))}
+  if let Err(e)=check_sources(ctx,&job.manifest.batches[i].sources){job.batches[i].status=SetupBatchStatus::NeedsConsent;job.batches[i].error=Some(e.clone());job.status=SetupJobStatus::NeedsConsent;bump(&mut job)?;coverage_refresh(&mut job);save_job(ctx,&job)?;return Err(e)}
+  let scope_id=new_id();let run_id=new_id();
+  let scope=Scope{preview:ScopePreview{scope_id:scope_id.clone(),root_id:ctx.root_id.clone(),sources:job.manifest.batches[i].sources.iter().map(|s|s.source.clone()).collect(),excluded:vec![]}};
+  save_json(&ctx.partition.join("scopes").join(format!("{scope_id}.json")),&scope)?;
+  save_json(&ctx.partition.join("runs").join(format!("{run_id}.json")),&Run{root_id:ctx.root_id.clone(),run_id:run_id.clone(),scope_id:scope_id.clone(),active:true,message_id:None,topic_id:None})?;
+  let batch=&mut job.batches[i];batch.attempt+=1;batch.status=SetupBatchStatus::Running;batch.scope_id=Some(scope_id.clone());batch.run_id=Some(run_id.clone());
+  let cap=SetupBatchCapability{root_id:ctx.root_id.clone(),job_id:job.job_id.clone(),batch_id:batch.batch_id.clone(),scope_id,run_id,manifest_fingerprint:job.manifest.fingerprint.clone(),attempt:batch.attempt};
+  job.status=SetupJobStatus::Running;job.coverage.model_calls+=1;bump(&mut job)?;save_job(ctx,&job)?;Ok(cap)
+ })
+    }
+    pub fn setup_batch_fail(&self, request: SetupBatchFailRequest) -> WResult<SetupJob> {
+        self.with(&request.capability.root_id, |ctx| {
+            // A source may already be stale when a runtime reports failure; match the exact attempt without reading it.
+            let mut job = get_job(ctx, &request.capability.job_id)?;
+            let b = job
+                .batches
+                .iter_mut()
+                .find(|b| {
+                    b.batch_id == request.capability.batch_id
+                        && b.run_id.as_ref() == Some(&request.capability.run_id)
+                        && b.scope_id.as_ref() == Some(&request.capability.scope_id)
+                        && b.attempt == request.capability.attempt
+                        && b.status == SetupBatchStatus::Running
+                })
+                .ok_or_else(|| error("forbidden", "Setup attempt is no longer running"))?;
+            revoke(ctx, &request.capability.run_id)?;
+            b.status = SetupBatchStatus::Failed;
+            // Provider strings may contain arbitrary private bytes. Persist only a stable human action.
+            b.error = Some(error(
+                if request.error.code == "cancelled" {
+                    "cancelled"
+                } else {
+                    "runtime_unavailable"
+                },
+                "Batch did not finish; retry these inputs or defer them",
+            ));
+            job.status = SetupJobStatus::Ready;
+            bump(&mut job)?;
+            coverage_refresh(&mut job);
+            save_job(ctx, &job)?;
+            Ok(job)
+        })
+    }
+}
+fn coverage_refresh(job: &mut SetupJob) {
+    coverage(job)
+}

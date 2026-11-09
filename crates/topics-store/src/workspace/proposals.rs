@@ -62,7 +62,7 @@ fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
     out.sort_by_key(|p| (p.proposal.created_at.clone(), p.proposal.id.clone()));
     Ok(out)
 }
-fn fingerprint(candidates: &[Candidate]) -> WResult<Hash> {
+pub(super) fn fingerprint(candidates: &[Candidate]) -> WResult<Hash> {
     let mut identities = BTreeMap::new();
     let mut counts = BTreeMap::new();
     for candidate in candidates {
@@ -144,7 +144,7 @@ fn fingerprint(candidates: &[Candidate]) -> WResult<Hash> {
     Ok(hash(values.join("\n").as_bytes()))
 }
 
-fn candidate_ids(candidates: &[Candidate]) -> Vec<Id> {
+pub(super) fn candidate_ids(candidates: &[Candidate]) -> Vec<Id> {
     candidates
         .iter()
         .flat_map(|c| match c {
@@ -158,7 +158,7 @@ fn candidate_ids(candidates: &[Candidate]) -> Vec<Id> {
         })
         .collect()
 }
-fn evidence_refs(c: &Candidate) -> Vec<&SourceRef> {
+pub(super) fn evidence_refs(c: &Candidate) -> Vec<&SourceRef> {
     match c {
         Candidate::Claim { claim } | Candidate::Correction { claim, .. } => claim
             .sources
@@ -176,7 +176,7 @@ fn evidence_refs(c: &Candidate) -> Vec<&SourceRef> {
         _ => vec![],
     }
 }
-fn dependencies(candidates: &[Candidate]) -> Vec<Id> {
+pub(super) fn dependencies(candidates: &[Candidate]) -> Vec<Id> {
     let mut out = BTreeSet::new();
     for c in candidates {
         match c {
@@ -217,7 +217,7 @@ fn dependencies(candidates: &[Candidate]) -> Vec<Id> {
     }
     out.into_iter().collect()
 }
-fn validate(
+pub(super) fn validate(
     ctx: &Context,
     state: &State,
     candidates: &[Candidate],
@@ -469,7 +469,7 @@ fn validate(
     }
     Ok(())
 }
-fn validate_model_boundary(
+pub(super) fn validate_model_boundary(
     ctx: &Context,
     state: &State,
     candidates: &[Candidate],
@@ -573,7 +573,7 @@ fn validate_model_boundary(
     }
     Ok(())
 }
-fn rule_matches(rule: &Rule, claim: &Claim) -> bool {
+pub(super) fn rule_matches(rule: &Rule, claim: &Claim) -> bool {
     rule.topic_id == claim.subject_id
         && rule.predicate == claim.predicate
         && rule.match_value == claim.value
@@ -590,7 +590,7 @@ fn rule_matches(rule: &Rule, claim: &Claim) -> bool {
             _ => false,
         })
 }
-fn taint(state: &State, candidates: &mut [Candidate]) -> BTreeSet<Id> {
+pub(super) fn taint(state: &State, candidates: &mut [Candidate]) -> BTreeSet<Id> {
     let mut private: BTreeSet<_> = state
         .topics
         .values()
@@ -628,7 +628,7 @@ fn taint(state: &State, candidates: &mut [Candidate]) -> BTreeSet<Id> {
     }
     private
 }
-fn bound_model_run(
+pub(super) fn bound_model_run(
     ctx: &Context,
     request: &StageProposalRequest,
 ) -> WResult<(Option<BTreeSet<Id>>, Option<Id>)> {
@@ -689,7 +689,7 @@ fn bound_model_run(
     }
     Ok((selected, run))
 }
-fn same_claim(a: &Claim, b: &Claim) -> bool {
+pub(super) fn same_claim(a: &Claim, b: &Claim) -> bool {
     a.subject_id == b.subject_id
         && a.predicate == b.predicate
         && a.value == b.value
@@ -709,7 +709,7 @@ fn endpoint_identity(state: &State, e: &Endpoint) -> Endpoint {
         _ => e.clone(),
     }
 }
-fn remap(candidates: &mut [Candidate], mapping: &BTreeMap<Id, Id>) -> WResult<()> {
+pub(super) fn remap(candidates: &mut [Candidate], mapping: &BTreeMap<Id, Id>) -> WResult<()> {
     fn replace(value: &mut Value, mapping: &BTreeMap<Id, Id>) {
         match value {
             Value::Object(map) => {
@@ -761,7 +761,7 @@ fn merge_uncertainty(retained: &mut Option<String>, additional: &Option<String>)
     }
 }
 #[derive(Clone, Copy, PartialEq)]
-enum NormalizationMode {
+pub(super) enum NormalizationMode {
     Input,
     Review,
     Approval,
@@ -772,7 +772,7 @@ fn ambiguity_name(name: &str) -> String {
         .join(" ")
         .to_lowercase()
 }
-fn normalize_model_candidates(
+pub(super) fn normalize_model_candidates(
     state: &State,
     candidates: &[Candidate],
     origin: &Origin,
@@ -1113,7 +1113,7 @@ fn normalize_model_candidates(
     }
     Ok(result)
 }
-fn prepared_candidates(
+pub(super) fn prepared_candidates(
     ctx: &Context,
     state: &State,
     request: &StageProposalRequest,

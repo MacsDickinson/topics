@@ -146,6 +146,8 @@ pub(super) fn target_path(root: &Path, path: &str, create: bool) -> WResult<Path
             "statements",
             "operations",
             "unresolved",
+            "reviews",
+            "receipts",
         ]
         .contains(&parts[1])
     {
@@ -216,13 +218,14 @@ pub(super) struct PreparedPublication {
     temporary: PathBuf,
     target: PathBuf,
     pub published: bool,
+    replace: bool,
 }
 impl PreparedPublication {
     pub fn publish(&mut self) -> WResult<()> {
         if self.published {
             return Ok(());
         }
-        if self.target.exists() {
+        if !self.replace && self.target.exists() {
             return Err(error("conflict", "Proposal target already exists"));
         }
         fs::rename(&self.temporary, &self.target).map_err(internal)?;
@@ -237,6 +240,14 @@ impl Drop for PreparedPublication {
         }
     }
 }
+pub(super) fn prepare_checkpoint(
+    path: &Path,
+    value: &impl Serialize,
+) -> WResult<PreparedPublication> {
+    let mut prepared = prepare_publication(path, value)?;
+    prepared.replace = true;
+    Ok(prepared)
+}
 pub(super) fn prepare_publication(
     path: &Path,
     value: &impl Serialize,
@@ -249,6 +260,7 @@ pub(super) fn prepare_publication(
         temporary: parent.join(format!(".topics-{}.tmp", new_id())),
         target: path.into(),
         published: false,
+        replace: false,
     };
     let bytes = serde_json::to_vec_pretty(value).map_err(internal)?;
     let mut file = fs::OpenOptions::new()
@@ -530,6 +542,8 @@ pub(super) struct State {
     pub sources: BTreeMap<Id, SourceSummary>,
     pub statements: BTreeMap<Id, UserStatement>,
     pub unresolved: Vec<Candidate>,
+    pub reviews: BTreeMap<Id, ReviewMetadata>,
+    pub receipts: BTreeMap<Id, SetupDecisionResult>,
     pub operations: Vec<Commit>,
     pub warnings: Vec<String>,
     pub hashes: BTreeMap<String, Option<Hash>>,
@@ -758,12 +772,14 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             "sources" => "source",
             "statements" => "statement",
             "unresolved" => "unresolved",
+            "reviews" => "review",
+            "receipts" => "receipt",
             _ => "",
         };
         let key = match kind {
             "claim" => "revision_id",
             "source" => "source_id",
-            "unresolved" => "",
+            "unresolved" | "receipt" => "",
             _ => "id",
         };
         if record.record_kind != kind
@@ -828,6 +844,8 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             "connection" => insert!(connections, Connection),
             "rule" => insert!(rules, Rule),
             "statement" => insert!(statements, UserStatement),
+            "review" if integrity => insert!(reviews, ReviewMetadata),
+            "receipt" if integrity => insert!(receipts, SetupDecisionResult),
             "unresolved" => {
                 if let Ok(c) = serde_json::from_value(record.data.clone()) {
                     state.unresolved.push(c);

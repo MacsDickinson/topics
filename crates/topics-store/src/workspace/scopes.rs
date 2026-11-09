@@ -241,7 +241,7 @@ fn source_policy(state: &State, path: &str, h: &str) -> Sensitivity {
     }
     review.map(|(label, _)| *label).unwrap_or(own)
 }
-fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
+pub(super) fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
     let own = source_policy(state, path, h);
     if own == Sensitivity::LocalOnly {
         return own;
@@ -950,7 +950,7 @@ impl WorkspaceService {
     }
 }
 
-fn source_identity(ctx: &Context, state: &State, path: &str, h: &str) -> Id {
+pub(super) fn source_identity(ctx: &Context, state: &State, path: &str, h: &str) -> Id {
     if let Some(source) = state
         .sources
         .values()
