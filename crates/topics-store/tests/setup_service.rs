@@ -4,6 +4,80 @@ use support::*;
 use topics_core::*;
 
 #[test]
+fn failed_batch_persists_only_exact_allowlisted_diagnostic_pairs() {
+    use serde_json::json;
+    let turn = json!({"phase":"turn","reason":"model_terminal_failed"});
+    let publication = json!({"phase":"publication","reason":"scope_not_read"});
+    let sentinel = "PRIVATE_ERROR_SENTINEL";
+    let cases = vec![
+        (Some(turn.clone()), Some(turn.clone())),
+        (Some(publication.clone()), Some(publication)),
+        (None, None),
+        (Some(json!(sentinel)), None),
+        (Some(json!([turn])), None),
+        (Some(json!({})), None),
+        (Some(json!({"phase":"turn"})), None),
+        (
+            Some(json!({"phase":null,"reason":"model_terminal_failed"})),
+            None,
+        ),
+        (
+            Some(json!({"phase":"publication","reason":"model_terminal_failed"})),
+            None,
+        ),
+        (
+            Some(json!({"phase":"turn","reason":"scope_not_read"})),
+            None,
+        ),
+        (Some(json!({"phase":"turn","reason":sentinel})), None),
+        (
+            Some(json!({"phase":sentinel,"reason":"scope_not_read"})),
+            None,
+        ),
+        (
+            Some(json!({"phase":"turn","reason":"model_terminal_failed","raw":sentinel})),
+            None,
+        ),
+    ];
+    for (details, expected) in cases {
+        let mut f = Fixture::new();
+        f.prepare_default(1);
+        let cap = f.start();
+        let mut failure = ApiError::new(sentinel, sentinel);
+        failure.details = details;
+        let job = f
+            .service
+            .setup_batch_fail(SetupBatchFailRequest {
+                capability: cap.clone(),
+                error: failure,
+            })
+            .unwrap();
+        let error = job.batches[0].error.as_ref().unwrap();
+        assert_eq!(error.code, "runtime_unavailable");
+        assert_eq!(error.details, expected);
+        assert!(!serde_json::to_string(error).unwrap().contains(sentinel));
+        assert!(job.coverage.processed.is_empty());
+        assert!(job.graph.items.is_empty());
+        assert!(job.batches[0].proposal_ids.is_empty());
+        assert!(
+            f.service
+                .setup_batch_fail(SetupBatchFailRequest {
+                    capability: cap,
+                    error: ApiError::new(sentinel, sentinel),
+                })
+                .is_err(),
+            "late diagnostics cannot change the completed failure checkpoint"
+        );
+        f.restart();
+        assert_eq!(
+            f.job.as_ref().unwrap().batches[0].error.as_ref().unwrap(),
+            error
+        );
+        f.unchanged();
+    }
+}
+
+#[test]
 fn exact_manifest_multibatch_dedupe_save_confirm_rebuild() {
     let mut f = Fixture::new();
     f.prepare_default(4);

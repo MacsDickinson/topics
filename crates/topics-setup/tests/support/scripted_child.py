@@ -33,7 +33,8 @@ def call(identifier, tool, arguments):
 
 def terminal(status):
     emit({'method': 'turn/completed', 'params': {
-        'threadId': 'thread', 'turn': {'id': 'turn', 'status': status}}})
+        'threadId': 'thread', 'turn': {'id': 'turn', 'status': status,
+        'error': {'message': 'PRIVATE_ERROR_SENTINEL', 'details': 'PRIVATE_ERROR_SENTINEL'}}}})
 
 
 for line in sys.stdin:

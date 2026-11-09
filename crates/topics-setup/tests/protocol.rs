@@ -1355,6 +1355,55 @@ fn successful_turn_without_scoped_read_cannot_claim_source_coverage() {
     );
 }
 
+fn assert_failed_diagnostic(mode: &str, phase: &str, reason: &str) {
+    let f = Fixture::new(1, mode);
+    let job = f.authorize(1);
+    let path = f.temp.path().join("notes").join(&f.files[0]);
+    let original = fs::read(&path).unwrap();
+    f.coordinator.start(f.request(&job)).unwrap();
+    let done = f.done(&job);
+    assert_eq!(done.status, SetupJobStatus::FinishedWithGaps);
+    assert!(!done.coverage.complete);
+    assert_eq!(done.coverage.processed.len(), 0);
+    assert_eq!(done.coverage.failed.len(), 1);
+    assert_eq!(done.coverage.model_calls, 1);
+    assert_eq!(done.batches[0].attempt, 1);
+    assert!(done.graph.items.is_empty());
+    assert!(done.batches[0].proposal_ids.is_empty());
+    assert!(done.batches[0].completed_source_ids.is_empty());
+    assert_eq!(fs::read(path).unwrap(), original);
+    assert_eq!(f.transmissions().len(), usize::from(mode == "fail_first"));
+    let failure = done.batches[0].error.as_ref().unwrap();
+    assert_eq!(failure.code, "runtime_unavailable");
+    assert!(
+        !serde_json::to_string(failure)
+            .unwrap()
+            .contains("PRIVATE_ERROR_SENTINEL")
+    );
+    assert_eq!(
+        failure.details,
+        Some(serde_json::json!({"phase":phase,"reason":reason}))
+    );
+    // Rereading the durable snapshot cannot publish the failed turn's buffer.
+    assert_eq!(f.coordinator.get(f.request(&job)).unwrap(), done);
+}
+
+#[test]
+fn failed_terminal_retains_safe_reason_and_discards_validated_candidates() {
+    isolated(
+        "failed_terminal_retains_safe_reason_and_discards_validated_candidates",
+        || assert_failed_diagnostic("fail_first", "turn", "model_terminal_failed"),
+    );
+}
+
+#[test]
+fn unread_scope_retains_distinct_safe_reason_without_publication() {
+    isolated(
+        "unread_scope_retains_distinct_safe_reason_without_publication",
+        || assert_failed_diagnostic("no_read", "publication", "scope_not_read"),
+    );
+}
+
 #[test]
 fn optional_prior_context_cannot_crowd_out_deliverable_selected_sources() {
     isolated(
