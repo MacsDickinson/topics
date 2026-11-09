@@ -40,3 +40,6 @@ mod workspace_validation;
 pub use workspace_validation::{
     validate_candidate_shapes, validate_date_range, validate_workspace_id,
 };
+
+pub mod setup;
+pub use setup::*;

@@ -2,6 +2,7 @@
 mod persistence;
 mod proposals;
 mod scopes;
+mod setup;
 use super::TopicsService;
 use persistence::*;
 use scopes::validate_source;
