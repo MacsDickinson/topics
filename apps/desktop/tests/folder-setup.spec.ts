@@ -697,3 +697,20 @@ test("BoardUI nonmodal role select navigates with keyboard and dismisses outside
   await page.getByRole("heading", { name: "Choose notes to analyse" }).click();
   await expect(page.getByRole("listbox")).toHaveCount(0);
 });
+
+
+test("date picker dismisses on outside press and page scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 480, height: 800 });
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  const trigger = page.getByRole("button", { name: "From date: Select date" });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  await expect(page.getByRole("dialog", { name: "From date" })).toBeVisible();
+  await page.getByRole("heading", { name: "Choose notes to analyse" }).click();
+  await expect(page.getByRole("dialog", { name: "From date" })).toHaveCount(0);
+  await trigger.click();
+  await expect(page.getByRole("dialog", { name: "From date" })).toBeVisible();
+  await page.evaluate(() => window.scrollBy(0, 150));
+  await expect(page.getByRole("dialog", { name: "From date" })).toHaveCount(0);
+});

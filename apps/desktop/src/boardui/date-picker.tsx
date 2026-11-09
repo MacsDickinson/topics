@@ -37,7 +37,8 @@ export function DatePicker({ value, defaultValue = null, onChange, isDisabled, c
   const openChange = (open: boolean) => { if (open) setOpenKey((key) => key + 1); setIsOpen(open); };
   useDismissOnOutsidePress(isOpen, () => setIsOpen(false), [triggerRef, popoverRef]);
   return <>
-    {!isExternal && <button ref={ownTriggerRef} type="button" disabled={isDisabled} aria-label={`${ariaLabel}: ${committedValue ? formatTriggerDate(committedValue) : "Select date"}`} onClick={() => openChange(!isOpen)} className={`board-trigger board-date-trigger ${className || ""}`}>
+    {/* WebKit mouse presses do not always focus buttons; FocusScope must capture the trigger before opening. */}
+    {!isExternal && <button ref={ownTriggerRef} type="button" disabled={isDisabled} aria-label={`${ariaLabel}: ${committedValue ? formatTriggerDate(committedValue) : "Select date"}`} onClick={() => { if (!isOpen) ownTriggerRef.current?.focus({ preventScroll: true }); openChange(!isOpen); }} className={`board-trigger board-date-trigger ${className || ""}`}>
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M6.5 2.5v4M13.5 2.5v4M3 8h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
       <span>{committedValue ? formatTriggerDate(committedValue) : "Select date"}</span>
     </button>}
