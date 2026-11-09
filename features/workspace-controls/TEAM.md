@@ -9,3 +9,11 @@ Independent workstreams: window/native chrome; folder setup UI and actual BoardU
 Routing: Jev selected Terra medium for all three streams (window low-confidence fallback0.12; setup0.52; discovery0.80). Every substantive implementation needs independent review; user-required Claude cross-provider review remains a requirement, with previous CLI authentication blocked and to be checked again before dispatching reviewers. Do not substitute a provider silently.
 
 All development/verification uses synthetic notes and isolated app data, never the notes symlink or live folder. No provider calls during this UI work, no changes to source caps/consent/pinning/tools, no restarting the user's running app. Worker commits locally; manager preserves branches and integrates after review. Tests record real RED before the correction and appropriate browser/native evidence.
+
+| Stream | Task | Dispatch | Worktree |
+| --- | --- | --- | --- |
+| Integrated native window | `task_c71228949474` | `ctx_1ffeda913ca4` | `topics-integrated-window` |
+| Setup recovery / actual BoardUI controls | `task_10f68e2908df` | `ctx_fc00c925f91f` | `topics-setup-boardui-controls` |
+| Large-note discovery / proposed scenarios | `task_8b10f40cb0c2` | `ctx_5a8103d4bb6d` | `topics-large-notes-discovery` |
+
+All three started from `8dd1751`, confirmed attached and live. No build or review result is claimed yet. BoardUI primary sources confirm free source components built on React Aria; the setup worker verifies exact license/source provenance and pins dependencies before integration. No relevant BoardUI connector is exposed, so official web/source references are used.
