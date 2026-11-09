@@ -1,18 +1,76 @@
-.folder-setup { max-width: 960px; }
-.setup-tree, .setup-tree ul { list-style: none; padding-left: 0; }
-.setup-tree > li { border-top: 1px solid var(--color-border-default); padding: var(--space-4) 0; }
-.setup-folder, .setup-dates { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: space-between; }
-.folder-setup details { margin: var(--space-2) 0; }
-.folder-setup blockquote { margin: var(--space-2) 0; padding-left: var(--space-3); border-left: 3px solid var(--color-border-default); white-space: pre-wrap; overflow-wrap: anywhere; }
-.setup-graph { width: 100%; max-height: 420px; border: 1px solid var(--color-border-default); background: var(--color-background-subtle); }
-.setup-graph rect { fill: var(--color-background-panel); stroke: var(--color-border-strong); }
-.setup-graph text { fill: var(--color-text-primary); font: var(--type-body); }
-.folder-setup li { overflow-wrap: anywhere; }
-.setup-graph line { stroke: var(--color-text-secondary); stroke-width: 2; }
-.setup-graph line.inferred { stroke-dasharray: 6 4; }
-.context-review article { border-top: 1px solid var(--color-border-default); padding: var(--space-3) 0; }
-.setup-folder > label:first-child { display: inline-flex; align-items: center; gap: var(--space-2); }
-.setup-folder > label:first-child input { margin: 0; }
-.setup-graph [role='button'] { cursor: pointer; }
-.setup-graph [role='button']:focus-visible { outline: 3px solid var(--color-border-focus); outline-offset: 2px; }
-.setup-tree ul { padding-left: var(--space-4); }
+.folder-setup {
+  max-width: 960px;
+}
+.setup-tree,
+.setup-tree ul {
+  list-style: none;
+  padding-left: 0;
+}
+.setup-tree > li {
+  border-top: 1px solid var(--color-border-default);
+  padding: var(--space-4) 0;
+}
+.setup-folder,
+.setup-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+}
+.folder-setup details {
+  margin: var(--space-2) 0;
+}
+.folder-setup blockquote {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-border-default);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.setup-graph {
+  width: 100%;
+  max-height: 420px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-background-subtle);
+}
+.setup-graph rect {
+  fill: var(--color-background-panel);
+  stroke: var(--color-border-strong);
+}
+.setup-graph text {
+  fill: var(--color-text-primary);
+  font: var(--type-body);
+}
+.folder-setup li {
+  overflow-wrap: anywhere;
+}
+.setup-graph line {
+  stroke: var(--color-text-secondary);
+  stroke-width: 2;
+}
+.setup-graph line.inferred {
+  stroke-dasharray: 6 4;
+}
+.context-review article {
+  border-top: 1px solid var(--color-border-default);
+  padding: var(--space-3) 0;
+}
+.setup-folder > label:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.setup-folder > label:first-child input {
+  margin: 0;
+}
+.setup-graph [role="button"] {
+  cursor: pointer;
+}
+.setup-graph [role="button"]:focus-visible {
+  outline: 3px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+.setup-tree ul {
+  padding-left: var(--space-4);
+}
