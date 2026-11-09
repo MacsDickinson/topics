@@ -1218,6 +1218,128 @@ fn graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it() {
 }
 
 #[test]
+fn captured_date_only_timestamp_is_rejected_full_utc_validates_and_transmitted_guidance_is_explicit()
+ {
+    isolated(
+        "captured_date_only_timestamp_is_rejected_full_utc_validates_and_transmitted_guidance_is_explicit",
+        || {
+            let f = Fixture::new(1, "empty");
+            let notes = f.temp.path().join("notes");
+            // Exact 110-byte source of the authorized genuine scratch capture.
+            let source = "# Synthetic Alex A42\n\nAlex A42 is a person. Alex A42 uses he/him pronouns. Alex A42 leads the Ledger project.\n";
+            fs::write(notes.join(&f.files[0]), source).unwrap();
+            let job = f.authorize(1);
+            let mut captured: Vec<Candidate> =
+                serde_json::from_str(include_str!("fixtures/native-date-only-recorded-at.json"))
+                    .unwrap();
+            let service = f.service.lock().unwrap();
+            let cap = service
+                .setup_batch_start(SetupBatchStartRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    batch_id: job.batches[0].batch_id.clone(),
+                })
+                .unwrap();
+            let citation = service
+                .scope_read(ScopeReadRequest {
+                    root_id: cap.root_id.clone(),
+                    scope_id: cap.scope_id.clone(),
+                    run_id: cap.run_id.clone(),
+                })
+                .unwrap()
+                .sources[0]
+                .citation
+                .clone();
+            // Only fixture-bound citation ID/path change; content, locator,
+            // hashes, identities and candidate facts retain the real capture.
+            for candidate in &mut captured {
+                let citations: Vec<&mut SourceRef> = match candidate {
+                    Candidate::Claim { claim } => claim
+                        .sources
+                        .iter_mut()
+                        .filter_map(|e| match e {
+                            Evidence::Passage { source } => Some(source),
+                            _ => None,
+                        })
+                        .collect(),
+                    Candidate::Connection { connection } => connection.sources.iter_mut().collect(),
+                    _ => vec![],
+                };
+                for original in citations {
+                    assert_eq!(original.document_hash, citation.document_hash);
+                    assert_eq!(original.passage_hash, citation.passage_hash);
+                    assert_eq!(original.locator, citation.locator);
+                    assert_eq!(original.excerpt, citation.excerpt);
+                    original.source_id = citation.source_id.clone();
+                    original.path = citation.path.clone();
+                }
+            }
+            let request = |candidates| SetupBatchStageRequest {
+                capability: cap.clone(),
+                candidates,
+            };
+            assert_eq!(
+                service
+                    .setup_batch_validate(request(captured.clone()))
+                    .unwrap_err(),
+                ApiError::new("invalid_input", "Claim timestamp must be RFC3339 UTC")
+            );
+            let mut corrected = captured.clone();
+            let mut changed = 0;
+            for candidate in &mut corrected {
+                if let Candidate::Claim { claim } = candidate {
+                    assert_eq!(claim.recorded_at, "2026-11-09");
+                    claim.recorded_at = "2026-11-09T00:00:00Z".into();
+                    changed += 1;
+                }
+            }
+            assert_eq!(changed, 1);
+            // Assert exact one-field ablation, beyond merely cloning in code.
+            let mut expected = serde_json::to_value(&captured).unwrap();
+            expected[2]["claim"]["recorded_at"] = serde_json::json!("2026-11-09T00:00:00Z");
+            assert_eq!(serde_json::to_value(&corrected).unwrap(), expected);
+            service.setup_batch_validate(request(corrected)).unwrap();
+            let unchanged = service.setup_job_get(f.request(&job)).unwrap();
+            assert!(unchanged.graph.items.is_empty());
+            assert!(unchanged.coverage.processed.is_empty());
+            assert!(unchanged.batches[0].proposal_ids.is_empty());
+            assert_eq!(
+                fs::read(notes.join(&f.files[0])).unwrap(),
+                source.as_bytes()
+            );
+            drop(service);
+
+            // A separate real coordinator/runtime/host turn proves what the
+            // scripted child receives; no production constant is imported.
+            let delivery = Fixture::new(1, "empty");
+            let delivered_job = delivery.authorize(1);
+            delivery
+                .coordinator
+                .start(delivery.request(&delivered_job))
+                .unwrap();
+            assert!(delivery.done(&delivered_job).coverage.complete);
+            let sent = delivery.transmissions();
+            assert_eq!(sent.len(), 1);
+            let prompt = sent[0]["prompt"].as_str().unwrap();
+            for requirement in [
+                "recorded_at",
+                "RFC3339 UTC",
+                "date and time",
+                "date alone",
+                "valid_from",
+                "valid_to",
+                "YYYY-MM-DD",
+            ] {
+                assert!(
+                    prompt.contains(requirement),
+                    "transmitted setup instructions omit {requirement}"
+                );
+            }
+        },
+    );
+}
+
+#[test]
 fn renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints() {
     isolated(
         "renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints",
