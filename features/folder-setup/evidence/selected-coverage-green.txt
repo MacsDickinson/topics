@@ -1,0 +1,10 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Finished `test` profile [unoptimized] target(s) in 3.41s
+     Running tests/setup_amendments.rs (/tmp/topics-setup-core-target/debug/deps/setup_amendments-c24cdb4b93b00a02)
+
+running 1 test
+selected=100, processed=100, excluded=1, status=Finished, complete=true
+test selected_manifest_completion_retains_exclusions_without_claiming_full_vault_coverage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 14.01s
+

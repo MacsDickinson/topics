@@ -192,4 +192,30 @@ fn completed_draft_context_respects_record_and_frame_budgets() {
     }));
 }
 #[test]
-fn selected_manifest_completion_retains_exclusions_without_claiming_full_vault_coverage(){let mut f=Fixture::new();f.prepare_default(100);f.preview(20);f.authorize();f.finish();let job=f.job.as_ref().unwrap();assert_eq!(job.coverage.selected,100);assert_eq!(job.coverage.processed.len(),100);assert_eq!(job.coverage.model_calls,5);assert!(job.coverage.excluded.iter().any(|e|e.path=="topics"));println!("selected={}, processed={}, excluded={}, status={:?}, complete={}",job.coverage.selected,job.coverage.processed.len(),job.coverage.excluded.len(),job.status,job.coverage.complete);assert!(job.coverage.complete,"all exact selected sources completed; exclusions must remain disclosed separately");assert_eq!(job.status,SetupJobStatus::Finished);assert!(!f.seen.iter().any(|s|s.summary.path.starts_with("topics/")));f.unchanged();}
+fn selected_manifest_completion_retains_exclusions_without_claiming_full_vault_coverage() {
+    let mut f = Fixture::new();
+    f.prepare_default(100);
+    f.preview(20);
+    f.authorize();
+    f.finish();
+    let job = f.job.as_ref().unwrap();
+    assert_eq!(job.coverage.selected, 100);
+    assert_eq!(job.coverage.processed.len(), 100);
+    assert_eq!(job.coverage.model_calls, 5);
+    assert!(job.coverage.excluded.iter().any(|e| e.path == "topics"));
+    println!(
+        "selected={}, processed={}, excluded={}, status={:?}, complete={}",
+        job.coverage.selected,
+        job.coverage.processed.len(),
+        job.coverage.excluded.len(),
+        job.status,
+        job.coverage.complete
+    );
+    assert!(
+        job.coverage.complete,
+        "all exact selected sources completed; exclusions must remain disclosed separately"
+    );
+    assert_eq!(job.status, SetupJobStatus::Finished);
+    assert!(!f.seen.iter().any(|s| s.summary.path.starts_with("topics/")));
+    f.unchanged();
+}

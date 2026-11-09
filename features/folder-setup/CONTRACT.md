@@ -156,3 +156,14 @@ excluded private identities. `independent_evidence_groups` conservatively groups
 verbatim passage hashes (including copies under different document headings);
 its count is not independent confirmation or personal verification. Root folder
 role overrides use the inventory root's empty path; longer folder overrides win.
+
+## Coverage clarification — coordinator ruling 2026-11-09
+
+`coverage.complete` and Finished mean completion of the exact eligible **selected**
+manifest sources: every selected source is processed, and none selected failed or
+remain outstanding. They never mean the entire filesystem/folder/vault was
+analysed or understood. `coverage.excluded` always retains intentional preview
+exclusions (app records, hidden/config/private files, filters and unselected
+notes); those files are never counted as processed or sent. FinishedWithGaps
+identifies missing/failed selected coverage. The 100/100 selected + app-owned
+exclusion regression was captured RED before changing the predicate.

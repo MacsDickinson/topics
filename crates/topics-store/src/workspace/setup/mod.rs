@@ -287,9 +287,7 @@ fn coverage(job: &mut SetupJob) {
     job.coverage.processed = processed;
     job.coverage.failed = failed;
     job.coverage.outstanding = outstanding;
-    job.coverage.complete = job.coverage.failed.is_empty()
-        && job.coverage.outstanding.is_empty()
-        && job.coverage.excluded.is_empty();
+    job.coverage.complete = job.coverage.failed.is_empty() && job.coverage.outstanding.is_empty();
     if job.batches.iter().all(|b| {
         matches!(
             b.status,
