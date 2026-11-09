@@ -64,11 +64,7 @@ impl SetupHost {
                 }
             }
             let draft_context = service.setup_draft_context(SetupDraftContextRequest { capability: self.capability.clone() })?;
-            let response = json!({"sources": sources, "topic_contexts": topic_contexts, "draft_context": draft_context});
-            if response.to_string().len() > topics_runtime::protocol::MAX_FRAME / 2 {
-                return Err(error("invalid_input", "Selected context exceeds the runtime payload bound; preview smaller batches"));
-            }
-            Ok(response)
+            crate::context::response(sources, topic_contexts, draft_context)
         })
     }
 }
