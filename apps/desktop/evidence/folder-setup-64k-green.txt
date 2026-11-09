@@ -1,0 +1,30 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts
+
+[WebServer] (node:73767) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 17 tests using 1 worker
+
+(node:73773) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (492ms)
+  ✓   2 tests/folder-setup.spec.ts:48:1 › setup offers tree selection and an exact manifest before building (509ms)
+  ✓   3 tests/folder-setup.spec.ts:87:1 › selected completion stays distinct from excluded sources (343ms)
+  ✓   4 tests/folder-setup.spec.ts:102:1 › topic map offers graph and list navigation (517ms)
+  ✓   5 tests/folder-setup.spec.ts:148:1 › draft map exposes one exact starting-map receipt without record checkboxes (397ms)
+  ✓   6 tests/folder-setup.spec.ts:166:1 › a saved topic offers contextual decisions and collapsed evidence (494ms)
+  ✓   7 tests/folder-setup.spec.ts:192:1 › folder chooser cancellation preserves the path and selection waits for explicit use (246ms)
+  ✓   8 tests/folder-setup.spec.ts:217:1 › context is saved as the exact user statement without correction or confirmation (501ms)
+  ✓   9 tests/folder-setup.spec.ts:240:1 › confirmation previews only the enumerated visible revisions (485ms)
+  ✓  10 tests/folder-setup.spec.ts:264:1 › job watch ignores foreign and older snapshots and displays a newer matching update (381ms)
+  ✓  11 tests/folder-setup.spec.ts:316:1 › tree builds missing intermediate folders from inventory paths and selects descendants (268ms)
+  ✓  12 tests/folder-setup.spec.ts:330:1 › changed scope requires a new manifest and explicit consent before resuming (417ms)
+  ✓  13 tests/folder-setup.spec.ts:385:1 › connection confirmation previews only the selected connection (494ms)
+  ✓  14 tests/folder-setup.spec.ts:422:1 › a returning root opens the saved map and still offers setup (225ms)
+  ✓  15 tests/folder-setup.spec.ts:435:1 › new evidence shows the prior understanding without accepting the proposed replacement (350ms)
+  ✓  16 tests/folder-setup.spec.ts:488:1 › an oversized selected source is named and must be excluded before preview (247ms)
+  ✓  17 tests/folder-setup.spec.ts:502:1 › manifest request and reviewed budget reserve room for evidence and context (302ms)
+
+  17 passed (7.8s)

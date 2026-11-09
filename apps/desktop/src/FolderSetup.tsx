@@ -26,7 +26,7 @@ import "./folder-setup.css";
 
 const limits = {
   max_files_per_batch: 20,
-  max_bytes_per_batch: 262144,
+  max_bytes_per_batch: 65536,
   max_batches: 100,
   max_candidates_per_turn: 64,
   max_turns_per_batch: 4,
@@ -743,8 +743,9 @@ export function FolderSetup({
                 {manifest.runtime} · {manifest.batches.length}{" "}
                 {manifest.batches.length === 1 ? "batch" : "batches"} · up to{" "}
                 {manifest.limits.max_files_per_batch} notes and{" "}
-                {formatBytes(manifest.limits.max_bytes_per_batch)} per batch. Up
-                to {manifest.limits.max_candidates_per_turn} candidates per turn
+                {formatBytes(manifest.limits.max_bytes_per_batch)} of notes per
+                batch, with space reserved for citations and context. Up to{" "}
+                {manifest.limits.max_candidates_per_turn} candidates per turn
                 and {manifest.limits.max_turns_per_batch} total attempts per
                 batch. Each attempt has one bounded turn.
               </p>

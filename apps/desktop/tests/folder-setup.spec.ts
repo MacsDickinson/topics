@@ -491,10 +491,29 @@ test("an oversized selected source is named and must be excluded before preview"
   await workspaceFixture(page, { oversized: true });
   await page.getByRole("button", { name: "Set up folder" }).click();
   await expect(
-    page.getByText(/exceed the 256 KiB per-batch limit/),
+    page.getByText(/exceed the 64 KiB per-batch limit/),
   ).toBeVisible();
   await expect(page.getByText(/Meetings\/one.md \(293/)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Review manifest" }),
   ).toBeDisabled();
+});
+
+test("manifest request and reviewed budget reserve room for evidence and context", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await page.getByRole("button", { name: "Review manifest" }).click();
+  const request = await page.evaluate(
+    () =>
+      (window as any).calls.find(
+        (call: any) => call.command === "setup_manifest_preview",
+      ).args.request,
+  );
+  expect(request.limits.max_bytes_per_batch).toBe(65536);
+  await expect(page.getByText(/64 KiB of notes per batch/)).toBeVisible();
+  await expect(
+    page.getByText(/space reserved for citations and context/i),
+  ).toBeVisible();
 });
