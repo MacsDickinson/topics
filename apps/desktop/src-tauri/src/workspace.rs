@@ -7,6 +7,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::Emitter;
+use topics_core::setup::*;
 use topics_core::workspace::*;
 use topics_runtime::{CommitPermit, HostTools, RunRequest, Runtime, RuntimeConfig};
 use topics_store::WorkspaceService;
@@ -184,6 +185,65 @@ service_command!(
     SourceGetRequest,
     ScopedSource,
     source_get
+);
+
+// Setup commands expose the canonical service contract directly. Batch capabilities
+// and publication stay behind the job coordinator, never the webview.
+service_command!(
+    setup_inventory,
+    SetupInventoryRequest,
+    SetupInventory,
+    setup_inventory
+);
+service_command!(
+    setup_manifest_preview,
+    SetupManifestPreviewRequest,
+    SetupManifest,
+    setup_manifest_preview
+);
+service_command!(setup_job_get, SetupJobRequest, SetupJob, setup_job_get);
+service_command!(setup_jobs_list, RootRequest, Vec<SetupJob>, setup_jobs_list);
+service_command!(
+    setup_draft_edit,
+    SetupDraftEditRequest,
+    SetupJob,
+    setup_draft_edit
+);
+service_command!(
+    setup_draft_disposition,
+    SetupDraftDispositionRequest,
+    SetupJob,
+    setup_draft_disposition
+);
+service_command!(
+    setup_save_preview,
+    SetupSavePreviewRequest,
+    SetupReceipt,
+    setup_save_preview
+);
+service_command!(
+    setup_confirm_preview,
+    SetupConfirmPreviewRequest,
+    SetupReceipt,
+    setup_confirm_preview
+);
+service_command!(
+    setup_correction_preview,
+    SetupCorrectionPreviewRequest,
+    SetupCorrectionPreview,
+    setup_correction_preview
+);
+service_command!(
+    setup_decide,
+    SetupDecisionRequest,
+    SetupDecisionResult,
+    setup_decide
+);
+service_command!(
+    setup_topic_review,
+    TopicGetRequest,
+    SetupTopicReview,
+    setup_topic_review
 );
 
 #[tauri::command]
@@ -628,6 +688,27 @@ mod tests {
             "invalid_input"
         );
         assert!(decode_request::<RootGetRequest>(Some(json!({}))).is_ok());
+    }
+    #[test]
+    fn setup_commands_decode_the_canonical_contract_before_service_access() {
+        assert!(
+            decode_request::<SetupInventoryRequest>(Some(json!({
+                "root_id": "synthetic-root", "roles": []
+            })))
+            .is_ok()
+        );
+        for request in [
+            json!({"root_id": "synthetic-root"}),
+            json!({"root_id": "synthetic-root", "roles": [], "extra": true}),
+            json!({"root_id": "synthetic-root", "roles": [{"path": "x", "role": "invented"}]}),
+        ] {
+            assert_eq!(
+                decode_request::<SetupInventoryRequest>(Some(request))
+                    .unwrap_err()
+                    .code,
+                "invalid_input"
+            );
+        }
     }
     #[test]
     fn publication_denial_cannot_leave_a_pending_proposal_visible() {

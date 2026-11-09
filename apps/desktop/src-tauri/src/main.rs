@@ -111,7 +111,18 @@ fn main() {
             workspace_runtime_status,
             workspace_manual_propose,
             workspace_sources_list,
-            workspace_source_get
+            workspace_source_get,
+            setup_inventory,
+            setup_manifest_preview,
+            setup_job_get,
+            setup_jobs_list,
+            setup_draft_edit,
+            setup_draft_disposition,
+            setup_save_preview,
+            setup_confirm_preview,
+            setup_correction_preview,
+            setup_decide,
+            setup_topic_review
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Topics desktop");
