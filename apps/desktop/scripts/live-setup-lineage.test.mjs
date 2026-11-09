@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { baseline, corrected, verifyStatementRule, snapshot, afterRestart } from './live-setup-lineage.mjs';
+import { baseline, corrected, verifyStatementRule, snapshot, afterRestart, findClaimArticle } from './live-setup-lineage.mjs';
 const selected = {topicId:'topic',logicalId:'logical',revisionId:'old',predicate:'pronouns',value:'he/him'};
 const old = {id:'logical',revision_id:'old',subject_id:'topic',predicate:'pronouns',value:'he/him',supersedes:[],sources:[{kind:'passage',source:{path:'synthetic.md'}}]};
 const head = {...old,revision_id:'new',value:'updated after review',supersedes:['old'],sources:[{kind:'user_statement',statement_id:'statement'}]};
@@ -36,4 +36,12 @@ test('missing evidence, incorrect statement or rule are rejected',()=>{
   const lineage=corrected(good,selected,'updated after review','Synthetic correction');
   assert.throws(()=>verifyStatementRule(lineage,{...statement,text:'other'},rule,selected,'updated after review'));
   assert.throws(()=>verifyStatementRule(lineage,statement,{...rule,source_revision_id:'wrong'},selected,'updated after review'));
+});
+
+test('asynchronous WebdriverIO-style collection finds only the sourced selected claim', async () => {
+  const other = { getText: async () => 'role: he/him From your notes' };
+  const claim = { getText: async () => 'pronouns: he/him From your notes' };
+  const collection = { async *[Symbol.asyncIterator]() { yield other; yield claim; } };
+  assert.equal(await findClaimArticle(collection, 'pronouns', 'he/him'), claim);
+  assert.equal(await findClaimArticle(collection, 'missing', 'he/him'), undefined);
 });

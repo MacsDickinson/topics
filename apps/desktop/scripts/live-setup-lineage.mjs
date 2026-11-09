@@ -65,3 +65,12 @@ export function readRule(root, headId) {
   assert.equal(rules.length, 1, 'exactly one persisted rule must refer to the replacement');
   return rules[0];
 }
+
+// WebdriverIO element collections are asynchronously iterable; map() is not a native array.
+export async function findClaimArticle(articles, predicate, value) {
+  for await (const article of articles) {
+    const text = await article.getText();
+    if (text.includes(predicate) && text.includes(value) && text.includes('From your notes')) return article;
+  }
+  return undefined;
+}

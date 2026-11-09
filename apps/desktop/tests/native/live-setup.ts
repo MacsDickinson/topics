@@ -1,6 +1,6 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 import { writeFileSync } from "node:fs";
-import { baseline, corrected, verifyStatementRule, snapshot, readRule } from "../../scripts/live-setup-lineage.mjs";
+import { baseline, corrected, verifyStatementRule, snapshot, readRule, findClaimArticle } from "../../scripts/live-setup-lineage.mjs";
 import { waitForTerminal } from "../../scripts/live-setup-observation.mjs";
 
 describe("Genuine Codex synthetic setup through native services", () => {
@@ -115,12 +115,9 @@ describe("Genuine Codex synthetic setup through native services", () => {
         { timeout: 10000 },
       );
       const original = baseline(await readProjection(), selected);
-      const articles = await $$(".context-review article");
-      const claimArticle = (await Promise.all(articles.map(async (article) => ({
-        article, text: await article.getText(),
-      })))).find(({ text }) => text.includes(claim.predicate) && text.includes(claim.value) && text.includes("From your notes"));
+      const claimArticle = await findClaimArticle($$(".context-review article"), claim.predicate, claim.value);
       expect(claimArticle).toBeTruthy();
-      await claimArticle!.article.$("button=That’s wrong").click();
+      await claimArticle!.$("button=That’s wrong").click();
       await $(".context-review textarea").setValue(
         statementText,
       );
