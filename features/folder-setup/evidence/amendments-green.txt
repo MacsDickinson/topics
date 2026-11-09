@@ -1,0 +1,13 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Finished `test` profile [unoptimized] target(s) in 3.06s
+     Running tests/setup_amendments.rs (/tmp/topics-setup-core-target/debug/deps/setup_amendments-c24cdb4b93b00a02)
+
+running 5 tests
+test successful_empty_terminal_completion_is_guarded_without_empty_model_proposals ... ok
+test classification_is_explicit_projection_separate_from_verification ... ok
+test explicit_reconsent_preserves_completed_graph_and_issues_only_unsent_subsets ... ok
+test exact_connection_confirmation_preserves_claim_verification_and_sources ... ok
+test supplemental_context_is_durable_without_claims_rules_or_duplicated_corrections ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+

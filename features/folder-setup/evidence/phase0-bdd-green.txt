@@ -1,0 +1,178 @@
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-bdd)
+    Finished `dev` profile [unoptimized] target(s) in 2.86s
+     Running `/tmp/topics-setup-core-target/debug/topics-bdd --tags 'not @ui'`
+Feature: Index a notes folder read-only and search it
+  Scenario: Index classifies documents by folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then document "memory/people/alex-example.md" has kind "person"
+   ✔  And document "memory/projects/ledger-migration.md" has kind "project"
+   ✔  And document "Meetings/2026.10/2026-10-28-16-05-alex-121.md" has kind "meeting" dated "2026-10-28"
+   ✔  And document "Log/2026.10/2026-10-26.md" has kind "log" dated "2026-10-26"
+  Scenario: People are parsed from profiles with aliases
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then there is a person "Alex Example" known as "Alex" with pronouns "they/them"
+   ✔  And "Alex Example" has the alias "AJ"
+   ✔  And "Alex Example" has role "Engineering Manager" in team "Payments"
+  Scenario: Full-text search finds matches across document kinds
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  And I search for "ledger"
+   ✔  Then the results include "memory/projects/ledger-migration.md"
+   ✔  And the results include "Meetings/2026.10/2026-10-28-16-05-alex-121.md"
+   ✔  And the results include "Log/2026.10/2026-10-26.md"
+   ✔  And each result shows a snippet with "ledger" highlighted
+  Scenario: Indexing never modifies the notes folder
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  When the index is built
+   ✔  Then every file in the notes root has the same bytes and modified time as before
+  Scenario: A file that cannot be parsed does not stop the index
+   ✔> Given a notes root with these files:
+       | path                                          | content                                                                                                            |
+       | memory/people/alex-example.md                 | # Alex Example
+- **Known as:** Alex
+- **Pronouns:** they/them
+- **Role:** Engineering Manager
+- **Team:** Payments |
+       | memory/glossary.md                            | ## Nicknames
+| Nickname | Person |
+| AJ | Alex Example |                                                           |
+       | memory/projects/ledger-migration.md           | # Ledger migration
+Move accounts to the new ledger.                                                                |
+       | Meetings/2026.10/2026-10-28-16-05-alex-121.md | # Alex 121
+We discussed the ledger migration cutover.                                                              |
+       | Log/2026.10/2026-10-26.md                     | # Actions — week of 26 October 2026
+- Chase ledger vendor                                                          |
+   ✔  Given the file "memory/people/broken.md" contains invalid UTF-8
+   ✔  When the index is built
+   ✔  Then the index contains 6 documents
+   ✔  And there is 1 warning naming "memory/people/broken.md"
+Feature: Choose or create a notes folder
+  Scenario: Use an existing notes folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I set the notes root to "work-notes"
+   ✔  Then the notes root setting is "work-notes"
+   ✔  And the index contains 3 documents
+   ✔  And no file in "work-notes" has changed
+  Scenario: Create a fresh notes folder
+   ✔  Given the folder "new-notes" does not exist
+   ✔  When I initialise a notes root at "new-notes"
+   ✔  Then "new-notes" contains the folders "memory/people", "memory/projects", "Meetings", "Log" and "topics"
+   ✔  And the notes root setting is "new-notes"
+  Scenario: Refuse to initialise over an existing non-empty folder
+   ✔  Given a folder "work-notes" containing 3 markdown files
+   ✔  When I initialise a notes root at "work-notes"
+   ✔  Then I am told the folder is not empty and to use it instead
+   ✔  And no file in "work-notes" has changed
+  Scenario: Switch to a different notes folder
+   ✔  Given the notes root is "work-notes" with 3 markdown files
+   ✔  And a folder "home-notes" containing 2 markdown files
+   ✔  When I set the notes root to "home-notes"
+   ✔  Then the index contains 2 documents
+   ✔  And no document from "work-notes" appears in search results
+Feature: Keep the index in step with the files
+  Scenario: Rebuild after the database is deleted
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  When the index database is deleted
+   ✔  And the app starts
+   ✔  Then the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger-migration.md"
+  Scenario: An external edit is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds searching for "Northwind" returns "memory/projects/ledger-migration.md"
+  Scenario: A new file is picked up while the app runs
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program creates "Meetings/2026-11-02-10-00-standup.md" containing "Northwind call"
+   ✔  Then within 2 seconds the index contains 4 documents
+  Scenario: A renamed file keeps a single index entry
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program renames "memory/projects/ledger-migration.md" to "memory/projects/ledger.md"
+   ✔  Then within 2 seconds the index contains 3 documents
+   ✔  And searching for "ledger" returns "memory/projects/ledger.md"
+   ✔  And no result points to "memory/projects/ledger-migration.md"
+  Scenario: A deleted file leaves the index
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is running and watching the notes root
+   ✔  When another program deletes "memory/projects/ledger-migration.md"
+   ✔  Then within 2 seconds the index contains 2 documents
+  Scenario: Changes made while the app was closed are caught on start
+   ✔> Given a notes root with 3 markdown files including "memory/projects/ledger-migration.md"
+   ✔> And the index is built
+   ✔  Given the app is stopped
+   ✔  When another program appends "Vendor is Northwind" to "memory/projects/ledger-migration.md"
+   ✔  And the app starts
+   ✔  Then searching for "Northwind" returns "memory/projects/ledger-migration.md"
+[Summary]
+3 features
+15 scenarios (15 passed)
+78 steps (78 passed)

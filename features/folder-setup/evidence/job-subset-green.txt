@@ -1,0 +1,78 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 1.02s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 10 tests
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... 
+running 1 test
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 2.98s
+
+ok
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... 
+running 1 test
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 6.05s
+
+ok
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... 
+running 1 test
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 11.00s
+
+ok
+test multiple_tool_calls_validate_the_runtime_combined_buffer_once ... 
+running 1 test
+test multiple_tool_calls_validate_the_runtime_combined_buffer_once ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 1.55s
+
+ok
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 2.95s
+
+ok
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... 
+running 1 test
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 3.14s
+
+ok
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... 
+running 1 test
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 5.37s
+
+ok
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... 
+running 1 test
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 1.46s
+
+ok
+test root_switch_clears_old_context_and_rejects_old_job_launches ... 
+running 1 test
+test root_switch_clears_old_context_and_rejects_old_job_launches ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 2.77s
+
+ok
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... 
+running 1 test
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 5.28s
+
+ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 42.64s
+

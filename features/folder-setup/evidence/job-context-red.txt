@@ -1,0 +1,39 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 1.25s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest ... 
+running 1 test
+
+thread 'next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest' (6652807) panicked at crates/topics-setup/tests/protocol.rs:869:13:
+assertion `left == right` failed: later turn needs scoped canonical IDs from the completed draft, not independent topic lists
+  left: 0
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest ... FAILED
+
+failures:
+
+failures:
+    next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 3.02s
+
+FAILED
+
+failures:
+
+---- next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest stdout ----
+
+thread 'next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest' (6652805) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 3.04s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`

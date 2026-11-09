@@ -45,8 +45,12 @@ shared manifests/lock and integration. No source rewrite or git in notes.
    document and excluded/failed/outstanding paths, actual started model calls,
    exact manifest authorizations, and honest finished_with_gaps status.
 7. `setup_draft_context(SetupDraftContextRequest) -> SetupDraftContext`: only
-   capability-selected eligible citations and associated draft nodes, no
-   human inventory, private alternative IDs/counts/name-collision errors.
+   current-batch eligible citations plus previously completed, unchanged, still-eligible
+   job-manifest citations and associated draft nodes, no
+   human inventory, waiting files, private alternative IDs/counts/name-collision errors.
+   This same explicit context subset can support proposals; scope_read still returns
+   only the current batch documents. Superseded accepted history and human
+   statement text never enter this draft context.
 8. `setup_draft_edit` requires expected job revision and same item identity;
    human edit provenance is retained. `setup_draft_disposition` supports explicit
    defer/dismiss separately; omitted items remain pending. Read API includes
@@ -105,3 +109,61 @@ presentation-owned; native runtime cancellation/containment, actual model calls,
 and UI approval counts require downstream evidence and are not claimed from
 synthetic store calls. Service privacy/stale/root/cancel/rebuild/100-doc tests
 remain mandatory independently of those presentation proofs.
+
+## Additive coordinator amendment (2026-11-09)
+
+- `setup_job_reconsent(SetupJobReconsentRequest{root_id,job_id,expected_revision,
+  manifest_id,expected_fingerprint}) -> SetupJob` reviews one exact new immutable
+  manifest for the existing root generation/job. `prior_consents: [SetupConsent]`
+  retains original manifest and batch/scope/run identities; each current batch's
+  `completed_source_ids` retains unaffected completed coverage even when the new
+  manifest puts completed and waiting sources in one batch. A new capability
+  contains only the outstanding subset of its reviewed manifest batch. No stale
+  source/new file inherits old consent, and no original IDs are rebased.
+- `setup_connection_confirm_preview(SetupConnectionConfirmPreviewRequest{
+  root_id,connection_ids}) -> SetupReceipt` enumerates exact accepted connections,
+  source/dependency hashes and `connections` snapshots. The existing `setup_decide`
+  approves this receipt, confirming only enumerated connection IDs. Claim-only
+  `setup_confirm_preview` is unchanged; verification is separate for both kinds.
+- `setup_context_add(UserStatementRequest) -> UserStatement` reuses the canonical
+  human statement record format with a distinct journal purpose for supplemental
+  topic notes. It records exact human text only, no claim, replacement, rule or
+  verification. `SetupTopicReview.context: [UserStatement]` returns those notes
+  after restart/rebuild, excluding correction/edit/chat evidence. A distinct
+  journal purpose is necessary to avoid guessing whether old chat questions or
+  correction evidence were supplemental context; existing `user_statement` keeps
+  its prior evidence semantics.
+- `DraftItem.assertion_kind` explicitly projects reported_explicit,
+  inferred_or_uncertain, unsupported, identity_question or correction separately
+  from verification and disposition. These are conservative extraction/review
+  categories derived from declared candidate kind, cited evidence and an explicit
+  uncertainty flag; roles, recency and confidence never select truth. Absence of
+  uncertainty is not semantic proof or personal verification. Unclassified items
+  remain ineligible until classified. All data still enters through canonical
+  bounded Candidate values; no new model approval/type surface.
+- Empty successful terminal output is an application-only guarded-stage outcome,
+  after the exact capability/hash/privacy/attempt checks and run consumption. It
+  gets a stable proposal UUID and one atomic checkpoint publication. Model-facing
+  `setup_batch_validate` and legacy proposal schemas still require 1–200 candidates.
+- `max_turns_per_batch` counts total one-turn attempts, including cancelled and
+  failed attempts. It remains finite; the desktop default is four. Setup adapters
+  may retain a stricter 64-candidate combined buffer than core's 200 raw cap.
+
+Draft context is a bounded retrieval subset, never a claim of complete knowledge:
+at most 200 topic/claim/connection records and 1 MiB of serialized context, after
+privacy filtering, including necessary topic labels. It never reports counts of
+excluded private identities. `independent_evidence_groups` conservatively groups
+verbatim passage hashes (including copies under different document headings);
+its count is not independent confirmation or personal verification. Root folder
+role overrides use the inventory root's empty path; longer folder overrides win.
+
+## Coverage clarification — coordinator ruling 2026-11-09
+
+`coverage.complete` and Finished mean completion of the exact eligible **selected**
+manifest sources: every selected source is processed, and none selected failed or
+remain outstanding. They never mean the entire filesystem/folder/vault was
+analysed or understood. `coverage.excluded` always retains intentional preview
+exclusions (app records, hidden/config/private files, filters and unselected
+notes); those files are never counted as processed or sent. FinishedWithGaps
+identifies missing/failed selected coverage. The 100/100 selected + app-owned
+exclusion regression was captured RED before changing the predicate.

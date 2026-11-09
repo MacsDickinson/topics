@@ -6,6 +6,7 @@ npm ci
 export PATH="$PWD/node_modules/.bin:$PATH"
 test "$(node --version)" = "v24.22.2"
 npm exec -- playwright install chromium
+npm exec -- node scripts/setup-types.mjs --check
 npm run build
 npm test
 # A missing macOS session or embedded provider fails this check; no skipped smoke.

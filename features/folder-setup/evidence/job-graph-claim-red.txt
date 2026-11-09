@@ -1,0 +1,40 @@
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-store)
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 7.09s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it ... 
+running 1 test
+
+thread 'graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it' (6723047) panicked at crates/topics-setup/tests/protocol.rs:1190:18:
+graph_claim fixture must stage a canonical cited responsibility claim
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it ... FAILED
+
+failures:
+
+failures:
+    graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 15 filtered out; finished in 2.67s
+
+FAILED
+
+failures:
+
+---- graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it stdout ----
+
+thread 'graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it' (6723045) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 15 filtered out; finished in 2.71s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`
