@@ -21,5 +21,6 @@
     "ContextReview.decide": true,
     "ContextReview.effect0": true,
     "ContextReview.allIpcCalls": true
-  }
+  },
+  "scope": "Historical pre-P1 checkpoint d4eec57; ContextReview state/effects intentionally repaired in 3a71a4d. See approval-repair.md; this is not current state-machine parity or safety acceptance."
 }

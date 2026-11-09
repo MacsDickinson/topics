@@ -1,0 +1,19 @@
+[WebServer] (node:2467) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:2490) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/context-approval.spec.ts:163:3 › correction to connection approves exactly the displayed receipt (687ms)
+  ✓   2 tests/context-approval.spec.ts:163:3 › correction to statements approves exactly the displayed receipt (413ms)
+  ✓   3 tests/context-approval.spec.ts:163:3 › connection to correction approves exactly the displayed receipt (463ms)
+  ✓   4 tests/context-approval.spec.ts:163:3 › statements to correction approves exactly the displayed receipt (393ms)
+  ✓   5 tests/context-approval.spec.ts:184:1 › cancelled correction response cannot replace a newer connection preview (448ms)
+  ✓   6 tests/context-approval.spec.ts:206:1 › edited correction invalidates visible and pending approvals until a fresh preview (479ms)
+  ✓   7 tests/context-approval.spec.ts:248:1 › cancelled connection response cannot replace a newer statement preview (378ms)
+  ✓   8 tests/context-approval.spec.ts:268:1 › changing notes root invalidates an in-flight correction without submitting it (430ms)
+  ✓   9 tests/context-approval.spec.ts:300:1 › changing topic prevents a pending correction from restoring the old approval (367ms)
+  ✓  10 tests/context-approval.spec.ts:326:1 › a submitted decision locks the displayed intent and correction fields until it settles (396ms)
+
+  10 passed (5.5s)

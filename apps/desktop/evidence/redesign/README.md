@@ -2,7 +2,8 @@
 
 The accepted 83-check snapshot below is historical. See the
 [canonical integration follow-up](canonical-integration.md) for the later backend
-merge, canonical new states, current checks and remaining final dependencies.
+merge and canonical states, then [final budget/P1 repair](approval-repair.md) for
+112 passing checks and the current independent re-review requirement.
 
 UI implementation: `c6965c044dd580bd39e43da712e8740d5397dffd`, with authorized
 setup integration through `9c20a467a7c539fdfcd06f13537b073e0999df25`, based on

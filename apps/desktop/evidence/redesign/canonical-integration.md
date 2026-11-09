@@ -1,5 +1,9 @@
 # Canonical setup integration into the accepted redesign
 
+Final implementation follow-up: [64 KiB integration and P1 repair](approval-repair.md)
+records the supplied budget commit, intentional ContextReview state deviation,
+112 passing browser checks, final build and independent re-review still required.
+
 This follow-up preserves accepted structural redesign `7407b50be3cdb576137b5eb56c1755b71b5d3105`
 and integrates authoritative backend main `85ae348aa9a329dcdb5dbfc0ec0655bfb6dea3b6`.
 It is confined to the isolated redesign worktree. No main/other worktree edits,
@@ -79,6 +83,12 @@ three `canonical-*-contact.png` sheets were visually inspected. The existing
 baseline screenshots remain unchanged.
 
 ## Pending final acceptance
+
+The checkpoint history below is preserved for traceability. The later budget
+dependency is now integrated as `e48e267`; P1 was repaired as `3a71a4d`. Consult
+the [final repair report](approval-repair.md) for current verification. The earlier
+ContextReview state/effect AST-parity result is historical and intentionally no
+longer describes the repaired state machine; request contracts remain unchanged.
 
 The runtime packing fix is now integrated through exact main `52a066a`, including
 `7094155`/`85c664d` and the final handoff report. Desktop source tree
