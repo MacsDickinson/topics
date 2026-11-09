@@ -296,13 +296,25 @@ function App() {
         if (disposed || !current(generation)) return;
         rootRef.current = result.root;
         setRoot(result.root);
-        setPath(result.root?.path || '');
+        setPath(result.root?.path || "");
         if (result.root) {
           const selected = result.root;
           void refresh(selected, generation);
-          void ipc<{ entry: string; root_id: string }>('setup_inventory', { root_id: selected.root_id, roles: [] }).then((inventory) => {
-            if (!disposed && current(generation, selected.root_id) && inventory.root_id === selected.root_id && inventory.entry === 'returning' && navigationSeq.current === 0) setScreen('topics');
-          }).catch(() => undefined);
+          void ipc<{ entry: string; root_id: string }>("setup_inventory", {
+            root_id: selected.root_id,
+            roles: [],
+          })
+            .then((inventory) => {
+              if (
+                !disposed &&
+                current(generation, selected.root_id) &&
+                inventory.root_id === selected.root_id &&
+                inventory.entry === "returning" &&
+                navigationSeq.current === 0
+              )
+                setScreen("topics");
+            })
+            .catch(() => undefined);
         }
       })
       .catch((e) => {
@@ -703,7 +715,10 @@ function App() {
     setSettings(false);
     requestAnimationFrame(() => {
       const trigger = formTrigger.current;
-      (trigger?.isConnected ? trigger : document.getElementById(trigger?.id || ""))?.focus();
+      (trigger?.isConnected
+        ? trigger
+        : document.getElementById(trigger?.id || "")
+      )?.focus();
     });
   };
   const quickSearch = () => {
@@ -1132,7 +1147,7 @@ function App() {
                             key={`${root.root_id}-${topic.topic.id}`}
                             rootId={root.root_id}
                             topicId={topic.topic.id}
-                          topics={topics}
+                            topics={topics}
                             onSaved={() => {
                               void refresh(root);
                               void openTopic(topic.topic.id);

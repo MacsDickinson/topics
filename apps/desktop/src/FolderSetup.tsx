@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { ipc, apiError } from "./ipc";
-import { Badge, Button, EmptyState, Field, Icon, PageHeader, Section } from "./ui";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Icon,
+  PageHeader,
+  Section,
+} from "./ui";
 import type { SetupInventory } from "./generated/SetupInventory";
 import type { SetupManifest } from "./generated/SetupManifest";
 import type { SetupJob } from "./generated/SetupJob";
@@ -502,7 +510,7 @@ export function FolderSetup({
       <li key={path}>
         <div className="setup-folder">
           <label className="check">
-            <Icon name="folder"/>
+            <Icon name="folder" />
             <input
               type="checkbox"
               checked={
@@ -621,85 +629,110 @@ export function FolderSetup({
             </Button>
           ))}
           {inventory.entry === "empty" ? (
-            <EmptyState title="No notes yet" icon="folder"><p>Add Markdown notes or use New topic for manual capture.</p></EmptyState>
+            <EmptyState title="No notes yet" icon="folder">
+              <p>Add Markdown notes or use New topic for manual capture.</p>
+            </EmptyState>
           ) : (
             <>
-              <ol className="flow-steps" aria-label="Folder setup steps"><li aria-current={!manifest ? "step" : undefined}><span>1</span>Choose notes</li><li aria-current={manifest ? "step" : undefined}><span>2</span>Authorize manifest</li><li><span>3</span>Review starting map</li></ol>
-              <Section title="Choose notes to analyse" description={<>{inventory.documents.length} notes; {inventory.eligible_bytes} eligible bytes. Suggested roles do not change privacy.</>}>
-              <ul className="setup-tree" aria-label="Notes folders">
-                {folderPaths.has("")
-                  ? renderFolder("")
-                  : [...folderPaths]
-                      .filter((path) => !path.includes("/"))
-                      .sort()
-                      .map(renderFolder)}
-              </ul>
-              <div className="setup-dates">
-                <Field id="setup-from" label="From date"><input
-                    type="date"
-                    value={from}
-                    onChange={(e) => {
-                      setFrom(e.target.value);
-                      invalidate();
-                    }}
-                  /></Field>
-                <Field id="setup-through" label="Through date"><input
-                    type="date"
-                    value={through}
-                    onChange={(e) => {
-                      setThrough(e.target.value);
-                      invalidate();
-                    }}
-                  /></Field>
-              </div>
-              <h3>Excluded from discovery</h3>
-              <ul>
-                {inventory.excluded.map((e, i) => (
-                  <li key={i}>
-                    {e.path}: {e.reason}
-                  </li>
-                ))}
-              </ul>
-              {inventory.documents.some(
-                (d) =>
-                  selected.includes(d.source.path) &&
-                  d.bytes > limits.max_bytes_per_batch,
-              ) && (
-                <div className="notice">
-                  <p>
-                    These selected notes exceed the{" "}
-                    {formatBytes(limits.max_bytes_per_batch)} per-batch limit.
-                    Exclude them before previewing.
-                  </p>
-                  <ul>
-                    {inventory.documents
-                      .filter(
-                        (d) =>
-                          selected.includes(d.source.path) &&
-                          d.bytes > limits.max_bytes_per_batch,
-                      )
-                      .map((d) => (
-                        <li key={d.source.source_id}>
-                          {d.source.path} ({formatBytes(d.bytes)})
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              )}
-              <Button
-                disabled={
-                  busy ||
-                  !selected.length ||
-                  inventory.documents.some(
-                    (d) =>
-                      selected.includes(d.source.path) &&
-                      d.bytes > limits.max_bytes_per_batch,
-                  )
+              <ol className="flow-steps" aria-label="Folder setup steps">
+                <li aria-current={!manifest ? "step" : undefined}>
+                  <span>1</span>Choose notes
+                </li>
+                <li aria-current={manifest ? "step" : undefined}>
+                  <span>2</span>Authorize manifest
+                </li>
+                <li>
+                  <span>3</span>Review starting map
+                </li>
+              </ol>
+              <Section
+                title="Choose notes to analyse"
+                description={
+                  <>
+                    {inventory.documents.length} notes;{" "}
+                    {inventory.eligible_bytes} eligible bytes. Suggested roles
+                    do not change privacy.
+                  </>
                 }
-                onClick={preview}
               >
-                Review manifest
-              </Button>
+                <ul className="setup-tree" aria-label="Notes folders">
+                  {folderPaths.has("")
+                    ? renderFolder("")
+                    : [...folderPaths]
+                        .filter((path) => !path.includes("/"))
+                        .sort()
+                        .map(renderFolder)}
+                </ul>
+                <div className="setup-dates">
+                  <Field id="setup-from" label="From date">
+                    <input
+                      type="date"
+                      value={from}
+                      onChange={(e) => {
+                        setFrom(e.target.value);
+                        invalidate();
+                      }}
+                    />
+                  </Field>
+                  <Field id="setup-through" label="Through date">
+                    <input
+                      type="date"
+                      value={through}
+                      onChange={(e) => {
+                        setThrough(e.target.value);
+                        invalidate();
+                      }}
+                    />
+                  </Field>
+                </div>
+                <h3>Excluded from discovery</h3>
+                <ul>
+                  {inventory.excluded.map((e, i) => (
+                    <li key={i}>
+                      {e.path}: {e.reason}
+                    </li>
+                  ))}
+                </ul>
+                {inventory.documents.some(
+                  (d) =>
+                    selected.includes(d.source.path) &&
+                    d.bytes > limits.max_bytes_per_batch,
+                ) && (
+                  <div className="notice">
+                    <p>
+                      These selected notes exceed the{" "}
+                      {formatBytes(limits.max_bytes_per_batch)} per-batch limit.
+                      Exclude them before previewing.
+                    </p>
+                    <ul>
+                      {inventory.documents
+                        .filter(
+                          (d) =>
+                            selected.includes(d.source.path) &&
+                            d.bytes > limits.max_bytes_per_batch,
+                        )
+                        .map((d) => (
+                          <li key={d.source.source_id}>
+                            {d.source.path} ({formatBytes(d.bytes)})
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+                <Button
+                  disabled={
+                    busy ||
+                    !selected.length ||
+                    inventory.documents.some(
+                      (d) =>
+                        selected.includes(d.source.path) &&
+                        d.bytes > limits.max_bytes_per_batch,
+                    )
+                  }
+                  onClick={preview}
+                >
+                  Review manifest
+                </Button>
               </Section>
             </>
           )}
@@ -910,310 +943,319 @@ export function FolderSetup({
               )}
             </section>
           )}
-          <Section title="Draft topics" description="A proposed map for your review. Saving requires a separate receipt.">
-          <div className="actions">
-            <Button
-              aria-pressed={view === "list"}
-              onClick={() => setView("list")}
-            >
-              List
-            </Button>
-            <Button
-              aria-pressed={view === "graph"}
-              onClick={() => setView("graph")}
-            >
-              Graph
-            </Button>
-          </div>
-          {view === "graph" && (
-            <svg
-              className="setup-graph"
-              role="group"
-              aria-label="Draft topic map; use the topic and relationship lists to navigate"
-              viewBox={`0 0 600 ${Math.max(140, topics.length * 55)}`}
-            >
-              {connections.map((item) => {
-                if (item.candidate.kind !== "connection") return null;
-                const c = item.candidate.connection;
-                if (c.from.kind !== "topic" || c.to.kind !== "topic")
-                  return null;
-                const fromId = c.from.id,
-                  toId = c.to.id;
-                const a = topics.findIndex(
-                  (t) =>
-                    t.candidate.kind === "topic" &&
-                    t.candidate.topic.id === fromId,
-                );
-                const b = topics.findIndex(
-                  (t) =>
-                    t.candidate.kind === "topic" &&
-                    t.candidate.topic.id === toId,
-                );
-                if (a < 0 || b < 0) return null;
-                const inferred =
-                  item.assertion_kind === "inferred_or_uncertain";
-                const openEvidence = () => {
-                  const detail = document.getElementById(
-                    `edge-${item.item_id}`,
-                  ) as HTMLDetailsElement | null;
-                  if (detail) {
-                    detail.open = true;
-                    detail.scrollIntoView({ block: "nearest" });
-                  }
-                };
-                return (
-                  <line
-                    key={item.item_id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open evidence for ${c.relation}${inferred ? ", inferred association" : ""}`}
-                    onClick={openEvidence}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        openEvidence();
-                      }
-                    }}
-                    className={inferred ? "inferred" : ""}
-                    x1={a % 2 ? 445 : 145}
-                    y1={41 + a * 55}
-                    x2={b % 2 ? 445 : 145}
-                    y2={41 + b * 55}
-                  />
-                );
-              })}
-              {topics.map(
-                (item, i) =>
-                  item.candidate.kind === "topic" && (
-                    <g
+          <Section
+            title="Draft topics"
+            description="A proposed map for your review. Saving requires a separate receipt."
+          >
+            <div className="actions">
+              <Button
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                List
+              </Button>
+              <Button
+                aria-pressed={view === "graph"}
+                onClick={() => setView("graph")}
+              >
+                Graph
+              </Button>
+            </div>
+            {view === "graph" && (
+              <svg
+                className="setup-graph"
+                role="group"
+                aria-label="Draft topic map; use the topic and relationship lists to navigate"
+                viewBox={`0 0 600 ${Math.max(140, topics.length * 55)}`}
+              >
+                {connections.map((item) => {
+                  if (item.candidate.kind !== "connection") return null;
+                  const c = item.candidate.connection;
+                  if (c.from.kind !== "topic" || c.to.kind !== "topic")
+                    return null;
+                  const fromId = c.from.id,
+                    toId = c.to.id;
+                  const a = topics.findIndex(
+                    (t) =>
+                      t.candidate.kind === "topic" &&
+                      t.candidate.topic.id === fromId,
+                  );
+                  const b = topics.findIndex(
+                    (t) =>
+                      t.candidate.kind === "topic" &&
+                      t.candidate.topic.id === toId,
+                  );
+                  if (a < 0 || b < 0) return null;
+                  const inferred =
+                    item.assertion_kind === "inferred_or_uncertain";
+                  const openEvidence = () => {
+                    const detail = document.getElementById(
+                      `edge-${item.item_id}`,
+                    ) as HTMLDetailsElement | null;
+                    if (detail) {
+                      detail.open = true;
+                      detail.scrollIntoView({ block: "nearest" });
+                    }
+                  };
+                  return (
+                    <line
                       key={item.item_id}
                       role="button"
                       tabIndex={0}
-                      aria-label={`Open ${item.candidate.topic.name}`}
-                      onClick={() =>
-                        setTopicId(
-                          item.candidate.kind === "topic"
-                            ? item.candidate.topic.id
-                            : null,
-                        )
-                      }
+                      aria-label={`Open evidence for ${c.relation}${inferred ? ", inferred association" : ""}`}
+                      onClick={openEvidence}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          if (item.candidate.kind === "topic")
-                            setTopicId(item.candidate.topic.id);
+                          openEvidence();
                         }
                       }}
-                      transform={`translate(${i % 2 ? 330 : 30}, ${20 + i * 55})`}
-                    >
-                      <rect width="230" height="42" rx="8" />
-                      <text x="12" y="26">
-                        {item.candidate.topic.name.length > 24
-                          ? `${item.candidate.topic.name.slice(0, 23)}…`
-                          : item.candidate.topic.name}
-                      </text>
-                    </g>
-                  ),
-              )}
-            </svg>
-          )}
-          <ul className="draft-topic-list">
-            {topics.map(
-              (item) =>
-                item.candidate.kind === "topic" && (
-                  <li key={item.item_id}>
-                    <Button
-                      onClick={() =>
-                        setTopicId(
-                          item.candidate.kind === "topic"
-                            ? item.candidate.topic.id
-                            : null,
-                        )
-                      }
-                    >
-                      {item.candidate.topic.name}
-                    </Button>
-                  </li>
-                ),
-            )}
-          </ul>
-          {active && (
-            <section className="draft-topic-detail">
-              <h3>
-                <CandidateText candidate={active.candidate} />
-              </h3>
-              {job.graph.items
-                .filter(
-                  (item) =>
-                    (item.candidate.kind === "claim" ||
-                      item.candidate.kind === "correction") &&
-                    item.candidate.claim.subject_id === topicId,
-                )
-                .map((item) => {
-                  if (
-                    item.candidate.kind !== "claim" &&
-                    item.candidate.kind !== "correction"
-                  )
-                    return null;
-                  const claim = item.candidate.claim;
-                  return (
-                    <div key={item.item_id}>
-                      <p>
-                        {claim.predicate}: {claim.value}{" "}
-                        <Badge>
-                          {item.disposition === "saved"
-                            ? "From your notes"
-                            : "Draft"}
-                        </Badge>
-                      </p>
-                      {(claim.valid_from || claim.valid_to) && (
-                        <p>
-                          Reported period:{" "}
-                          {claim.valid_from || "unspecified start"} to{" "}
-                          {claim.valid_to || "unspecified end"}
-                        </p>
-                      )}
-                      <Evidence
-                        sources={claim.sources.flatMap((e) =>
-                          e.kind === "passage" ? [e.source] : [],
-                        )}
-                      />
-                    </div>
+                      className={inferred ? "inferred" : ""}
+                      x1={a % 2 ? 445 : 145}
+                      y1={41 + a * 55}
+                      x2={b % 2 ? 445 : 145}
+                      y2={41 + b * 55}
+                    />
                   );
                 })}
-              {(() => {
-                const itemIds = new Set(
-                  job.graph.issues
-                    .filter(
-                      (issue) =>
-                        issue.issue_kind === "replacement" ||
-                        issue.issue_kind === "contradiction",
+                {topics.map(
+                  (item, i) =>
+                    item.candidate.kind === "topic" && (
+                      <g
+                        key={item.item_id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open ${item.candidate.topic.name}`}
+                        onClick={() =>
+                          setTopicId(
+                            item.candidate.kind === "topic"
+                              ? item.candidate.topic.id
+                              : null,
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            if (item.candidate.kind === "topic")
+                              setTopicId(item.candidate.topic.id);
+                          }
+                        }}
+                        transform={`translate(${i % 2 ? 330 : 30}, ${20 + i * 55})`}
+                      >
+                        <rect width="230" height="42" rx="8" />
+                        <text x="12" y="26">
+                          {item.candidate.topic.name.length > 24
+                            ? `${item.candidate.topic.name.slice(0, 23)}…`
+                            : item.candidate.topic.name}
+                        </text>
+                      </g>
+                    ),
+                )}
+              </svg>
+            )}
+            <ul className="draft-topic-list">
+              {topics.map(
+                (item) =>
+                  item.candidate.kind === "topic" && (
+                    <li key={item.item_id}>
+                      <Button
+                        onClick={() =>
+                          setTopicId(
+                            item.candidate.kind === "topic"
+                              ? item.candidate.topic.id
+                              : null,
+                          )
+                        }
+                      >
+                        {item.candidate.topic.name}
+                      </Button>
+                    </li>
+                  ),
+              )}
+            </ul>
+            {active && (
+              <section className="draft-topic-detail">
+                <h3>
+                  <CandidateText candidate={active.candidate} />
+                </h3>
+                {job.graph.items
+                  .filter(
+                    (item) =>
+                      (item.candidate.kind === "claim" ||
+                        item.candidate.kind === "correction") &&
+                      item.candidate.claim.subject_id === topicId,
+                  )
+                  .map((item) => {
+                    if (
+                      item.candidate.kind !== "claim" &&
+                      item.candidate.kind !== "correction"
                     )
-                    .flatMap((issue) => issue.item_ids),
-                );
-                const incoming = job.graph.items.filter(
-                  (item) =>
-                    itemIds.has(item.item_id) &&
-                    (item.candidate.kind === "claim" ||
-                      item.candidate.kind === "correction") &&
-                    item.candidate.claim.subject_id === topicId,
-                );
-                return incoming.length > 0 && topicId ? (
-                  <TopicDiff
-                    rootId={rootId}
-                    topicId={topicId}
-                    incoming={incoming}
-                  />
-                ) : null;
-              })()}
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  savePreview(
-                    job.graph.items
-                      .filter((item) => {
-                        const c = item.candidate;
-                        return (
-                          item.item_id === active.item_id ||
-                          ((c.kind === "claim" || c.kind === "correction") &&
-                            c.claim.subject_id === topicId) ||
-                          (c.kind === "connection" &&
-                            ((c.connection.from.kind === "topic" &&
-                              c.connection.from.id === topicId) ||
-                              (c.connection.to.kind === "topic" &&
-                                c.connection.to.id === topicId)))
-                        );
-                      })
-                      .map((item) => item.item_id),
-                  )
-                }
-              >
-                Review topic group
-              </Button>
-            </section>
-          )}
-          </Section><Section title="Relationships">
-          {connections.length === 0 && <p>No relationships in this draft.</p>}
-          {connections.map((item) => {
-            if (item.candidate.kind !== "connection") return null;
-            const c = item.candidate.connection;
-            const endpoint = (value: typeof c.from) =>
-              value.kind === "topic"
-                ? topics.find(
-                    (t) =>
-                      t.candidate.kind === "topic" &&
-                      t.candidate.topic.id === value.id,
-                  )?.candidate
-                : null;
-            const from = endpoint(c.from),
-              to = endpoint(c.to);
-            const inferred = item.assertion_kind === "inferred_or_uncertain";
-            return (
-              <article key={item.item_id} className="setup-relationship">
+                      return null;
+                    const claim = item.candidate.claim;
+                    return (
+                      <div key={item.item_id}>
+                        <p>
+                          {claim.predicate}: {claim.value}{" "}
+                          <Badge>
+                            {item.disposition === "saved"
+                              ? "From your notes"
+                              : "Draft"}
+                          </Badge>
+                        </p>
+                        {(claim.valid_from || claim.valid_to) && (
+                          <p>
+                            Reported period:{" "}
+                            {claim.valid_from || "unspecified start"} to{" "}
+                            {claim.valid_to || "unspecified end"}
+                          </p>
+                        )}
+                        <Evidence
+                          sources={claim.sources.flatMap((e) =>
+                            e.kind === "passage" ? [e.source] : [],
+                          )}
+                        />
+                      </div>
+                    );
+                  })}
+                {(() => {
+                  const itemIds = new Set(
+                    job.graph.issues
+                      .filter(
+                        (issue) =>
+                          issue.issue_kind === "replacement" ||
+                          issue.issue_kind === "contradiction",
+                      )
+                      .flatMap((issue) => issue.item_ids),
+                  );
+                  const incoming = job.graph.items.filter(
+                    (item) =>
+                      itemIds.has(item.item_id) &&
+                      (item.candidate.kind === "claim" ||
+                        item.candidate.kind === "correction") &&
+                      item.candidate.claim.subject_id === topicId,
+                  );
+                  return incoming.length > 0 && topicId ? (
+                    <TopicDiff
+                      rootId={rootId}
+                      topicId={topicId}
+                      incoming={incoming}
+                    />
+                  ) : null;
+                })()}
+                <Button
+                  disabled={busy}
+                  onClick={() =>
+                    savePreview(
+                      job.graph.items
+                        .filter((item) => {
+                          const c = item.candidate;
+                          return (
+                            item.item_id === active.item_id ||
+                            ((c.kind === "claim" || c.kind === "correction") &&
+                              c.claim.subject_id === topicId) ||
+                            (c.kind === "connection" &&
+                              ((c.connection.from.kind === "topic" &&
+                                c.connection.from.id === topicId) ||
+                                (c.connection.to.kind === "topic" &&
+                                  c.connection.to.id === topicId)))
+                          );
+                        })
+                        .map((item) => item.item_id),
+                    )
+                  }
+                >
+                  Review topic group
+                </Button>
+              </section>
+            )}
+          </Section>
+          <Section title="Relationships">
+            {connections.length === 0 && <p>No relationships in this draft.</p>}
+            {connections.map((item) => {
+              if (item.candidate.kind !== "connection") return null;
+              const c = item.candidate.connection;
+              const endpoint = (value: typeof c.from) =>
+                value.kind === "topic"
+                  ? topics.find(
+                      (t) =>
+                        t.candidate.kind === "topic" &&
+                        t.candidate.topic.id === value.id,
+                    )?.candidate
+                  : null;
+              const from = endpoint(c.from),
+                to = endpoint(c.to);
+              const inferred = item.assertion_kind === "inferred_or_uncertain";
+              return (
+                <article key={item.item_id} className="setup-relationship">
+                  <p>
+                    {from ? (
+                      <CandidateText candidate={from} />
+                    ) : (
+                      "Unresolved endpoint"
+                    )}{" "}
+                    — {c.relation} —{" "}
+                    {to ? (
+                      <CandidateText candidate={to} />
+                    ) : (
+                      "Unresolved endpoint"
+                    )}{" "}
+                    <Badge>
+                      {inferred
+                        ? "Inferred association · Needs your input"
+                        : item.assertion_kind === "reported_explicit"
+                          ? "Explicit relationship"
+                          : "Unclassified relationship"}
+                    </Badge>
+                  </p>
+                  <details id={`edge-${item.item_id}`}>
+                    <summary>Sources ({c.sources.length})</summary>
+                    <ul>
+                      {c.sources.map((source, i) => (
+                        <li key={i}>
+                          <strong>{source.path}</strong>
+                          <blockquote>{source.excerpt}</blockquote>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </article>
+              );
+            })}
+          </Section>
+          <Section title={`Needs your input (${job.graph.issues.length})`}>
+            {job.graph.issues.map((issue) => (
+              <article key={issue.id} className="setup-issue">
                 <p>
-                  {from ? (
-                    <CandidateText candidate={from} />
-                  ) : (
-                    "Unresolved endpoint"
-                  )}{" "}
-                  — {c.relation} —{" "}
-                  {to ? (
-                    <CandidateText candidate={to} />
-                  ) : (
-                    "Unresolved endpoint"
-                  )}{" "}
-                  <Badge>
-                    {inferred
-                      ? "Inferred association · Needs your input"
-                      : item.assertion_kind === "reported_explicit"
-                        ? "Explicit relationship"
-                        : "Unclassified relationship"}
-                  </Badge>
+                  {issue.key} ({issue.issue_kind}){" "}
+                  {issue.deferred && "— Not now"}
                 </p>
-                <details id={`edge-${item.item_id}`}>
-                  <summary>Sources ({c.sources.length})</summary>
-                  <ul>
-                    {c.sources.map((source, i) => (
-                      <li key={i}>
-                        <strong>{source.path}</strong>
-                        <blockquote>{source.excerpt}</blockquote>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
+                <Evidence sources={issue.sources} />
+                <Button
+                  disabled={busy || issue.deferred}
+                  onClick={() =>
+                    void action(
+                      () =>
+                        ipc<SetupJob>("setup_draft_disposition", {
+                          root_id: rootId,
+                          job_id: job.job_id,
+                          expected_revision: job.revision,
+                          item_ids: issue.item_ids,
+                          disposition: "deferred",
+                        }),
+                      setJob,
+                    )
+                  }
+                >
+                  Not now
+                </Button>
               </article>
-            );
-          })}
-          </Section><Section title={`Needs your input (${job.graph.issues.length})`}>
-          {job.graph.issues.map((issue) => (
-            <article key={issue.id} className="setup-issue">
-              <p>
-                {issue.key} ({issue.issue_kind}) {issue.deferred && "— Not now"}
-              </p>
-              <Evidence sources={issue.sources} />
-              <Button
-                disabled={busy || issue.deferred}
-                onClick={() =>
-                  void action(
-                    () =>
-                      ipc<SetupJob>("setup_draft_disposition", {
-                        root_id: rootId,
-                        job_id: job.job_id,
-                        expected_revision: job.revision,
-                        item_ids: issue.item_ids,
-                        disposition: "deferred",
-                      }),
-                    setJob,
-                  )
-                }
-              >
-                Not now
-              </Button>
-            </article>
-          ))}
-          </Section><div className="review-footer"><Button disabled={busy} onClick={() => savePreview()}>
-            Review starting map
-          </Button></div>
+            ))}
+          </Section>
+          <div className="review-footer">
+            <Button disabled={busy} onClick={() => savePreview()}>
+              Review starting map
+            </Button>
+          </div>
           {receipt && (
             <section className="consent">
               <h2>{receiptGroup ? "Save topic group" : "Save starting map"}</h2>

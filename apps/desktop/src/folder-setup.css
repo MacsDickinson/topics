@@ -202,3 +202,33 @@
     padding: var(--space-4);
   }
 }
+
+/* Canonical scope amendments and named before/after understanding. */
+.topic-diff {
+  margin: var(--space-5) 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-card);
+  background: var(--color-background-subtle);
+}
+.topic-diff h5 {
+  font: var(--type-control);
+  font-weight: 600;
+  margin: var(--space-5) 0 var(--space-2);
+}
+.topic-diff > p {
+  color: var(--color-text-muted);
+  font: var(--type-meta);
+}
+.context-review > section,
+.context-review > section > blockquote {
+  margin: var(--space-4) 0;
+}
+.context-review section > blockquote {
+  border-left: 3px solid var(--color-border-info);
+  padding-left: var(--space-4);
+}
+.folder-setup .consent h3 {
+  margin: var(--space-5) 0 var(--space-2);
+}
+.folder-setup > .consent + .content-section { margin-top: var(--space-6); }

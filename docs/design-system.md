@@ -86,4 +86,41 @@ For connecting a notes root, offer a native folder chooser alongside the existin
 
 Folder setup uses a hierarchical list of native selection controls with a role selector and explanation per folder. The exact manifest and exclusions precede the single transmission authorization. The receipt lists its included candidates, dependencies and deferred counts before the save action; changing selection clears the preview. Progress names failed and outstanding inputs instead of implying complete coverage. Topic evidence uses a collapsed disclosure; status is written in text. Graph and list representations must provide equivalent keyboard access and distinguish explicit from inferred links without color alone. Contextual decisions enumerate their scope before confirmation; correction previews show the actual statement, before and after, and the future rule.
 
+### Changed scope and supplemental review
+
+When a job needs fresh consent, keep the coverage context visible and use the
+shared consent surface for **Review changed scope**. Show updated paths with
+unchanged/changed/new labels, removed paths and exclusions before the unchecked
+authorization control. Previewing again clears confirmation; only **Authorize
+and resume** submits the canonical manifest id, fingerprint and job revision.
+Completed subsets and identifiers are backend-owned; presentation must not
+replace the job or imply that the old consent covers changed bytes.
+
+Connection confirmation uses its own named receipt, listing the displayed
+connections before **Confirm connections**. It does not confirm adjacent claim
+revisions. **Add context** uses the shared Field/Button composer and displays the
+saved words under Your context; it supplements rather than replaces or confirms
+the current understanding. Preserve those distinctions in copy and requests.
+
+Named comparisons use `.topic-diff`: Earlier understanding and New evidence
+appear in reading order with source disclosures. Group receipts use **Save topic
+group**, named included candidates and dependency/deferred context, followed by
+the explicit save action. Assertion-kind labels distinguish explicit, inferred,
+unclassified and provisional content without relying on color. Selected-note
+completion remains separate from exclusions, which stay visible in the coverage
+area. Byte limits use readable units and name oversized selected paths beside
+the disabled preview action.
+
+```tsx
+<section className="consent" aria-label="Review changed scope">
+  <h2>Review changed scope</h2>
+  {/* Render the canonical updated, removed and excluded paths here. */}
+  <label className="check">
+    <input type="checkbox" checked={consent} onChange={onConsentChange} />
+    Authorize this updated manifest for the remaining job
+  </label>
+  <Button disabled={!consent || busy} onClick={reconsent}>Authorize and resume</Button>
+</section>
+```
+
 A stale setup job keeps completed work visible and presents a new exact manifest before renewed authorization. Label changed, unchanged and newly selected sources in text and show exclusions; do not imply that a new file inherited an earlier grant. Topic diffs pair prior reported understanding with new cited evidence. Confirming a connection lists its named endpoints and sources separately from confirming statements. Supplemental context displays the user's exact saved words without marking facts confirmed.

@@ -1,0 +1,36 @@
+[WebServer] (node:76128) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 25 tests using 2 workers
+
+(node:76152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76153) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (567ms)
+  ✓   2 tests/canonical-redesign.spec.ts:23:3 › light › light exact updated scope requires fresh keyboard consent (886ms)
+  ✓   3 tests/folder-setup.spec.ts:48:1 › setup offers tree selection and an exact manifest before building (520ms)
+  ✓   4 tests/canonical-redesign.spec.ts:48:3 › light › light supplemental context and connection approval remain separate (508ms)
+  ✓   5 tests/folder-setup.spec.ts:87:1 › selected completion stays distinct from excluded sources (364ms)
+  ✓   6 tests/canonical-redesign.spec.ts:65:3 › light › light named diff and topic-group receipt preserve the reading context (586ms)
+  ✓   7 tests/folder-setup.spec.ts:102:1 › topic map offers graph and list navigation (523ms)
+  ✓   9 tests/folder-setup.spec.ts:148:1 › draft map exposes one exact starting-map receipt without record checkboxes (455ms)
+  ✓   8 tests/canonical-redesign.spec.ts:23:3 › dark › dark exact updated scope requires fresh keyboard consent (584ms)
+  ✓  10 tests/folder-setup.spec.ts:166:1 › a saved topic offers contextual decisions and collapsed evidence (536ms)
+  ✓  11 tests/canonical-redesign.spec.ts:48:3 › dark › dark supplemental context and connection approval remain separate (498ms)
+  ✓  12 tests/folder-setup.spec.ts:192:1 › folder chooser cancellation preserves the path and selection waits for explicit use (242ms)
+  ✓  13 tests/canonical-redesign.spec.ts:65:3 › dark › dark named diff and topic-group receipt preserve the reading context (563ms)
+  ✓  14 tests/folder-setup.spec.ts:217:1 › context is saved as the exact user statement without correction or confirmation (624ms)
+  ✓  15 tests/canonical-redesign.spec.ts:23:3 › narrow › narrow exact updated scope requires fresh keyboard consent (533ms)
+  ✓  16 tests/folder-setup.spec.ts:240:1 › confirmation previews only the enumerated visible revisions (551ms)
+  ✓  17 tests/canonical-redesign.spec.ts:48:3 › narrow › narrow supplemental context and connection approval remain separate (440ms)
+  ✓  18 tests/folder-setup.spec.ts:264:1 › job watch ignores foreign and older snapshots and displays a newer matching update (382ms)
+  ✓  20 tests/folder-setup.spec.ts:316:1 › tree builds missing intermediate folders from inventory paths and selects descendants (285ms)
+  ✓  19 tests/canonical-redesign.spec.ts:65:3 › narrow › narrow named diff and topic-group receipt preserve the reading context (558ms)
+  ✓  21 tests/folder-setup.spec.ts:330:1 › changed scope requires a new manifest and explicit consent before resuming (471ms)
+  ✓  22 tests/folder-setup.spec.ts:385:1 › connection confirmation previews only the selected connection (571ms)
+  ✓  23 tests/folder-setup.spec.ts:422:1 › a returning root opens the saved map and still offers setup (250ms)
+  ✓  24 tests/folder-setup.spec.ts:435:1 › new evidence shows the prior understanding without accepting the proposed replacement (398ms)
+  ✓  25 tests/folder-setup.spec.ts:488:1 › an oversized selected source is named and must be excluded before preview (229ms)
+
+  25 passed (8.2s)
