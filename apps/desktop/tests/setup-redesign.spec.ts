@@ -20,7 +20,8 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
     await expect(
       page.getByRole("heading", { name: "Choose notes to analyse" }),
     ).toBeVisible();
-    await page.screenshot({
+    await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
       path: `evidence/redesign/after/${appearance}-folder-inventory.png`,
       fullPage: true,
     });
@@ -36,7 +37,8 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
     await expect(
       page.getByLabel("Authorize this exact manifest for this job"),
     ).not.toBeChecked();
-    await page.screenshot({
+    await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
       path: `evidence/redesign/after/${appearance}-folder-manifest.png`,
       fullPage: true,
     });
@@ -57,7 +59,8 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
     await expect(
       page.getByRole("button", { name: "Review topic group", exact: true }),
     ).toBeVisible();
-    await page.screenshot({
+    await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
       path: `evidence/redesign/after/${appearance}-starting-map.png`,
       fullPage: true,
     });
@@ -70,7 +73,8 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
     await expect(page.getByRole("checkbox", { name: /^Include/ })).toHaveCount(
       0,
     );
-    await page.screenshot({
+    await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
       path: `evidence/redesign/after/${appearance}-save-map.png`,
       fullPage: true,
     });
@@ -128,7 +132,8 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await page.screenshot({
+    await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
       path: `evidence/redesign/after/${appearance}-context-correction.png`,
       fullPage: true,
     });

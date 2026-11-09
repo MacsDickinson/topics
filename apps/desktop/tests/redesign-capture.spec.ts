@@ -12,6 +12,7 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
     "history",
     "setup",
     "analysis",
+    "manual",
   ] as const) {
     test(`capture ${appearance} ${screen}`, async ({ page }) => {
       await page.setViewportSize({
@@ -152,12 +153,17 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
         await expect(
           page.getByRole("heading", { name: "Review selected notes" }),
         ).toBeVisible();
+      } else if (screen === "manual") {
+        await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
+        await page.getByLabel('Topic name', { exact: true }).fill('Migration questions');
+        await expect(page.getByRole('button', { name: 'Create proposal', exact: true })).toBeEnabled();
       } else await expect(page.getByLabel("Notes folder path")).toBeVisible();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: `evidence/redesign/${phase}/${appearance}-${screen}.png`,
         fullPage: true,

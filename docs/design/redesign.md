@@ -98,3 +98,13 @@ visible selection and explicit confirmation near the consequential action.
 No primitive grants consent, resets selection or calls IPC. New feature screens
 must be checked after integration; this branch cannot claim coverage of screens
 that have not landed.
+
+## Implementation checkpoint
+
+Implemented the structural screen plan and integrated authorized setup checkpoint
+`cad6757` in this isolated branch. All listed primitives are adopted by multiple
+screens; `style.css` is organized into one control/shell/form/reading/search/review
+layer rather than the previous accumulated override blocks. See the
+[verification and screen coverage report](../../apps/desktop/evidence/redesign/README.md)
+for exact commits, tests, before/after screenshots and pending canonical/native
+integration limits. This checkpoint does not cover a later unmerged API delta.
