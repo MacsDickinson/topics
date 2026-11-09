@@ -12,7 +12,7 @@ The sidebar opens Topics, Search, Inbox, History and Sources. Choose or create a
 
 The runtime emits `workspace_run_event` with canonical root/run IDs, monotonic sequence and event; the shell forwards it without wrapping again. React discards wrong-root/run, duplicate, malformed, late and closed-run events, including events received before a start response. Root changes close the old event gate, cancel runtime and core capabilities, clear topic/proposal/consent state and reject stale reads. Cancellation errors remain retryable. The Rust lifecycle gate serializes start/cancel/root changes. App-level capabilities are revoked on every terminal path.
 
-The packaged desktop executable doubles as the scoped MCP proxy: exact `--topics-mcp-proxy` dispatch occurs before Tauri, application data or root discovery. Production never enables native test plugins or a fake provider. `TOPICS_CODEX_PATH` can select an absolute installed executable; Finder discovery checks only known executable metadata (`~/.local/bin/codex`, Homebrew paths), then PATH. Codex owns its own sign-in; Topics does not read credentials or implement login.
+The packaged desktop executable doubles as the scoped MCP proxy: exact `--topics-mcp-proxy` dispatch occurs before Tauri, application data or root discovery. Production never enables native test plugins or a fake provider. `TOPICS_CODEX_PATH` can select an absolute installed executable; Finder discovery checks only known executable metadata: on supported Macs, the exact retained standalone release for the pinned Codex version and host architecture, then `~/.local/bin/codex`, Homebrew paths, and PATH. Codex owns its own sign-in; Topics does not read credentials or implement login.
 
 ## Local development
 
