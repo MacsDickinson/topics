@@ -1,29 +1,30 @@
 # Topics design system
 
-Status: initial standards draft, 2026-11-09. This is the authoritative direction for UI work. The names, values and component examples below are **proposed**, not a claim that the current implementation provides them. Reconcile this document with the implementation and its actual APIs in the dependent implementation change. See the [reference review](design/reference-review.md) and [screen specifications](design/screens.md).
+Status: reconciled with the desktop implementation on 2026-11-09. The CSS in [`tokens.css`](../apps/desktop/src/tokens.css) and [`style.css`](../apps/desktop/src/style.css) is the source of truth for implemented values. The guidance below also identifies desired behavior that still needs verification or implementation. See the [reference review](design/reference-review.md) and [screen specifications](design/screens.md).
 
 ## Principles
 
 Topics is a local-first reading and review workspace. Give notes and evidence room to breathe; make provenance, uncertainty, privacy and the human decision visible. Use calm neutral layers, thin boundaries, restrained elevation, compact navigation and blue for actions or selection. Preserve native/offline operation, system fonts and existing behavior; presentation must not imply cloud consent, acceptance or capabilities that do not exist.
 
-## Foundations (proposed)
+## Implemented foundations
 
-Use primitives only in the central theme mapping; components consume semantic roles. Final names and values must be reconciled with code, and contrast measured on rendered foreground/background pairs in both themes before adoption.
+`tokens.css` maps semantic roles directly to colors for light and, under `prefers-color-scheme: dark`, dark system appearance. There is no user theme override. The legacy aliases `--line`, `--muted` and `--blue` point to semantic roles. Prefer semantic roles in new work; the full values and both mappings live in the CSS.
 
-| Role family | Proposed names and use |
+| Family | Implemented roles (prefix shown once) |
 | --- | --- |
-| Text | `--color-text-primary` reading and headings; `--color-text-secondary` supporting text; `--color-text-muted` metadata; `--color-text-on-action` on filled actions; `--color-text-danger` errors |
-| Background | `--color-background-canvas` outer workspace; `--color-background-surface` panels and reading surface; `--color-background-subtle` grouped content; `--color-background-action` primary button; `--color-background-selected` current item; `--color-background-danger` error context |
-| Border | `--color-border-default` separators and panels; `--color-border-strong` controls; `--color-border-focus` visible focus; `--color-border-danger` invalid state |
-| Other | Add semantic success, warning and highlight roles as needed, with paired text/background roles. Never encode meaning in hue alone. |
+| `--color-text-` | `primary`, `secondary`, `muted`, `accent`, `on-action`, `info`, `warning`, `success`, `danger` |
+| `--color-background-` | `app`, `sidebar`, `panel`, `subtle`, `hover`, `selected`, `action`, `action-hover`, `info`, `warning`, `success`, `danger`, `highlight` |
+| `--color-border-` | `subtle`, `default`, `strong`, `focus`, `info`, `warning`, `danger` |
 
-Map the same roles centrally for light and dark, including selected, hover, pressed, disabled, focus and error states; preserve the OS preference when adding a theme mechanism, with any explicit user choice taking precedence. Do not implement per-component color inversions. Avoid claiming dark support until every surface and state is checked. Prefer opaque surfaces with sufficient contrast to decorative transparency.
+Spacing is `--space-1` through `--space-6` (4, 8, 12, 16, 24, 32px). Radii are `--radius-control` 8px, `--radius-card` 10px, `--radius-panel` 14px and `--radius-pill` 999px. `--motion-fast` is 120ms ease; `--elevation-panel` supplies a theme-specific subtle shadow. Reduced-motion CSS removes transitions and animation. Existing CSS still contains literal spacing and dimensions; these tokens are available, not a claim of complete migration.
 
-Proposed spacing scale: 4, 8, 12, 16, 24, 32px (`--space-1` through `--space-6`); use 8–12px within a control, 16px within a group, 24–32px between sections. Proposed radii: 6px controls, 10px cards, 14px panels (`--radius-control`, `--radius-card`, `--radius-panel`). Use a subtle panel shadow (`--elevation-panel`) sparingly; borders must also establish edges when shadows are unavailable. Proposed motion: `--motion-fast: 120ms` for state feedback and `--motion-standard: 180ms` for disclosure, with reduced motion removing nonessential animation. These are starting points, not measured implementation constants.
+The local system font stack requires no network. Composite `--type-page`, `--type-section`, `--type-body` and `--type-meta` define 26px/1.25/650, 17px/1.4/600, 14px/1.55/400 and 12px/1.5/400 respectively. Headings use the first two; not all text uses a composite token. A separate reading or control type role is not implemented.
 
-Use the existing local system font stack. Proposed type roles specify size / line height / weight: page title 26px / 32px / 650, section 17px / 24px / 600, body 14px / 22px / 400, reading 16px / 26px / 400, metadata 12px / 18px / 400, control 14px / 20px / 500. Define roles as reusable composite styles rather than scattering metrics; keep color separate. Support zoom and user font settings, and avoid truncating content needed for a decision.
+## Implemented CSS primitives
 
-## Components and states (proposed conventions)
+These are CSS classes and native elements, not a React component library. Global buttons, inputs, textareas and selects share control styling and focus-visible outlines; `.primary` and `.quiet` modify buttons. `.badge` has `.pending`, `.accepted` and `.conflict` variants; `.error`, `.notice`, `.empty`, `.candidate`, `.run-panel` and `.source-evidence` provide shared surfaces. Navigation uses `aria-current`, while topic and source selection use `aria-pressed`. Hover, disabled and focus-visible styles exist; distinct pressed and busy button variants are not established. For example, `<span class="badge pending">Pending</span>` is a non-interactive status label. Keep meanings in text as well as color.
+
+## Component and state guidance
 
 - **Navigation:** named controls, current page announced with `aria-current`; selected styling has a shape or other cue as well as color. Counts supplement labels and are not the only status signal.
 - **Buttons:** primary for the next main action, secondary for alternatives, quiet for low emphasis, danger for destructive actions. Use actual buttons, descriptive labels and accessible names for icon-only controls. Provide default, hover, pressed, focus-visible, disabled and busy states. Disabled controls need nearby explanation when the reason is not obvious.
@@ -42,7 +43,7 @@ At comfortable desktop widths use navigation plus a flexible content area; list/
 
 Every future UI feature must reuse design-system tokens, components and patterns. If a feature exposes a missing token, component, state or pattern, extend the design system and its documentation/examples in the **same change**, before or alongside the feature. Prefer extending an existing role over a one-off literal; if a genuinely new role is needed, describe its purpose and both theme mappings.
 
-Worked gap example: a future review adds a “needs attention” state. First check existing warning and error roles and badges. If neither communicates the state, add a semantic warning text/background/border mapping and a badge or notice variant in both themes, document its use and a small example here, then use it in the feature. Verify contrast, text meaning, keyboard behavior if interactive, and reduced motion. These names and APIs remain illustrative until implemented.
+Worked gap example: a future review adds a “needs attention” state. First check existing warning and error roles and badges. If neither communicates the state, add a semantic warning text/background/border mapping and a badge or notice variant in both themes, document its use and a small example here, then use it in the feature. Verify contrast, text meaning, keyboard behavior if interactive, and reduced motion. The suggested new role is illustrative; inspect the existing warning roles and badge first.
 
 Definition of done / review checklist:
 

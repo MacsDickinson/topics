@@ -1,6 +1,6 @@
 # Screen specifications
 
-These are proposed visual and interaction targets for the existing flows, based on source inspection on 2026-11-09, not a claim of implemented layout or new backend behavior. Apply the [design system](../design-system.md); retain current data and consent semantics.
+These specifications describe existing flows and desired interaction behavior, based on source inspection on 2026-11-09. They are review targets, not proof that every state or accessibility behavior has been verified. Apply the [design system](../design-system.md); retain current data and consent semantics.
 
 ```text
 Desktop shell                         Narrow window
