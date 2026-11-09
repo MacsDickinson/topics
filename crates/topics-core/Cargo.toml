@@ -14,3 +14,7 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 [features]
 default = []
 typescript = ["dep:ts-rs"]
+
+[[example]]
+name = "export_setup_types"
+required-features = ["typescript"]
