@@ -8,10 +8,12 @@ publish = false
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+tauri-plugin-dialog = "=2.8.4"
 tauri = { version = "2", features = [] }
 serde = { version = "1" }
 serde_json = "1"
 topics-core = { path = "../../../crates/topics-core" }
+topics-setup = { path = "../../../crates/topics-setup" }
 topics-runtime = { path = "../../../crates/topics-runtime" }
 topics-store = { path = "../../../crates/topics-store" }
 

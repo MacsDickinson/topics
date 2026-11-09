@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/topics-core", "crates/topics-store", "crates/topics-cli", "crates/topics-bdd", "crates/topics-runtime", "apps/desktop/src-tauri"]
+members = ["crates/topics-core", "crates/topics-store", "crates/topics-cli", "crates/topics-bdd", "crates/topics-runtime", "crates/topics-setup", "apps/desktop/src-tauri"]
 resolver = "2"
 
 [workspace.package]
@@ -13,3 +13,4 @@ serde_json = "1"
 topics-core = { path = "crates/topics-core" }
 topics-store = { path = "crates/topics-store" }
 topics-runtime = { path = "crates/topics-runtime" }
+topics-setup = { path = "crates/topics-setup" }
