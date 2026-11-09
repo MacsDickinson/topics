@@ -1,5 +1,6 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 import { writeFileSync } from "node:fs";
+import { waitForTerminal } from "../../scripts/live-setup-observation.mjs";
 
 describe("Genuine Codex synthetic setup through native services", () => {
   it(
@@ -54,29 +55,15 @@ describe("Genuine Codex synthetic setup through native services", () => {
       else await $("label*=Authorize this exact manifest").$("input").click();
       await $("button=Build starting map").click();
       await $("h1=Starting map").waitForDisplayed();
-      try { await browser.waitUntil(
-        async () =>
-          (await $(".run-panel [role=status]").getText()).startsWith(
-            "Selected notes analysed",
-          ),
-        {
-          timeout: 180000,
-          timeoutMsg: "Synthetic job did not complete with full coverage",
-        },
-      );
-      } catch (error) {
-        const failed = await browser.execute(async () => { const core = (window as any).__TAURI__.core; const root = (await core.invoke("workspace_root_get", { request: {} })).root; return core.invoke("setup_jobs_list", { request: { root_id: root.root_id } }); });
-        console.log("LIVE_SETUP_FAILURE", JSON.stringify(failed));
-        throw error;
-      }
-      const state = await browser.execute(async () => {
+      const getState = async () => browser.execute(async () => {
         const core = (window as any).__TAURI__.core;
-        const root = (await core.invoke("workspace_root_get", { request: {} }))
-          .root;
-        const jobs = await core.invoke("setup_jobs_list", {
-          request: { root_id: root.root_id },
-        });
+        const root = (await core.invoke("workspace_root_get", { request: {} })).root;
+        const jobs = await core.invoke("setup_jobs_list", { request: { root_id: root.root_id } });
         return { root, job: jobs[0] };
+      });
+      let state: any;
+      await waitForTerminal(async () => { state = await getState(); return state.job; }, (observation: unknown) => {
+        writeFileSync(process.env.TOPICS_TEST_OBSERVATION!, JSON.stringify(observation, null, 2));
       });
       expect(state.job.coverage.complete).toEqual(true);
       expect(state.job.status).toEqual("finished");
@@ -93,7 +80,7 @@ describe("Genuine Codex synthetic setup through native services", () => {
       expect(state.job.manifest.batches.flatMap((batch: any) => batch.sources).map((source: any) => source.source.path)).toEqual(["profiles/alex.md"]);
       expect(state.job.coverage.processed.length).toEqual(1);
       expect(state.job.coverage.transmission_authorizations).toEqual(1);
-      console.log("LIVE_SETUP_JOB", JSON.stringify(state.job));
+
       const claims = state.job.graph.items.filter((item: any) => item.candidate.kind === "claim" && item.candidate.claim.sources.some((source: any) => source.kind === "passage"));
       expect(claims.length).toBeGreaterThan(0);
       const claim = claims[0].candidate.claim;
