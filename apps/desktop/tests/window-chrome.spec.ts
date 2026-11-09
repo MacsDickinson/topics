@@ -55,6 +55,12 @@ for (const theme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: theme });
       await page.setViewportSize({ width, height: width === 560 ? 420 : 800 });
       await workspaceFixture(page, { empty: true });
+      // Navigation can finish before React mounts or the root lookup completes.
+      // Start the keyboard sequence only once the disconnected workspace is ready.
+      await expect(page.getByLabel("Notes folder path")).toBeVisible();
+      await page.bringToFront();
+      await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
       const skip = page.getByRole("link", { name: "Skip to content" });
       await page.keyboard.press("Tab");
       await expect(skip).toBeFocused();
