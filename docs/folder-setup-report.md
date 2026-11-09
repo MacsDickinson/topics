@@ -27,6 +27,8 @@ The final signed bundle was built from `76107ad` without the native-test feature
 
 Full assembled output is retained in `features/folder-setup/evidence/assembled-final-check.txt`; the Finder check/build output is adjacent. The genuine run, prior failures and explicitly separate scripted rehearsal are recorded in `apps/desktop/evidence/live-setup-acceptance/REPORT.md` and `apps/desktop/evidence/scripted-setup-rehearsal/REPORT.md`.
 
+Hosted source `1fb98ab` subsequently passed Core (`42566710443`) and all earlier Desktop stages, but the newly added rehearsal rejected CI's unset `CARGO_TARGET_DIR` (`42566710430`). The shared desktop check now supplies Cargo's normal absolute repository target when unset and preserves explicit overrides. A pre-fix invocation probe reproduced the omission; post-fix probes verify all ten npm stages receive the expected default or explicit target and retain rehearsal opt-in. The rehearsal guard and acceptance assertions remain unchanged. See `features/folder-setup/evidence/target-dir-integration.txt`; the corrected source requires its own hosted run.
+
 ## Findings resolved
 
 Independent review caught a real approval mismatch: switching previews could leave a correction displayed while submitting another receipt. Unified approval state, stale-response guards and outgoing ID/fingerprint regressions closed it. Other bounded reviews closed diagnostic provenance spoofing and strengthened the genuine harness to require the exact corrected claim lineage through restart.

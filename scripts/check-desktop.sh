@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../apps/desktop"
+# Native stages run serially and share Cargo's normal repository target by default.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$(cd ../.. && pwd)/target}"
 # npm ci bootstraps the pinned local LTS runtime without changing global Node.
 npm ci
 export PATH="$PWD/node_modules/.bin:$PATH"

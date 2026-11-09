@@ -1,0 +1,4 @@
+Pre-fix actual check-desktop.sh from HEAD with CARGO_TARGET_DIR unset: npm stub detected missing target (exit93). This is an invocation probe, not a native run. Hosted run42566710430 independently failed the real rehearsal guard.
+Actual check-desktop.sh executed with npm stub; no package/network/provider/native calls. Project-local Node version check ran.
+unset: passed; 10 npm stages received exact absolute target; scripted rehearsal opt-in retained
+explicit: passed; 10 npm stages received exact absolute target; scripted rehearsal opt-in retained
