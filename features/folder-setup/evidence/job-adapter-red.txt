@@ -1,0 +1,246 @@
+Runnable core authorized4815346 (local47112e9), previous facade stub4260dfc.
+Command: cargo test -p topics-setup --test protocol --offline -- --test-threads=1 (own target, debug0, incremental0)
+Source restored to current implementation in finally after recording baseline RED.
+
+   Compiling libsqlite3-sys v0.36.0
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-core)
+   Compiling rusqlite v0.38.0
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-runtime)
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-store)
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 5.58s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 10 tests
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... 
+running 1 test
+
+thread 'ambiguity_stays_an_issue_and_model_success_has_no_approval_surface' (6638144) panicked at crates/topics-setup/tests/protocol.rs:528:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... FAILED
+
+failures:
+
+failures:
+    ambiguity_stays_an_issue_and_model_success_has_no_approval_surface
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.15s
+
+FAILED
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... 
+running 1 test
+
+thread 'failed_turn_preserves_other_batches_and_retry_does_not_duplicate' (6638152) panicked at crates/topics-setup/tests/protocol.rs:312:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... FAILED
+
+failures:
+
+failures:
+    failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.13s
+
+FAILED
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... 
+running 1 test
+
+thread 'hundred_documents_use_exact_multiple_scopes_and_one_draft_graph' (6638155) panicked at crates/topics-setup/tests/protocol.rs:242:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... FAILED
+
+failures:
+
+failures:
+    hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 1.25s
+
+FAILED
+test inventory_is_local_and_consent_starts_one_bounded_job ... 
+running 1 test
+
+thread 'inventory_is_local_and_consent_starts_one_bounded_job' (6638273) panicked at crates/topics-setup/tests/protocol.rs:212:18:
+authorized setup must schedule bounded turns: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test inventory_is_local_and_consent_starts_one_bounded_job ... FAILED
+
+failures:
+
+failures:
+    inventory_is_local_and_consent_starts_one_bounded_job
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.12s
+
+FAILED
+test multiple_tool_calls_validate_the_runtime_combined_buffer_once ... 
+running 1 test
+
+thread 'multiple_tool_calls_validate_the_runtime_combined_buffer_once' (6638286) panicked at crates/topics-setup/tests/protocol.rs:813:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test multiple_tool_calls_validate_the_runtime_combined_buffer_once ... FAILED
+
+failures:
+
+failures:
+    multiple_tool_calls_validate_the_runtime_combined_buffer_once
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.08s
+
+FAILED
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6638289) panicked at crates/topics-setup/tests/protocol.rs:349:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... FAILED
+
+failures:
+
+failures:
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.12s
+
+FAILED
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... 
+running 1 test
+
+thread 'private_sources_and_unrelated_topic_inventory_never_reach_the_child' (6638292) panicked at crates/topics-setup/tests/protocol.rs:500:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... FAILED
+
+failures:
+
+failures:
+    private_sources_and_unrelated_topic_inventory_never_reach_the_child
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.31s
+
+FAILED
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... 
+running 1 test
+
+thread 'restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids' (6638303) panicked at crates/topics-setup/tests/protocol.rs:699:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... FAILED
+
+failures:
+
+failures:
+    restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.12s
+
+FAILED
+test root_switch_clears_old_context_and_rejects_old_job_launches ... 
+running 1 test
+
+thread 'root_switch_clears_old_context_and_rejects_old_job_launches' (6638327) panicked at crates/topics-setup/tests/protocol.rs:641:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test root_switch_clears_old_context_and_rejects_old_job_launches ... FAILED
+
+failures:
+
+failures:
+    root_switch_clears_old_context_and_rejects_old_job_launches
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.11s
+
+FAILED
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... 
+running 1 test
+
+thread 'unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources' (6638330) panicked at crates/topics-setup/tests/protocol.rs:573:50:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Setup orchestration pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... FAILED
+
+failures:
+
+failures:
+    unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.12s
+
+FAILED
+
+failures:
+
+---- ambiguity_stays_an_issue_and_model_success_has_no_approval_surface stdout ----
+
+thread 'ambiguity_stays_an_issue_and_model_success_has_no_approval_surface' (6638142) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: ambiguity_stays_an_issue_and_model_success_has_no_approval_surface
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- failed_turn_preserves_other_batches_and_retry_does_not_duplicate stdout ----
+
+thread 'failed_turn_preserves_other_batches_and_retry_does_not_duplicate' (6638150) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+
+---- hundred_documents_use_exact_multiple_scopes_and_one_draft_graph stdout ----
+
+thread 'hundred_documents_use_exact_multiple_scopes_and_one_draft_graph' (6638153) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+
+---- inventory_is_local_and_consent_starts_one_bounded_job stdout ----
+
+thread 'inventory_is_local_and_consent_starts_one_bounded_job' (6638271) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: inventory_is_local_and_consent_starts_one_bounded_job
+
+---- multiple_tool_calls_validate_the_runtime_combined_buffer_once stdout ----
+
+thread 'multiple_tool_calls_validate_the_runtime_combined_buffer_once' (6638284) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: multiple_tool_calls_validate_the_runtime_combined_buffer_once
+
+---- pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs stdout ----
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6638287) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+---- private_sources_and_unrelated_topic_inventory_never_reach_the_child stdout ----
+
+thread 'private_sources_and_unrelated_topic_inventory_never_reach_the_child' (6638290) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: private_sources_and_unrelated_topic_inventory_never_reach_the_child
+
+---- restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids stdout ----
+
+thread 'restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids' (6638300) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids
+
+---- root_switch_clears_old_context_and_rejects_old_job_launches stdout ----
+
+thread 'root_switch_clears_old_context_and_rejects_old_job_launches' (6638325) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: root_switch_clears_old_context_and_rejects_old_job_launches
+
+---- unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources stdout ----
+
+thread 'unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources' (6638328) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources
+
+
+failures:
+    ambiguity_stays_an_issue_and_model_success_has_no_approval_surface
+    failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+    hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+    inventory_is_local_and_consent_starts_one_bounded_job
+    multiple_tool_calls_validate_the_runtime_combined_buffer_once
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+    private_sources_and_unrelated_topic_inventory_never_reach_the_child
+    restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids
+    root_switch_clears_old_context_and_rejects_old_job_launches
+    unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources
+
+test result: FAILED. 0 passed; 10 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.62s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`
+
+Exit: 101
