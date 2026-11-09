@@ -1,0 +1,40 @@
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-core)
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-store)
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-runtime)
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 6.26s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints ... 
+running 1 test
+
+thread 'renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints' (6777352) panicked at crates/topics-setup/tests/protocol.rs:1277:22:
+explicit renewed manifest consent must retain the existing draft job: ApiError { code: "not_implemented", message: "Explicit job reconsent is pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints ... FAILED
+
+failures:
+
+failures:
+    renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 16 filtered out; finished in 2.89s
+
+FAILED
+
+failures:
+
+---- renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints stdout ----
+
+thread 'renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints' (6777350) panicked at crates/topics-setup/tests/protocol.rs:35:13:
+synthetic protocol child failed: renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 16 filtered out; finished in 2.91s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`

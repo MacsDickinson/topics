@@ -1204,3 +1204,119 @@ fn graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it() {
         },
     );
 }
+
+#[test]
+fn renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints() {
+    isolated(
+        "renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints",
+        || {
+            let mut f = Fixture::new(4, "hold_second");
+            let job = f.authorize_attempts(2, 4);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while f.transmissions().len() < 2 {
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            let running = f.coordinator.get(f.request(&job)).unwrap();
+            let paused = f
+                .coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: running.revision,
+                    action: SetupJobAction::Pause,
+                })
+                .unwrap();
+            let completed_paths = paused.coverage.processed.clone();
+            let original = paused
+                .batches
+                .iter()
+                .find(|batch| batch.status == SetupBatchStatus::Completed)
+                .unwrap()
+                .clone();
+            let changed = paused.coverage.outstanding[0].clone();
+            fs::write(
+                PathBuf::from(&f.root.path).join(&changed),
+                "# Synthetic changed account\n\nAlex A42 leads Ledger. New date context.\n",
+            )
+            .unwrap();
+            let added = "meetings/extra.md";
+            fs::write(
+                PathBuf::from(&f.root.path).join(added),
+                "# Synthetic new account\n\nAlex A42 leads Ledger.\n",
+            )
+            .unwrap();
+            f.files.push(added.into());
+            let reconsented = {
+                let service = f.service.lock().unwrap();
+                let mut limits = job.manifest.limits.clone();
+                limits.max_files_per_batch = 5; // Intentionally mix completed + outstanding in one new batch.
+                let manifest = service
+                    .setup_manifest_preview(SetupManifestPreviewRequest {
+                        root_id: f.root.root_id.clone(),
+                        spec: ScopeSpec {
+                            files: f.files.clone(),
+                            folders: vec![],
+                            date_from: None,
+                            date_to: None,
+                        },
+                        roles: job.manifest.roles.clone(),
+                        limits,
+                        runtime: job.manifest.runtime.clone(),
+                    })
+                    .unwrap();
+                service
+                    .setup_job_reconsent(SetupJobReconsentRequest {
+                        root_id: f.root.root_id.clone(),
+                        job_id: job.job_id.clone(),
+                        expected_revision: paused.revision,
+                        manifest_id: manifest.manifest_id,
+                        expected_fingerprint: manifest.fingerprint,
+                    })
+                    .expect("explicit renewed manifest consent must retain the existing draft job")
+            };
+            assert_eq!(reconsented.job_id, job.job_id);
+            assert_eq!(reconsented.prior_consents.len(), 1);
+            let retained = reconsented.prior_consents[0]
+                .batches
+                .iter()
+                .find(|batch| batch.batch_id == original.batch_id)
+                .unwrap();
+            assert_eq!(retained.run_id, original.run_id);
+            assert_eq!(retained.scope_id, original.scope_id);
+            assert_eq!(retained.proposal_ids, original.proposal_ids);
+            assert_eq!(reconsented.manifest.batches.len(), 1);
+            assert_eq!(reconsented.batches[0].completed_source_ids.len(), 2);
+            fs::write(f.temp.path().join("mode"), "graph").unwrap();
+            f.coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: reconsented.revision,
+                    action: SetupJobAction::Resume,
+                })
+                .unwrap();
+            let done = f.done(&job);
+            assert_eq!(done.coverage.processed.len(), 5);
+            assert_eq!(done.coverage.transmission_authorizations, 2);
+            assert_eq!(done.coverage.model_calls, 3);
+            assert_eq!(done.graph.items.len(), 3);
+            let sent = f.transmissions();
+            assert_eq!(sent.len(), 3);
+            assert_eq!(
+                sent[2]["context"]["sources"].as_array().unwrap().len(),
+                3,
+                "fresh capability must contain only outstanding sources, not the five-file manifest batch"
+            );
+            for path in completed_paths {
+                let count = sent
+                    .iter()
+                    .flat_map(|turn| turn["context"]["sources"].as_array().unwrap())
+                    .filter(|source| source["summary"]["path"] == path)
+                    .count();
+                assert_eq!(count, 1, "completed source retransmitted after reconsent");
+            }
+        },
+    );
+}
