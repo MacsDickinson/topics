@@ -664,6 +664,50 @@ fn empty_host(base: Arc<Host>) -> Arc<EmptyCheckpointHost> {
         finished: None,
     })
 }
+struct SpoofedPublicationHost;
+impl HostTools for SpoofedPublicationHost {
+    fn call(&self, _: &str, _: Value) -> WorkspaceResult<Value> {
+        panic!("empty synthetic turn must not call tools")
+    }
+    fn requires_empty_commit(&self) -> bool {
+        true
+    }
+    fn commit_candidates(&self, _: Vec<Candidate>, _: CommitPermit) -> WorkspaceResult<()> {
+        let mut error = ApiError::new("arbitrary_host_error", "PRIVATE_SYNTHETIC_ERROR");
+        error.details = Some(json!({"phase":"preflight", "reason":"version_check_failed"}));
+        Err(error)
+    }
+}
+#[test]
+fn arbitrary_host_valid_pair_cannot_spoof_runtime_publication_origin() {
+    let (_temp, rt, request, _) = fixture("empty_complete");
+    let source = request.notes_root.join("source.md");
+    let before = std::fs::read(&source).unwrap();
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request,
+        Arc::new(SpoofedPublicationHost),
+        Arc::new(move |event| {
+            let _ = tx.send(event);
+        }),
+    )
+    .unwrap();
+    loop {
+        match rx.recv_timeout(Duration::from_secs(15)).unwrap().event {
+            RunEvent::TextDelta { .. } => {}
+            RunEvent::Error { error } => {
+                assert_eq!(
+                    error.details,
+                    Some(json!({"phase":"publication", "reason":"preparation_failed"}))
+                );
+                break;
+            }
+            event => panic!("failed host may not publish or complete: {event:?}"),
+        }
+    }
+    assert_eq!(std::fs::read(source).unwrap(), before);
+    assert!(rx.recv_timeout(Duration::from_millis(30)).is_err());
+}
 #[test]
 fn setup_empty_success_publishes_checkpoint_once_through_real_permit() {
     let (_temp, rt, request, base) = fixture("empty_complete");

@@ -1,5 +1,21 @@
 # Local failure origin diagnostics
 
+## Valid-pair provenance repair followup
+
+Independent review at `fefcfa1` reproduced a real public host-seam bug:
+generic `HostTools::commit_candidates` errors with an exactly valid preflight
+pair were promoted to runtime provenance. This is a diagnostic integrity bug;
+the review demonstrated no current model route, privacy leak or publication
+authority change. The genuine initiating cause is still unknown.
+
+Semantic RED: `cargo test --offline -p topics-runtime --test scripted_runtime
+arbitrary_host_valid_pair -- --nocapture` returned **0 passed, 1 failed** on
+`fefcfa1`, exporting `preflight/version_check_failed` where the observed boundary
+requires `publication/preparation_failed`. Only a local scripted completed empty
+turn and synthetic source/home were used; evidence:
+`/tmp/topics-host-provenance-red.txt`. This is the exact valid-pair spoof,
+not merely an unknown or extra-key shape test.
+
 The genuine 25.1s followup on built `4d3420e` failed with one attempt, zero
 processed sources, empty graph and unknown diagnostics. This instrumentation
 does not establish that failure's initiating cause. No further provider call is
