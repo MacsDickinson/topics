@@ -110,6 +110,9 @@ impl Fixture {
         }
     }
     fn authorize(&self, per_batch: u32) -> SetupJob {
+        self.authorize_attempts(per_batch, 1)
+    }
+    fn authorize_attempts(&self, per_batch: u32, attempts: u32) -> SetupJob {
         let service = self.service.lock().unwrap();
         let manifest = service
             .setup_manifest_preview(SetupManifestPreviewRequest {
@@ -135,7 +138,7 @@ impl Fixture {
                     max_bytes_per_batch: 65536,
                     max_batches: 100,
                     max_candidates_per_turn: 64,
-                    max_turns_per_batch: 1,
+                    max_turns_per_batch: attempts,
                 },
                 runtime: "codex-cli 0.166.0".into(),
             })
@@ -821,4 +824,17 @@ fn multiple_tool_calls_validate_the_runtime_combined_buffer_once() {
             assert_eq!(done.batches[0].proposal_ids.len(), 1);
         },
     );
+}
+
+#[test]
+fn reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn() {
+    isolated("reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn", || {
+        let f = Fixture::new(2, "empty");
+        let job = f.authorize_attempts(2, 4);
+        f.coordinator.start(f.request(&job)).expect("reviewed retry budget permits one turn per attempt");
+        let done = f.done(&job);
+        assert!(done.coverage.complete);
+        assert_eq!(done.coverage.model_calls, 1, "a retry budget does not cause automatic extra turns");
+        assert_eq!(f.transmissions().len(), 1);
+    });
 }

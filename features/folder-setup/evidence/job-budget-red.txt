@@ -1,0 +1,37 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 1.24s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... 
+running 1 test
+
+thread 'reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn' (6645508) panicked at crates/topics-setup/tests/protocol.rs:834:46:
+reviewed retry budget permits one turn per attempt: ApiError { code: "invalid_input", message: "Setup needs bounded batches with one runtime turn each", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... FAILED
+
+failures:
+
+failures:
+    reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.09s
+
+FAILED
+
+failures:
+
+---- reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn stdout ----
+
+thread 'reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn' (6645503) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.11s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`
