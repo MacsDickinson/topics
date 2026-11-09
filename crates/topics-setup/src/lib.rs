@@ -23,6 +23,21 @@ use topics_store::WorkspaceService;
 fn error(code: &str, message: &str) -> ApiError {
     ApiError::new(code, message)
 }
+fn attempt_budget(job: &SetupJob, retry_failed: bool) -> WorkspaceResult<()> {
+    if job.batches.iter().any(|batch| {
+        let pending = matches!(
+            batch.status,
+            SetupBatchStatus::Waiting | SetupBatchStatus::Cancelled
+        ) || (retry_failed && batch.status == SetupBatchStatus::Failed);
+        pending && batch.attempt >= job.manifest.limits.max_turns_per_batch
+    }) {
+        return Err(error(
+            "conflict",
+            "Reviewed batch attempt budget exhausted; preview a new manifest before retrying",
+        ));
+    }
+    Ok(())
+}
 
 struct Active {
     request: SetupJobRequest,
@@ -104,6 +119,7 @@ impl SetupCoordinator {
                 "Resume the job or review changed transmission consent first",
             ));
         }
+        attempt_budget(&job, false)?;
         if job.batches.len() > job.manifest.limits.max_batches as usize {
             return Err(error(
                 "invalid_input",
@@ -167,11 +183,26 @@ impl SetupCoordinator {
                         "Another setup job is running or stopping",
                     ));
                 }
+                attempt_budget(
+                    &self.get(key.clone())?,
+                    request.action == SetupJobAction::RetryFailed,
+                )?;
             }
         }
-        let job = self
+        let result = self
             .inner
-            .with_service(|service| service.setup_job_control(request.clone()))?;
+            .with_service(|service| service.setup_job_control(request.clone()));
+        let job = match result {
+            Ok(job) => job,
+            Err(failure) => {
+                // Core can durably mark NeedsConsent before rejecting a stale
+                // unsent scope. Emit that canonical snapshot without polling.
+                if let Ok(job) = self.get(key) {
+                    self.inner.publish(job);
+                }
+                return Err(failure);
+            }
+        };
         self.inner.publish(job.clone());
         if matches!(
             request.action,
@@ -458,7 +489,10 @@ impl SetupCoordinator {
                 scope_id: capability.scope_id.clone(),
                 run_id: capability.run_id.clone(),
                 notes_root,
-                prompt: host::PROMPT.into(),
+                prompt: format!(
+                    "{} This attempt's reviewed candidate budget is {max_candidates}.",
+                    host::PROMPT
+                ),
             },
             host,
             sink,

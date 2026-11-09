@@ -84,7 +84,22 @@ for line in sys.stdin:
                 'from': {'kind': 'topic', 'id': topics[0]['topic']['id']}, 'relation': 'leads',
                 'to': {'kind': 'topic', 'id': topics[1]['topic']['id']}, 'uncertainty': None,
                 'sources': citations, 'valid_from': None, 'valid_to': None}}
-            if mode == 'ambiguous':
+            if mode in ['pronouns', 'historic']:
+                claims = []
+                for index, source in enumerate(context['sources']):
+                    historic = '2020-01-01' in source['content']
+                    claims.append({'kind': 'claim', 'claim': {
+                        'id': '30000000-0000-4000-8000-%012d' % (count * 100 + index * 2 + 1),
+                        'revision_id': '30000000-0000-4000-8000-%012d' % (count * 100 + index * 2 + 2),
+                        'subject_id': topics[0 if mode == 'pronouns' else 1]['topic']['id'],
+                        'predicate': 'pronouns' if mode == 'pronouns' else 'leader',
+                        'value': 'he/him' if mode == 'pronouns' else ('Taylor' if historic else 'Alex'),
+                        'uncertainty': None, 'sources': [{'kind': 'passage', 'source': source['citation']}],
+                        'supersedes': [], 'recorded_at': '2026-11-09T00:00:00Z',
+                        'valid_from': None if mode == 'pronouns' else ('2020-01-01' if historic else '2026-10-01'),
+                        'valid_to': None}})
+                candidates = claims if mode == 'pronouns' else topics + claims
+            elif mode == 'ambiguous':
                 for topic in topics:
                     topic['topic']['name'] = 'Joe'
                     topic['topic']['topic_kind'] = 'person'

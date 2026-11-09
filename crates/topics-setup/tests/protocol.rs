@@ -937,3 +937,232 @@ fn exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error() {
         },
     );
 }
+
+#[test]
+fn scoped_accepted_correction_is_available_without_human_statement_text_and_cannot_be_revived() {
+    isolated(
+        "scoped_accepted_correction_is_available_without_human_statement_text_and_cannot_be_revived",
+        || {
+            let f = Fixture::new(2, "pronouns");
+            for path in &f.files {
+                fs::write(
+                    PathBuf::from(&f.root.path).join(path),
+                    "# Synthetic Alex A42\n\nAlex A42 uses he/him.\n",
+                )
+                .unwrap();
+            }
+            let person_id = "10000000-0000-4000-8000-000000000001";
+            {
+                let service = f.service.lock().unwrap();
+                let preview = service
+                    .scope_preview(ScopePreviewRequest {
+                        root_id: f.root.root_id.clone(),
+                        spec: ScopeSpec {
+                            files: vec![f.files[0].clone()],
+                            folders: vec![],
+                            date_from: None,
+                            date_to: None,
+                        },
+                    })
+                    .unwrap();
+                let run = service
+                    .analysis_start(AnalysisStartRequest {
+                        root_id: f.root.root_id.clone(),
+                        scope_id: preview.scope_id.clone(),
+                        confirm_unknown: true,
+                    })
+                    .unwrap();
+                let source = service
+                    .scope_read(ScopeReadRequest {
+                        root_id: f.root.root_id.clone(),
+                        scope_id: preview.scope_id,
+                        run_id: run.run_id.clone(),
+                    })
+                    .unwrap()
+                    .sources[0]
+                    .citation
+                    .clone();
+                service
+                    .run_cancel(RunCancelRequest {
+                        root_id: f.root.root_id.clone(),
+                        run_id: run.run_id,
+                    })
+                    .unwrap();
+                let claim = Claim {
+                    id: "40000000-0000-4000-8000-000000000001".into(),
+                    revision_id: "40000000-0000-4000-8000-000000000002".into(),
+                    subject_id: person_id.into(),
+                    predicate: "pronouns".into(),
+                    value: "he/him".into(),
+                    uncertainty: None,
+                    sources: vec![Evidence::Passage { source }],
+                    supersedes: vec![],
+                    recorded_at: "2026-11-09T00:00:00Z".into(),
+                    valid_from: None,
+                    valid_to: None,
+                };
+                let candidates = vec![
+                    Candidate::Topic {
+                        topic: Topic {
+                            id: person_id.into(),
+                            topic_kind: TopicKind::Person,
+                            name: "Synthetic Alex A42".into(),
+                            aliases: vec!["employee A42".into()],
+                            sensitivity: Sensitivity::CloudAllowed,
+                        },
+                    },
+                    Candidate::Claim {
+                        claim: claim.clone(),
+                    },
+                ];
+                let proposal = service
+                    .manual_propose(ManualProposeRequest {
+                        root_id: f.root.root_id.clone(),
+                        candidates: candidates.clone(),
+                    })
+                    .unwrap()
+                    .proposal;
+                service
+                    .proposal_decide(ProposalDecideRequest {
+                        root_id: f.root.root_id.clone(),
+                        proposal_id: proposal.id,
+                        decision: Decision::Approve { candidates },
+                        expected_fingerprint: proposal.fingerprint,
+                    })
+                    .unwrap();
+                let correction = service
+                    .setup_correction_preview(SetupCorrectionPreviewRequest {
+                        root_id: f.root.root_id.clone(),
+                        topic_id: person_id.into(),
+                        revision_ids: vec![claim.revision_id],
+                        predicate: "pronouns".into(),
+                        replacement: "they/them".into(),
+                        statement: "Alex uses they/them. PRIVATE_UNRELATED_HUMAN_SENTINEL".into(),
+                        rule_scope: RuleScope {
+                            source_paths: f.files.clone(),
+                            context: None,
+                        },
+                    })
+                    .unwrap();
+                let result = service
+                    .setup_decide(SetupDecisionRequest {
+                        root_id: f.root.root_id.clone(),
+                        receipt_id: correction.receipt.receipt_id,
+                        expected_fingerprint: correction.receipt.fingerprint,
+                    })
+                    .unwrap();
+                assert_eq!(result.status, SetupDecisionStatus::Completed);
+            }
+            let job = f.authorize(1);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert_eq!(done.coverage.processed.len(), 2);
+            assert!(
+                done.batches
+                    .iter()
+                    .all(|b| b.status == SetupBatchStatus::Completed)
+            );
+            assert!(!done.graph.items.iter().any(|i| matches!(&i.candidate, Candidate::Claim { claim } if claim.predicate == "pronouns" && claim.value == "he/him")), "analysis must not revive the precise suppressed assertion");
+            let sent = f.transmissions();
+            assert!(
+                sent[0]["context"]["topic_contexts"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .flat_map(|view| view["current_claims"].as_array().unwrap())
+                    .any(|claim| claim["predicate"] == "pronouns" && claim["value"] == "they/them")
+            );
+            assert!(
+                !serde_json::to_string(&sent)
+                    .unwrap()
+                    .contains("PRIVATE_UNRELATED_HUMAN_SENTINEL")
+            );
+            let view = f
+                .service
+                .lock()
+                .unwrap()
+                .setup_topic_review(TopicGetRequest {
+                    root_id: f.root.root_id.clone(),
+                    topic_id: person_id.into(),
+                })
+                .unwrap();
+            assert_eq!(
+                view.topic
+                    .current_claims
+                    .iter()
+                    .find(|c| c.predicate == "pronouns")
+                    .unwrap()
+                    .value,
+                "they/them"
+            );
+            assert!(
+                view.reviews
+                    .iter()
+                    .any(|r| r.state == ReviewState::ConfirmedByYou)
+            );
+        },
+    );
+}
+
+#[test]
+fn historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting_truth() {
+    isolated(
+        "historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting_truth",
+        || {
+            let f = Fixture::new(3, "historic");
+            for path in &f.files {
+                let text = if path.starts_with("profiles/") {
+                    "# 2020-01-01 Ledger profile\n\nLedger leader is Taylor.\n"
+                } else {
+                    "# 2026-10-01 Ledger meeting\n\nLedger leader is Alex.\n"
+                };
+                fs::write(PathBuf::from(&f.root.path).join(path), text).unwrap();
+            }
+            let job = f.authorize(1);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            let claims: Vec<_> = done
+                .graph
+                .items
+                .iter()
+                .filter_map(|i| {
+                    if let Candidate::Claim { claim } = &i.candidate {
+                        Some(claim)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            assert_eq!(claims.len(), 2);
+            assert!(
+                claims
+                    .iter()
+                    .any(|c| c.value == "Taylor" && c.valid_from.as_deref() == Some("2020-01-01"))
+            );
+            assert!(
+                claims
+                    .iter()
+                    .any(|c| c.value == "Alex" && c.valid_from.as_deref() == Some("2026-10-01"))
+            );
+            assert_eq!(claims.iter().map(|c| c.sources.len()).sum::<usize>(), 3);
+            assert!(
+                done.graph
+                    .issues
+                    .iter()
+                    .any(|i| i.issue_kind == SetupIssueKind::Contradiction)
+            );
+            assert!(
+                f.service
+                    .lock()
+                    .unwrap()
+                    .topics_list(RootRequest {
+                        root_id: f.root.root_id.clone()
+                    })
+                    .unwrap()
+                    .topics
+                    .is_empty()
+            );
+        },
+    );
+}
