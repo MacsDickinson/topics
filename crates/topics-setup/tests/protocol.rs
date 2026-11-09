@@ -1354,3 +1354,71 @@ fn successful_turn_without_scoped_read_cannot_claim_source_coverage() {
         },
     );
 }
+
+#[test]
+fn optional_prior_context_cannot_crowd_out_deliverable_selected_sources() {
+    isolated(
+        "optional_prior_context_cannot_crowd_out_deliverable_selected_sources",
+        || {
+            let f = Fixture::new(12, "graph");
+            let note = format!(
+                "# Synthetic Alex A42\n\nAlex A42 leads Ledger.\n{}",
+                "x".repeat(24 * 1024)
+            );
+            for path in &f.files {
+                fs::write(PathBuf::from(&f.root.path).join(path), &note).unwrap();
+            }
+            let job = f.authorize(1);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            let sent = f.transmissions();
+            assert!(!sent.is_empty());
+            let mandatory = serde_json::json!({"sources": sent[0]["context"]["sources"], "topic_contexts": [], "draft_context": {"topics":[],"claims":[],"connections":[]}, "candidate_schema": sent[0]["context"]["candidate_schema"]});
+            assert!(
+                mandatory.to_string().len() < topics_runtime::protocol::MAX_FRAME / 2,
+                "the exact selected source is independently deliverable"
+            );
+            assert_eq!(
+                done.coverage.processed.len(),
+                12,
+                "optional completed context must not cause otherwise deliverable selected batches to fail"
+            );
+            assert!(done.coverage.failed.is_empty());
+            assert!(done.coverage.complete);
+            assert_eq!(done.coverage.model_calls, 12);
+            assert_eq!(sent.len(), 12);
+            assert!(
+                sent.iter().any(|turn| turn["context"]["context_notice"]
+                    .as_str()
+                    .is_some_and(|notice| notice.contains("partial"))),
+                "omitting optional prior context requires an explicit partial-context notice"
+            );
+            for turn in &sent {
+                let context = &turn["context"];
+                assert!(context.to_string().len() <= topics_runtime::protocol::MAX_FRAME / 2);
+                assert_eq!(context["sources"].as_array().unwrap().len(), 1);
+                assert_eq!(
+                    context["sources"][0]["content"], note,
+                    "mandatory source bytes must be exact, never truncated"
+                );
+                let topics: std::collections::BTreeSet<_> = context["draft_context"]["topics"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|topic| topic["id"].as_str().unwrap())
+                    .collect();
+                for connection in context["draft_context"]["connections"].as_array().unwrap() {
+                    for endpoint in [&connection["from"], &connection["to"]] {
+                        if endpoint["kind"] == "topic" {
+                            assert!(
+                                topics.contains(endpoint["id"].as_str().unwrap()),
+                                "packed optional graph must keep endpoint dependencies"
+                            );
+                        }
+                    }
+                }
+            }
+            assert_eq!(done.graph.items.len(), 3);
+        },
+    );
+}
