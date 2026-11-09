@@ -33,3 +33,11 @@ The genuine test harness remains on its separate branch pending independent revi
 Required Claude reviews of the Rust core, runtime/coordinator and desktop are blocked by expired CLI OAuth. Tool-free probes returned that error; the user was asked to run `claude auth login`. A fresh Codex review of the new diagnostics and live harness is additional interim verification, not a replacement for the user-required Claude review.
 
 Remaining work: close review findings; diagnose and fix the real setup failure; demonstrate the full genuine journey; verify final assembled native/browser checks and rebuilt signed app; then commit/push the final source to the personal remote and run hosted Linux/macOS CI. No final delivery, hosted CI or remote source update is claimed here.
+
+## Subsequent investigation checkpoint
+
+Independent interim review found and closed two P2 issues: valid-shaped arbitrary host error details could spoof diagnostic provenance, and the genuine harness could accept confirmation of a different claim revision. Typed internal error provenance and exact corrected-claim/history/evidence/rule/context comparisons passed re-review, 137 independently rerun Rust tests, six Node tests and both original counterexamples. These are additional Codex reviews; the required Claude review remains blocked.
+
+A later native attempt narrowed its failure to `host/validation_denied`. An actual-host scratch probe then captured a fictional claim with `recorded_at: 2026-11-09`; core requires a full RFC3339 UTC timestamp. Three same-capability offline replays reproduced the precise error. In copied synthetic app data, changing only that field to a valid UTC timestamp passed full core validation without publishing. This establishes the scratch attempt's cause, not the discarded payload of every earlier native failure. A minimal prompt-format clarification and captured-fixture regression are authorized; schema, validator, coercion, privacy and acceptance rules remain unchanged. No further genuine journey is accepted.
+
+Committed source `1cfd6f5568afecb38bbec6dbd11fda8ba9cc9450` is backed up on the personal remote branch `folder-setup-prototype-2026-11-09`. Hosted checks for that exact WIP source are being monitored; no CI result or final acceptance is implied. The newer timestamp fix will need separate integration and validation.
