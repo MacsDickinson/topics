@@ -1372,7 +1372,10 @@ fn assert_failed_diagnostic(mode: &str, phase: &str, reason: &str) {
     assert!(done.batches[0].proposal_ids.is_empty());
     assert!(done.batches[0].completed_source_ids.is_empty());
     assert_eq!(fs::read(path).unwrap(), original);
-    assert_eq!(f.transmissions().len(), usize::from(mode == "fail_first"));
+    assert_eq!(
+        f.transmissions().len(),
+        usize::from(!matches!(mode, "no_read" | "wrong_version"))
+    );
     let model_context = serde_json::to_string(&f.transmissions()).unwrap();
     for diagnostic in [
         "model_terminal_failed",
@@ -1411,6 +1414,47 @@ fn unread_scope_retains_distinct_safe_reason_without_publication() {
         || assert_failed_diagnostic("no_read", "publication", "scope_not_read"),
     );
 }
+
+macro_rules! diagnostic_case {
+    ($name:ident, $mode:literal, $phase:literal, $reason:literal) => {
+        #[test]
+        fn $name() {
+            isolated(stringify!($name), || {
+                assert_failed_diagnostic($mode, $phase, $reason)
+            });
+        }
+    };
+}
+diagnostic_case!(
+    local_failure_origin_candidate_schema,
+    "candidate_schema",
+    "candidate",
+    "schema_denied"
+);
+diagnostic_case!(
+    local_failure_origin_host_validation,
+    "host_denied",
+    "host",
+    "validation_denied"
+);
+diagnostic_case!(
+    local_failure_origin_transport,
+    "malformed",
+    "transport",
+    "protocol_denied"
+);
+diagnostic_case!(
+    local_failure_origin_callback,
+    "bad_callback",
+    "callback",
+    "authorization_denied"
+);
+diagnostic_case!(
+    local_failure_origin_preflight,
+    "wrong_version",
+    "preflight",
+    "version_check_failed"
+);
 
 #[test]
 fn optional_prior_context_cannot_crowd_out_deliverable_selected_sources() {

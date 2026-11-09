@@ -9,7 +9,7 @@ SETTINGS = Path(@SETTINGS@)
 LOG = Path(@LOG@)
 FLAGS = @FLAGS@
 if '--version' in sys.argv:
-    print('codex-cli 0.166.0')
+    print('codex-cli 0.165.0' if SETTINGS.read_text() == 'wrong_version' else 'codex-cli 0.166.0')
     sys.exit()
 
 
@@ -113,6 +113,12 @@ for line in sys.stdin:
                     'candidates': [topic['topic']['id'] for topic in topics], 'sources': citations}]
             else:
                 candidates = topics + [connection]
+            if mode == 'candidate_schema':
+                topics[0]['topic']['private'] = 'PRIVATE_ERROR_SENTINEL'
+            if mode == 'host_denied':
+                connection['sources'][0]['passage_hash'] = '0' * 64
+            if mode == 'bad_callback':
+                call(99, 'scope_sources', {'scope_id': '00000000-0000-4000-8000-000000000000'})
             if mode == 'graph_claim':
                 candidates.append({'kind': 'claim', 'claim': {
                     'id': '10000000-0000-4000-8000-000000000004',
@@ -130,6 +136,9 @@ for line in sys.stdin:
                 call(101, 'propose_changes', {'candidates': candidates})
         emit({'method': 'item/agentMessage/delta', 'params': {
             'threadId': 'thread', 'turnId': 'turn', 'itemId': 'text', 'delta': 'Synthetic turn buffered'}})
+        if mode == 'malformed':
+            print('PRIVATE_ERROR_SENTINEL', flush=True)
+            sys.exit()
         if mode == 'hold_second' and count == 2:
             continue
         terminal('failed' if mode == 'fail_first' and count == 1 else 'completed')

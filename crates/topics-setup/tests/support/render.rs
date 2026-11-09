@@ -39,6 +39,11 @@ pub fn render(directory: &Path, mode: &str) -> io::Result<Value> {
         "pronouns",
         "historic",
         "no_read",
+        "candidate_schema",
+        "host_denied",
+        "malformed",
+        "bad_callback",
+        "wrong_version",
     ]
     .contains(&mode)
     {

@@ -9,7 +9,7 @@ fn failed_batch_persists_only_exact_allowlisted_diagnostic_pairs() {
     let turn = json!({"phase":"turn","reason":"model_terminal_failed"});
     let publication = json!({"phase":"publication","reason":"scope_not_read"});
     let sentinel = "PRIVATE_ERROR_SENTINEL";
-    let cases = vec![
+    let mut cases = vec![
         (Some(turn.clone()), Some(turn.clone())),
         (Some(publication.clone()), Some(publication)),
         (None, None),
@@ -43,6 +43,21 @@ fn failed_batch_persists_only_exact_allowlisted_diagnostic_pairs() {
             None,
         ),
     ];
+    // Contract fixture is reviewable independently of the sanitizer implementation.
+    for line in include_str!("../../../features/folder-setup/FAILURE-ORIGINS.md").lines() {
+        if line.starts_with("| `") {
+            let fields: Vec<_> = line.split('`').collect();
+            let allowed = json!({"phase":fields[1],"reason":fields[3]});
+            cases.push((Some(allowed.clone()), Some(allowed.clone())));
+            let mut extra = allowed;
+            extra["private"] = json!(sentinel);
+            cases.push((Some(extra), None));
+            cases.push((
+                Some(json!({"phase":"PRIVATE_ERROR_SENTINEL","reason":fields[3]})),
+                None,
+            ));
+        }
+    }
     for (details, expected) in cases {
         let mut f = Fixture::new();
         f.prepare_default(1);
