@@ -14,9 +14,11 @@ assertNativeEnvironment(sessionEnvironment, process.env.TOPICS_TEST_SANDBOX);
 const live = process.env.TOPICS_TEST_LIVE === "1";
 const setup = process.env.TOPICS_TEST_SETUP === "1";
 const session = setup
-  ? process.env.TOPICS_TEST_SETUP_RESTART === "1"
-    ? "setup-restart"
-    : "setup"
+  ? process.env.TOPICS_TEST_SETUP_RECONSENT === "1"
+    ? "setup-reconsent"
+    : process.env.TOPICS_TEST_SETUP_RESTART === "1"
+      ? "setup-restart"
+      : "setup"
   : process.env.TOPICS_TEST_STARTUP === "1"
     ? process.env.TOPICS_APP_DATA_DIR
       ? "relative"
@@ -60,9 +62,11 @@ export const config = {
   runner: "local",
   specs: [
     setup
-      ? process.env.TOPICS_TEST_SETUP_RESTART === "1"
-        ? "./tests/native/setup-restart.ts"
-        : "./tests/native/setup.ts"
+      ? process.env.TOPICS_TEST_SETUP_RECONSENT === "1"
+        ? "./tests/native/setup-reconsent.ts"
+        : process.env.TOPICS_TEST_SETUP_RESTART === "1"
+          ? "./tests/native/setup-restart.ts"
+          : "./tests/native/setup.ts"
       : live
         ? process.env.TOPICS_TEST_LIVE_RESTART === "1"
           ? "./tests/native/live-restart.ts"

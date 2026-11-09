@@ -1,0 +1,47 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts --grep selected completion stays
+
+[WebServer] (node:60779) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:60781) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/folder-setup.spec.ts:87:1 › selected completion stays distinct from excluded sources (5.6s)
+
+
+  1) tests/folder-setup.spec.ts:87:1 › selected completion stays distinct from excluded sources ────
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('status')
+    Expected substring: "Selected notes analysed"
+    Received string:    "finished: 1 of 1 processed, 0 outstanding, 0 failed, 1 excluded."
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('status') with timeout 5000ms
+      - waiting for getByRole('status')
+        14 × locator resolved to <p role="status">…</p>
+           - unexpected value "finished: 1 of 1 processed, 0 outstanding, 0 failed, 1 excluded."
+
+
+      88 |   await workspaceFixture(page);
+      89 |   await setupJob(page);
+    > 90 |   await expect(page.getByRole("status")).toContainText("Selected notes analysed");
+         |                                          ^
+      91 |   await expect(page.getByRole("status")).toContainText("1 of 1 selected notes");
+      92 |   await expect(page.getByText("1 excluded source", { exact: false }).first()).toBeVisible();
+      93 |   await expect(page.getByText(/entire folder fully analysed/i)).toHaveCount(0);
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:90:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-selected-comp-c966b-tinct-from-excluded-sources/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-selected-comp-c966b-tinct-from-excluded-sources/error-context.md
+
+  1 failed
+    tests/folder-setup.spec.ts:87:1 › selected completion stays distinct from excluded sources ─────

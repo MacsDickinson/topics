@@ -84,6 +84,21 @@ test("setup offers tree selection and an exact manifest before building", async 
   ).toHaveCount(0);
 });
 
+test("selected completion stays distinct from excluded sources", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await setupJob(page);
+  await expect(page.getByRole("status")).toContainText(
+    "Selected notes analysed",
+  );
+  await expect(page.getByRole("status")).toContainText("1 of 1 selected notes");
+  await expect(
+    page.getByText("1 excluded source", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(page.getByText(/entire folder fully analysed/i)).toHaveCount(0);
+});
+
 test("topic map offers graph and list navigation", async ({ page }) => {
   await workspaceFixture(page);
   await setupJob(page);
@@ -272,7 +287,9 @@ test("job watch ignores foreign and older snapshots and displays a newer matchin
       for (const fn of Object.values(w.listeners))
         (fn as Function)({ event: "setup_job_event", id: 2, payload });
   });
-  await expect(page.getByRole("status")).toContainText("finished");
+  await expect(page.getByRole("status")).toContainText(
+    "Selected notes analysed",
+  );
   await page.evaluate(() => {
     const w = window as any;
     const payload = {
@@ -288,7 +305,9 @@ test("job watch ignores foreign and older snapshots and displays a newer matchin
     for (const fn of Object.values(w.listeners))
       (fn as Function)({ event: "setup_job_event", id: 2, payload });
   });
-  await expect(page.getByRole("status")).toContainText("finished with gaps");
+  await expect(page.getByRole("status")).toContainText(
+    "finished with gaps: selected coverage is incomplete",
+  );
   await expect(
     page.getByRole("button", { name: "Retry failed" }),
   ).toBeVisible();
@@ -464,4 +483,18 @@ test("new evidence shows the prior understanding without accepting the proposed 
       (window as any).calls.filter((c: any) => c.command === "setup_decide"),
     ),
   ).toHaveLength(0);
+});
+
+test("an oversized selected source is named and must be excluded before preview", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { oversized: true });
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await expect(
+    page.getByText(/exceed the 256 KiB per-batch limit/),
+  ).toBeVisible();
+  await expect(page.getByText(/Meetings\/one.md \(293/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Review manifest" }),
+  ).toBeDisabled();
 });

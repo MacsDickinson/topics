@@ -55,6 +55,15 @@ for (let i = 0; i < 100; i++) {
   writeFileSync(path, content);
   sources.push([path, createHash("sha256").update(content).digest("hex")]);
 }
+mkdirSync(join(notes, "private"), { recursive: true });
+const privatePath = join(notes, "private", "private.md");
+const privateContent =
+  "# Synthetic private marker\n\nPRIVATE_SYNTHETIC_ONLY must stay local.\n";
+writeFileSync(privatePath, privateContent);
+sources.push([
+  privatePath,
+  createHash("sha256").update(privateContent).digest("hex"),
+]);
 const session = prepareNativeEnvironment(fixture),
   codexHome = join(session.HOME, ".codex");
 mkdirSync(codexHome);
@@ -165,15 +174,32 @@ try {
       "--config",
       "src-tauri/tauri.native-test.conf.json",
     ]);
-  await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
-  for (const file of [
-    "index.sqlite3",
-    "index.sqlite3-wal",
-    "index.sqlite3-shm",
-    "index.sqlite3-journal",
-  ])
-    rmSync(join(appData, file), { force: true });
-  env.TOPICS_TEST_SETUP_RESTART = "1";
+  if (process.env.TOPICS_SETUP_RECONSENT_ONLY !== "1") {
+    await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
+    for (const file of [
+      "index.sqlite3",
+      "index.sqlite3-wal",
+      "index.sqlite3-shm",
+      "index.sqlite3-journal",
+    ])
+      rmSync(join(appData, file), { force: true });
+    env.TOPICS_TEST_SETUP_RESTART = "1";
+    await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
+  }
+  const reconsentRoot = join(fixture, "reconsent-notes");
+  mkdirSync(join(reconsentRoot, "meetings"), { recursive: true });
+  for (let i = 0; i < 41; i++)
+    writeFileSync(
+      join(reconsentRoot, "meetings", `${String(i).padStart(3, "0")}.md`),
+      "# Synthetic Alex A42\n\nAlex A42 leads Ledger.\n",
+    );
+  writeFileSync(rendered.mode_file, "hold_second");
+  rmSync(rendered.log_file, { force: true });
+  env.TOPICS_APP_DATA_DIR = join(fixture, "reconsent-app-data");
+  env.TOPICS_TEST_WORKSPACE_ROOT = reconsentRoot;
+  env.TOPICS_TEST_SETUP_RECONSENT = "1";
+  env.TOPICS_TEST_SETUP_RESTART = "0";
+  env.TOPICS_TEST_MODE_FILE = rendered.mode_file;
   await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
   for (const [path, expected] of sources)
     if (

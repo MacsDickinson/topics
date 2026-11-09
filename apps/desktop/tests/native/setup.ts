@@ -12,8 +12,42 @@ describe("Synthetic setup job through native services", () => {
       await $("#root-path").setValue(path);
       await $("button=Use notes folder").click();
       await $("h1=Understand this folder").waitForDisplayed();
+      await browser.execute(async () => {
+        const core = (window as any).__TAURI__.core;
+        const root = (await core.invoke("workspace_root_get", { request: {} }))
+          .root;
+        const sources = (
+          await core.invoke("workspace_sources_list", {
+            request: { root_id: root.root_id },
+          })
+        ).sources;
+        const privateSource = sources.find(
+          (source: any) => source.path === "private/private.md",
+        );
+        const detail = await core.invoke("workspace_source_get", {
+          request: {
+            root_id: root.root_id,
+            source_id: privateSource.source_id,
+          },
+        });
+        await core.invoke("workspace_sensitivity_set", {
+          request: {
+            root_id: root.root_id,
+            target: {
+              kind: "source",
+              source_id: privateSource.source_id,
+              locator: detail.citation.locator,
+            },
+            sensitivity: "local_only",
+          },
+        });
+      });
+      await $('button[aria-label="Topics"]').click();
+      await $("button=Set up folder").click();
+      await $("h2=Choose notes to analyse").waitForDisplayed();
       await $("button=Review manifest").click();
       await $("h2=Review the exact manifest").waitForDisplayed();
+      expect(await $(".consent").getText()).toContain("private/private.md");
       const authorization = await $(
         'input[type=checkbox][aria-label="Authorize this exact manifest for this job"]',
       );
@@ -25,7 +59,7 @@ describe("Synthetic setup job through native services", () => {
       await browser.waitUntil(
         async () =>
           (await $(".run-panel [role=status]").getText()).startsWith(
-            "finished",
+            "Selected notes analysed",
           ),
         {
           timeout: 180000,
@@ -41,11 +75,16 @@ describe("Synthetic setup job through native services", () => {
         });
         return { root, job: jobs[0] };
       });
-      expect(state.job.coverage.complete).toEqual(false);
-      expect(state.job.status).toEqual("finished_with_gaps");
+      expect(state.job.coverage.complete).toEqual(true);
+      expect(state.job.status).toEqual("finished");
       expect(
         state.job.coverage.excluded.some(
           (entry: any) => entry.path === "topics",
+        ),
+      ).toEqual(true);
+      expect(
+        state.job.coverage.excluded.some(
+          (entry: any) => entry.path === "private/private.md",
         ),
       ).toEqual(true);
       expect(state.job.coverage.processed.length).toEqual(100);
@@ -56,6 +95,12 @@ describe("Synthetic setup job through native services", () => {
           .trim()
           .split("\n").length,
       ).toEqual(5);
+      const transmitted = readFileSync(
+        process.env.TOPICS_TEST_SETUP_LOG!,
+        "utf8",
+      );
+      expect(transmitted).not.toContain("PRIVATE_SYNTHETIC_ONLY");
+      expect(transmitted).not.toContain("private/private.md");
       await $("button=Synthetic Alex A42").click();
       await $("button=Review topic group").click();
       await $("h2=Save topic group").waitForDisplayed();

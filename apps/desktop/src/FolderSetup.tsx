@@ -18,11 +18,18 @@ import "./folder-setup.css";
 
 const limits = {
   max_files_per_batch: 20,
-  max_bytes_per_batch: 2097152,
+  max_bytes_per_batch: 262144,
   max_batches: 100,
   max_candidates_per_turn: 64,
   max_turns_per_batch: 4,
 };
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 })} MiB`;
+  if (bytes >= 1024)
+    return `${(bytes / 1024).toLocaleString(undefined, { maximumFractionDigits: 1 })} KiB`;
+  return `${bytes} bytes`;
+}
 const roles: FolderRole[] = ["reference", "project", "meeting", "log", "other"];
 function Evidence({ sources }: { sources: SourceRef[] }) {
   return (
@@ -653,7 +660,44 @@ export function FolderSetup({
                   </li>
                 ))}
               </ul>
-              <Button disabled={busy || !selected.length} onClick={preview}>
+              {inventory.documents.some(
+                (d) =>
+                  selected.includes(d.source.path) &&
+                  d.bytes > limits.max_bytes_per_batch,
+              ) && (
+                <div className="notice">
+                  <p>
+                    These selected notes exceed the{" "}
+                    {formatBytes(limits.max_bytes_per_batch)} per-batch limit.
+                    Exclude them before previewing.
+                  </p>
+                  <ul>
+                    {inventory.documents
+                      .filter(
+                        (d) =>
+                          selected.includes(d.source.path) &&
+                          d.bytes > limits.max_bytes_per_batch,
+                      )
+                      .map((d) => (
+                        <li key={d.source.source_id}>
+                          {d.source.path} ({formatBytes(d.bytes)})
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+              <Button
+                disabled={
+                  busy ||
+                  !selected.length ||
+                  inventory.documents.some(
+                    (d) =>
+                      selected.includes(d.source.path) &&
+                      d.bytes > limits.max_bytes_per_batch,
+                  )
+                }
+                onClick={preview}
+              >
                 Review manifest
               </Button>
               </Section>
@@ -663,10 +707,11 @@ export function FolderSetup({
             <section className="consent">
               <h2>Review the exact manifest</h2>
               <p>
-                {manifest.runtime} · {manifest.batches.length} batches · up to{" "}
+                {manifest.runtime} · {manifest.batches.length}{" "}
+                {manifest.batches.length === 1 ? "batch" : "batches"} · up to{" "}
                 {manifest.limits.max_files_per_batch} notes and{" "}
-                {manifest.limits.max_bytes_per_batch} bytes per batch. Up to{" "}
-                {manifest.limits.max_candidates_per_turn} candidates per turn
+                {formatBytes(manifest.limits.max_bytes_per_batch)} per batch. Up
+                to {manifest.limits.max_candidates_per_turn} candidates per turn
                 and {manifest.limits.max_turns_per_batch} total attempts per
                 batch. Each attempt has one bounded turn.
               </p>
@@ -712,11 +757,17 @@ export function FolderSetup({
           <section className="run-panel">
             <h2>Coverage</h2>
             <p role="status">
-              {job.status.replaceAll("_", " ")}: {job.coverage.processed.length}{" "}
-              of {job.coverage.selected} processed,{" "}
-              {job.coverage.outstanding.length} outstanding,{" "}
-              {job.coverage.failed.length} failed,{" "}
-              {job.coverage.excluded.length} excluded.
+              {job.coverage.complete
+                ? "Selected notes analysed. Ready to save."
+                : `${job.status.replaceAll("_", " ")}: selected coverage is incomplete.`}{" "}
+              {job.coverage.processed.length} of {job.coverage.selected}{" "}
+              selected notes processed, {job.coverage.outstanding.length}{" "}
+              outstanding, {job.coverage.failed.length} failed.
+            </p>
+            <p>
+              {job.coverage.excluded.length} excluded{" "}
+              {job.coverage.excluded.length === 1 ? "source" : "sources"};
+              exclusions are not part of the selected coverage.
             </p>
             {job.status === "running" && (
               <Button disabled={busy} onClick={() => control("pause")}>
