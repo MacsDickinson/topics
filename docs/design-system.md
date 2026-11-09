@@ -55,3 +55,7 @@ Definition of done / review checklist:
 ## Folder chooser
 
 For connecting a notes root, offer a native folder chooser alongside the existing labelled path field. Selecting a folder fills the field; only the explicit “Use notes folder” action connects it. Cancelling leaves the entered path and current workspace intact. The chooser is a user-triggered native action and does not grant model access.
+
+## Setup and review patterns
+
+Folder setup uses a hierarchical list of native selection controls with a role selector and explanation per folder. The exact manifest and exclusions precede the single transmission authorization. The receipt lists its included candidates, dependencies and deferred counts before the save action; changing selection clears the preview. Progress names failed and outstanding inputs instead of implying complete coverage. Topic evidence uses a collapsed disclosure; status is written in text. Graph and list representations must provide equivalent keyboard access and distinguish explicit from inferred links without color alone. Contextual decisions enumerate their scope before confirmation; correction previews show the actual statement, before and after, and the future rule.

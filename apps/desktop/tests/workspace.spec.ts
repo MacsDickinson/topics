@@ -49,13 +49,13 @@ async function finish(page: Page) {
 test('create a fresh root and explain an honest empty workspace', async ({
   page,
 }) => {
-  await workspaceFixture(page, { empty: true });
+  await workspaceFixture(page, { empty: true, inventoryEmpty: true });
   await page.getByLabel('Notes folder path').fill('/synthetic/new-notes');
   await page.getByLabel('Create a new notes folder').check();
   await page.getByRole('button', { name: 'Use notes folder' }).click();
   await expect(
     page.getByText(
-      'Add Markdown notes to this folder, then analyse a selection.',
+      'Add Markdown notes or use New topic for manual capture.',
     ),
   ).toBeVisible();
   expect(
@@ -171,13 +171,14 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
   await page.getByRole('button', { name: 'Topics', exact: true }).click();
   await expect(page.getByText('Tuesday', { exact: true })).toBeVisible();
+  await page.locator('.topic-detail').getByText('Sources (1)', { exact: true }).first().click();
   await expect(
-    page.getByText('Your correction', { exact: false }),
+    page.getByText('Your correction', { exact: false }).first(),
   ).toBeVisible();
   await expect(
     page.getByText('The launch is Tuesday; Monday was a mistake.', {
       exact: true,
-    }),
+    }).first(),
   ).toBeVisible();
   await page.getByText('Revision history (1)', { exact: true }).click();
   await expect(
@@ -416,6 +417,7 @@ test('late topic detail read after a root switch cannot reveal old-root evidence
   await expect(page.getByText('OLD ROOT SECRET', { exact: true })).toHaveCount(
     0,
   );
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'No accepted topics yet' }),
   ).toBeVisible();

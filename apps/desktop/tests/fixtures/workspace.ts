@@ -56,7 +56,7 @@ export const proposal = {
 // Browser transport fixture only. Never imported by application code or native tests.
 export async function workspaceFixture(
   page: Page,
-  options: { empty?: boolean; unavailable?: boolean } = {},
+  options: { empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean } = {},
 ) {
   await page.addInitScript(
     ({ ids, topic, claim, proposal, hash, options }) => {
@@ -125,6 +125,27 @@ export async function workspaceFixture(
             };
           const request = args?.request;
           switch (command) {
+            case 'setup_inventory':
+              if (options.inventoryEmpty) return { schema: 1, root_id: request.root_id, entry: 'empty', folders: [], documents: [], excluded: [], eligible_bytes: 0, saved_topic_count: 0, resumable_job_ids: [] };
+              return { schema: 1, root_id: request.root_id, entry: 'new', folders: [{ path: 'Meetings', role: 'meeting', reason: 'Suggested from folder name.', documents: 1, bytes: 28, dated: 1, undated: 0, linked: 0, date_from: '2026-11-01', date_to: '2026-11-01' }], documents: [{ source: { source_id: ids.source, path: 'Meetings/one.md', hash, date: '2026-11-01', sensitivity: 'unknown' }, bytes: 28, title: 'Meeting', linked: false, role: 'meeting', role_reason: 'Suggested from folder name.' }], excluded: [{ path: 'Meetings/private.md', reason: 'Local-only' }], eligible_bytes: 28, saved_topic_count: 0, resumable_job_ids: [] };
+            case 'setup_manifest_preview':
+              w.setupManifest = { schema: 1, manifest_id: 'manifest-one', root_id: request.root_id, fingerprint: hash, spec: request.spec, roles: request.roles, limits: request.limits, runtime: request.runtime, created_at: '2026-11-03T00:00:00Z', batches: [{ batch_id: 'batch-one', sources: [{ source: { source_id: ids.source, path: 'Meetings/one.md', hash, date: '2026-11-01', sensitivity: 'unknown' }, bytes: 28, role: 'meeting' }] }], excluded: [{ path: 'Meetings/private.md', reason: 'Local-only' }] };
+              return w.setupManifest;
+            case 'setup_job_create':
+              w.setupJob = { schema: 1, job_id: 'job-one', root_id: request.root_id, manifest: w.setupManifest, status: 'ready', revision: 1, batches: [], graph: { items: [{ item_id: 'item-topic', candidate: { kind: 'topic', topic }, disposition: 'pending', batch_ids: ['batch-one'], proposal_ids: [ids.proposal], independent_evidence_groups: [] }, { item_id: 'item-claim', candidate: { kind: 'claim', claim }, disposition: 'pending', batch_ids: ['batch-one'], proposal_ids: [ids.proposal], independent_evidence_groups: [] }, { item_id: 'item-alex', candidate: { kind: 'topic', topic: { ...topic, id: 'alex-id', topic_kind: 'person', name: 'Alex' } }, disposition: 'pending', batch_ids: ['batch-one'], proposal_ids: [ids.proposal], independent_evidence_groups: [] }, { item_id: 'item-edge', candidate: { kind: 'connection', connection: { id: 'edge-id', from: { kind: 'topic', id: 'alex-id' }, relation: 'works with', to: { kind: 'topic', id: ids.topic }, uncertainty: 'Association inferred', sources: [claim.sources[0].source], valid_from: null, valid_to: null } }, disposition: 'pending', batch_ids: ['batch-one'], proposal_ids: [ids.proposal], independent_evidence_groups: [] }], issues: [{ id: 'issue-one', issue_kind: 'inferred', key: 'Alex and Ledger association', item_ids: ['item-edge'], sources: [claim.sources[0].source], deferred: false }], canonical_ids: {} }, coverage: { selected: 1, processed: [], failed: [], outstanding: ['Meetings/one.md'], excluded: w.setupManifest.excluded, complete: false, model_calls: 0, transmission_authorizations: 1 }, created_at: '2026-11-03T00:00:00Z' };
+              return w.setupJob;
+            case 'setup_job_start':
+              w.setupJob.status = 'finished'; w.setupJob.coverage.processed = ['Meetings/one.md']; w.setupJob.coverage.outstanding = []; w.setupJob.coverage.complete = true; return w.setupJob;
+            case 'setup_job_get': return w.setupJob;
+            case 'setup_save_preview':
+              return { schema: 1, receipt_id: 'receipt-one', root_id: request.root_id, kind: 'save', job_id: 'job-one', job_revision: 1, requested_ids: request.item_ids, included_ids: ['item-topic', 'item-claim'], dependency_ids: [], deferred_ids: [], candidates: [{ kind: 'topic', topic }, { kind: 'claim', claim }], revisions: [], expected_hashes: {}, fingerprint: hash, max_records_per_operation: 100, operation_count: 1, created_at: '2026-11-03T00:00:00Z' };
+            case 'workspace_user_statement':
+              w.savedContext = request.text;
+              return { id: 'context-one', topic_id: request.topic_id, text: request.text, recorded_at: '2026-11-03T00:00:00Z' };
+            case 'setup_confirm_preview':
+              return { schema: 1, receipt_id: 'confirm-one', root_id: request.root_id, kind: 'confirm', job_id: null, job_revision: null, requested_ids: request.revision_ids, included_ids: request.revision_ids, dependency_ids: [], deferred_ids: [], candidates: [], revisions: w.claims.filter((c: any) => request.revision_ids.includes(c.revision_id)), expected_hashes: {}, fingerprint: hash, max_records_per_operation: 100, operation_count: 1, created_at: '2026-11-03T00:00:00Z' };
+            case 'setup_topic_review':
+              return { topic: { topic, current_claims: w.claims, connections: [], unresolved: [], history: [], warnings: [] }, reviews: w.claims.map((c: any) => ({ id: 'review', record_id: c.revision_id, state: 'from_notes', receipt_id: 'receipt-one', statement_id: null, recorded_at: '2026-11-03T00:00:00Z' })) };
             case 'workspace_choose_root':
               return w.chosenRoot ?? null;
             case 'workspace_root_get':

@@ -63,7 +63,7 @@ export function TopicDetail({
               <p>{c.value}</p>
             </div>
             {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-            <Evidence sources={c.sources} rootId={rootId} />
+            <details><summary>Sources ({c.sources.length})</summary><Evidence sources={c.sources} rootId={rootId} /></details>
           </article>
         ))}
       </section>
@@ -77,9 +77,9 @@ export function TopicDetail({
                 {endpointLabel(c.to, topics)}
               </p>
               {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-              {c.sources.map((s, i) => (
+              <details><summary>Sources ({c.sources.length})</summary>{c.sources.map((s, i) => (
                 <SourceEvidence source={s} key={i} />
-              ))}
+              ))}</details>
             </article>
           ))}
         </section>
@@ -118,7 +118,7 @@ export function TopicDetail({
                 : ' · Earlier revision'}
             </p>
             {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-            <Evidence sources={c.sources} rootId={rootId} />
+            <details><summary>Sources ({c.sources.length})</summary><Evidence sources={c.sources} rootId={rootId} /></details>
           </article>
         ))}
       </details>

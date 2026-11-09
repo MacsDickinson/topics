@@ -107,6 +107,7 @@ fn main() {
             workspace_topics_list,
             workspace_topic_get,
             workspace_statement_get,
+            workspace_user_statement,
             workspace_chat_start,
             workspace_history_list,
             workspace_undo,
