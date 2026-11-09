@@ -1,0 +1,9 @@
+{
+  "session": "setup-reconsent",
+  "platform": "darwin",
+  "osRelease": "24.5.0",
+  "node": "v24.22.2",
+  "homePrepared": true,
+  "webkitIncognito": true,
+  "driverProvider": "embedded"
+}

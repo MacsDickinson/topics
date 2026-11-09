@@ -1,11 +1,7 @@
 {
-  "job_id": "f274f331-0744-4981-bce1-40f76f21b65e",
   "status": "finished",
   "batches": [
     {
-      "batch_id": "83410a54-b744-49e2-8ff7-6055fad5aeaa",
-      "scope_id": "1ecc6069-8de6-4a8d-85d5-51d2c85db9f2",
-      "run_id": "57e4a961-6c4b-4840-8cc3-76d6798b65c9",
       "status": "completed",
       "attempt": 1,
       "diagnostic": null,
@@ -28,7 +24,7 @@
       {
         "assertion_kind": "reported_explicit",
         "batch_ids": [
-          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+          "cc5c09e2-4c85-466f-9d95-af2099d5f3b8"
         ],
         "candidate": {
           "kind": "topic",
@@ -46,13 +42,13 @@
         "independent_evidence_groups": [],
         "item_id": "10000000-0000-4000-8000-000000000001",
         "proposal_ids": [
-          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+          "5b8d06d6-1d1f-46fe-b883-9b5823df4822"
         ]
       },
       {
         "assertion_kind": "reported_explicit",
         "batch_ids": [
-          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+          "cc5c09e2-4c85-466f-9d95-af2099d5f3b8"
         ],
         "candidate": {
           "kind": "topic",
@@ -68,13 +64,13 @@
         "independent_evidence_groups": [],
         "item_id": "10000000-0000-4000-8000-000000000002",
         "proposal_ids": [
-          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+          "5b8d06d6-1d1f-46fe-b883-9b5823df4822"
         ]
       },
       {
         "assertion_kind": "reported_explicit",
         "batch_ids": [
-          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+          "cc5c09e2-4c85-466f-9d95-af2099d5f3b8"
         ],
         "candidate": {
           "connection": {
@@ -95,7 +91,7 @@
                 },
                 "passage_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
                 "path": "profiles/alex.md",
-                "source_id": "f32080fc-a219-5a27-a454-1933be4451f1"
+                "source_id": "8bbf8951-664d-5c64-b049-122c54d146d8"
               }
             ],
             "to": {
@@ -114,13 +110,13 @@
         ],
         "item_id": "10000000-0000-4000-8000-000000000003",
         "proposal_ids": [
-          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+          "5b8d06d6-1d1f-46fe-b883-9b5823df4822"
         ]
       },
       {
         "assertion_kind": "reported_explicit",
         "batch_ids": [
-          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+          "cc5c09e2-4c85-466f-9d95-af2099d5f3b8"
         ],
         "candidate": {
           "claim": {
@@ -141,7 +137,7 @@
                   },
                   "passage_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
                   "path": "profiles/alex.md",
-                  "source_id": "f32080fc-a219-5a27-a454-1933be4451f1"
+                  "source_id": "8bbf8951-664d-5c64-b049-122c54d146d8"
                 }
               }
             ],
@@ -160,7 +156,7 @@
         ],
         "item_id": "10000000-0000-4000-8000-000000000005",
         "proposal_ids": [
-          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+          "5b8d06d6-1d1f-46fe-b883-9b5823df4822"
         ]
       }
     ]

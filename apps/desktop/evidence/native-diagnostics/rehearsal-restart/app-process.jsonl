@@ -1,0 +1,3 @@
+{"time":"2026-11-09T05:14:11.384Z","event":"spawn","pid":60358}
+{"time":"2026-11-09T05:14:14.130Z","event":"forward","signal":"SIGTERM"}
+{"time":"2026-11-09T05:14:14.139Z","event":"exit","code":null,"signal":"SIGTERM"}

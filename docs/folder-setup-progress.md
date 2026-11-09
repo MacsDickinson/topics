@@ -2,7 +2,7 @@
 
 2026-11-09. **Implemented and packaged for development; not accepted for delivery.**
 
-**Latest checkpoint:** the bounded genuine native journey passes, including exact corrected-revision lineage, supplemental context, unchanged source hashes and fresh-process SQLite rebuild. Hosted Linux/macOS checks passed the prototype snapshot `8e7d0c9`. Final assembled verification, a Finder executable-discovery repair and the user-required Claude reviews remain outstanding. Earlier investigation checkpoints below retain the failures and source identities that led to this result.
+**Latest checkpoint:** the bounded genuine native journey passes, including exact corrected-revision lineage, supplemental context, unchanged source hashes and fresh-process SQLite rebuild. The complete assembled check passed at `8d35973`; the subsequent Finder discovery repair passed its focused tests/review and signed production rebuild at `76107ad`. Hosted Linux/macOS checks passed prototype snapshot `8e7d0c9`; final source CI and user-required Claude reviews remain outstanding. See the [current prototype report](folder-setup-report.md). Earlier checkpoints below retain historical failures and source identities.
 
 The approved milestone adds local notes-folder inventory and role suggestions, exact-manifest consent, bounded resumable analysis, a sourced topic graph/list, group baseline save and topic-centred review. Imported assertions remain “From your notes”. Explicit confirmation, correction and supplemental context are separate operations; added context does not verify facts. Original source notes remain unchanged, and approved app records and receipts live under the root's reserved `topics/` folder.
 

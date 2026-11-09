@@ -1,0 +1,6 @@
+{"time":"2026-11-09T03:31:21.138Z","event":"spawn","pid":54062}
+{"time":"2026-11-09T03:31:34.487Z","event":"forward","signal":"SIGTERM"}
+{"time":"2026-11-09T03:31:34.491Z","event":"exit","code":null,"signal":"SIGTERM"}
+{"time":"2026-11-09T05:10:31.406Z","event":"spawn","pid":50104}
+{"time":"2026-11-09T05:10:35.354Z","event":"forward","signal":"SIGTERM"}
+{"time":"2026-11-09T05:10:35.359Z","event":"exit","code":null,"signal":"SIGTERM"}
