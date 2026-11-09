@@ -1,5 +1,6 @@
 //! Direct-mode Codex callbacks are only a transport adapter into the SAME SDK
 //! server. This module has no HostTools/store/approval capability.
+use crate::diagnostics::RuntimeResult;
 use crate::{
     bridge::Bridge,
     diagnostics::Failure,
@@ -13,13 +14,12 @@ use tokio::{
     io::{AsyncWriteExt, BufReader},
     net::TcpStream,
 };
-use topics_core::workspace::WorkspaceResult;
 pub(crate) struct McpClient {
     service: RunningService<RoleClient, ClientConfig>,
 }
 
 impl McpClient {
-    pub async fn connect(bridge: &Bridge) -> WorkspaceResult<Self> {
+    pub async fn connect(bridge: &Bridge) -> RuntimeResult<Self> {
         let mut stream = TcpStream::connect(&bridge.endpoint)
             .await
             .map_err(|_| error("runtime_unavailable", "Topics MCP connection unavailable"))?;
@@ -34,7 +34,7 @@ impl McpClient {
             .map_err(|_| error("forbidden", "Topics MCP authentication failed"))?
             != b"ok\n"
         {
-            return Err(error("forbidden", "Topics MCP authentication failed"));
+            return Err(error("forbidden", "Topics MCP authentication failed").into());
         }
         let (read, write) = reader.into_inner().into_split();
         let transport =
@@ -51,13 +51,13 @@ impl McpClient {
             .map_err(|_| error("runtime_unavailable", "Topics MCP initialization failed"))?;
         Ok(Self { service })
     }
-    pub async fn dynamic_tools(&self) -> WorkspaceResult<Value> {
+    pub async fn dynamic_tools(&self) -> RuntimeResult<Value> {
         let result = tokio::time::timeout(Duration::from_secs(5), self.service.list_tools(None))
             .await
             .map_err(|_| error("runtime_unavailable", "Topics MCP inventory timeout"))?
             .map_err(|_| error("runtime_unavailable", "Topics MCP inventory failed"))?;
         if result.next_cursor.is_some() || result.tools.len() != 2 {
-            return Err(error("forbidden", "Unexpected Topics MCP inventory"));
+            return Err(error("forbidden", "Unexpected Topics MCP inventory").into());
         }
         let expected = crate::bridge::tools();
         let mut tools = vec![];
@@ -69,7 +69,7 @@ impl McpClient {
             if tool.input_schema != reference.input_schema
                 || tool.annotations != reference.annotations
             {
-                return Err(error("forbidden", "Topics MCP schema drift"));
+                return Err(error("forbidden", "Topics MCP schema drift").into());
             }
             tools.push(json!({"type":"function","name":tool.name,"description":tool.description,"inputSchema":tool.input_schema}));
         }
@@ -77,14 +77,14 @@ impl McpClient {
             json!([{"type":"namespace","name":"topics","description":"Bounded tools from the Topics app-hosted MCP server; all changes are human-reviewed proposals","tools":tools}]),
         )
     }
-    pub async fn call(&self, tool: &str, arguments: Value) -> WorkspaceResult<Value> {
+    pub async fn call(&self, tool: &str, arguments: Value) -> RuntimeResult<Value> {
         self.call_inner(tool, arguments)
             .await
             .map_err(|e| Failure::McpRequest.tag(e))
     }
-    async fn call_inner(&self, tool: &str, arguments: Value) -> WorkspaceResult<Value> {
+    async fn call_inner(&self, tool: &str, arguments: Value) -> RuntimeResult<Value> {
         if !matches!(tool, "scope_sources" | "propose_changes") {
-            return Err(error("forbidden", "Unknown Topics tool callback"));
+            return Err(error("forbidden", "Unknown Topics tool callback").into());
         }
         let args = arguments
             .as_object()
@@ -117,14 +117,14 @@ impl McpClient {
             let value = serde_json::to_value(content)
                 .map_err(|_| error("internal", "MCP output encoding failed"))?;
             if value["type"] != "text" {
-                return Err(error("forbidden", "Unexpected MCP output kind"));
+                return Err(error("forbidden", "Unexpected MCP output kind").into());
             }
             let text = value["text"]
                 .as_str()
                 .ok_or_else(|| error("forbidden", "Invalid MCP text output"))?;
             bytes += text.len();
             if bytes > MAX_OUTPUT / 2 {
-                return Err(error("forbidden", "MCP output exceeded bounds"));
+                return Err(error("forbidden", "MCP output exceeded bounds").into());
             }
             output.push(json!({"type":"inputText","text":text}));
         }
@@ -187,7 +187,10 @@ mod tests {
         .await
         .unwrap()
         .unwrap_err();
-        assert_eq!(failure.details, Some(Failure::McpDeadline.details()));
+        assert_eq!(
+            topics_core::ApiError::from(failure).details,
+            Some(Failure::McpDeadline.details())
+        );
         server.abort();
         let _ = server.await;
     }

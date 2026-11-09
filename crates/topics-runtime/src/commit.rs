@@ -1,6 +1,10 @@
 //! Cooperative publication fence. Blocking preparation belongs BEFORE publish;
 //! its action must be the core-provided final short atomic visibility action.
-use crate::{HostTools, diagnostics::Failure, error};
+use crate::{
+    HostCommitError, HostTools,
+    diagnostics::{Failure, RuntimeResult},
+    error,
+};
 use std::{
     sync::{Arc, Mutex, OnceLock},
     time::{Duration, Instant},
@@ -102,7 +106,7 @@ pub(crate) async fn stage(
     host: Arc<dyn HostTools>,
     candidates: Vec<Candidate>,
     permit: CommitPermit,
-) -> WorkspaceResult<Vec<String>> {
+) -> RuntimeResult<Vec<String>> {
     static WORKERS: OnceLock<Arc<Semaphore>> = OnceLock::new();
     let slot = WORKERS
         .get_or_init(|| Arc::new(Semaphore::new(8)))
@@ -119,9 +123,21 @@ pub(crate) async fn stage(
     std::thread::spawn(move || {
         let _slot = slot;
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            host.commit_candidates(candidates, worker_permit)
+            host.commit_candidates_diagnosed(candidates, worker_permit)
         }))
-        .unwrap_or_else(|_| Err(error("internal", "Host staging panicked")));
+        .unwrap_or_else(|_| {
+            Err(HostCommitError::Failed(error(
+                "internal",
+                "Host staging panicked",
+            )))
+        });
+        let result = result.map_err(|failure| match failure {
+            HostCommitError::Failed(error) => Failure::Publication.tag(error),
+            HostCommitError::ScopeNotRead => Failure::ScopeNotRead.error(
+                "forbidden",
+                "The model must read its exact scoped sources before reporting source coverage",
+            ),
+        });
         let _ = tx.send(result);
     });
     let mut changed = permit.inner.changed.subscribe();
@@ -130,14 +146,11 @@ pub(crate) async fn stage(
             return Ok(ids);
         }
         if matches!(*changed.borrow(), State::Revoked) {
-            return Err(error(
-                "cancelled",
-                "Proposal preparation cancelled or expired",
-            ));
+            return Err(error("cancelled", "Proposal preparation cancelled or expired").into());
         }
         let result = tokio::select! {
          _=tokio::time::sleep_until(tokio::time::Instant::from_std(permit.inner.deadline))=>{permit.revoke();Err(Failure::PublicationDeadline.error("runtime_unavailable","Proposal preparation timed out; later publication denied"))},
-         result=&mut rx=>{permit.revoke();result.unwrap_or_else(|_|Err(error("internal","Proposal preparation disconnected"))).and_then(|_|Err(error("internal","Host did not use guarded proposal publication")))},
+         result=&mut rx=>{permit.revoke();result.unwrap_or_else(|_|Err(error("internal","Proposal preparation disconnected").into())).and_then(|_|Err(error("internal","Host did not use guarded proposal publication").into()))},
          _=changed.changed()=>continue,
         };
         // Published outcome wins even if host panics, stalls or errors afterwards.

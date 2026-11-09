@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use topics_core::workspace::{ApiError, WorkspaceResult};
+use topics_core::workspace::ApiError;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Failure {
     Version,
@@ -64,53 +64,14 @@ impl Failure {
         };
         json!({"phase":phase,"reason":reason})
     }
-    pub(crate) fn from_details(details: Option<&Value>) -> Option<Self> {
-        let object = details?.as_object()?;
-        if object.len() != 2 {
-            return None;
+    pub(crate) fn tag(self, error: impl Into<RuntimeFailure>) -> RuntimeFailure {
+        let mut failure = error.into();
+        if failure.reason.is_none() && failure.error.code != "cancelled" {
+            failure.reason = Some(self);
         }
-        match (
-            object.get("phase")?.as_str()?,
-            object.get("reason")?.as_str()?,
-        ) {
-            ("preflight", "version_check_failed") => Some(Self::Version),
-            ("preflight", "layout_denied") => Some(Self::Layout),
-            ("preflight", "native_denied") => Some(Self::Native),
-            ("startup", "setup_failed") => Some(Self::Startup),
-            ("discovery", "discovery_failed") => Some(Self::Discovery),
-            ("discovery", "discovery_deadline") => Some(Self::DiscoveryDeadline),
-            ("transport", "transport_failed") => Some(Self::Transport),
-            ("transport", "read_deadline") => Some(Self::ReadDeadline),
-            ("transport", "protocol_denied") => Some(Self::Protocol),
-            ("mcp", "session_failed") => Some(Self::McpSession),
-            ("mcp", "inventory_denied") => Some(Self::McpInventory),
-            ("mcp", "request_failed") => Some(Self::McpRequest),
-            ("mcp", "request_deadline") => Some(Self::McpDeadline),
-            ("callback", "authorization_denied") => Some(Self::Callback),
-            ("candidate", "schema_denied") => Some(Self::Schema),
-            ("host", "validation_denied") => Some(Self::HostValidation),
-            ("host", "call_deadline") => Some(Self::HostDeadline),
-            ("host", "host_failed") => Some(Self::Host),
-            ("execution", "validation_denied") => Some(Self::Execution),
-            ("execution", "execution_deadline") => Some(Self::ExecutionDeadline),
-            ("publication", "preparation_failed") => Some(Self::Publication),
-            ("publication", "preparation_deadline") => Some(Self::PublicationDeadline),
-            ("turn", "model_terminal_failed") => Some(Self::Terminal),
-            ("publication", "scope_not_read") => Some(Self::ScopeNotRead),
-            _ => None,
-        }
+        failure
     }
-    pub(crate) fn tag(self, mut error: ApiError) -> ApiError {
-        if error.code != "cancelled" {
-            error.details = Some(
-                Self::from_details(error.details.as_ref())
-                    .unwrap_or(self)
-                    .details(),
-            );
-        }
-        error
-    }
-    pub(crate) fn error(self, code: &str, message: &str) -> ApiError {
+    pub(crate) fn error(self, code: &str, message: &str) -> RuntimeFailure {
         self.tag(crate::error(code, message))
     }
     pub(crate) fn record(self, state: &Arc<Mutex<RunState>>) {
@@ -125,13 +86,49 @@ impl Failure {
         }
     }
 }
+/// Runtime-owned provenance travels as a type, never through ApiError JSON.
+#[derive(Debug)]
+pub(crate) struct RuntimeFailure {
+    error: ApiError,
+    pub(crate) reason: Option<Failure>,
+}
+pub(crate) type RuntimeResult<T> = Result<T, RuntimeFailure>;
+impl From<ApiError> for RuntimeFailure {
+    fn from(mut error: ApiError) -> Self {
+        // Generic errors cross an arbitrary host/service seam: even an exact
+        // allowlisted pair is data, not evidence of a locally observed stage.
+        error.details = None;
+        Self {
+            error,
+            reason: None,
+        }
+    }
+}
+impl From<RuntimeFailure> for ApiError {
+    fn from(failure: RuntimeFailure) -> Self {
+        let mut error = failure.error;
+        error.details = failure.reason.map(Failure::details);
+        error
+    }
+}
+impl std::ops::Deref for RuntimeFailure {
+    type Target = ApiError;
+    fn deref(&self) -> &Self::Target {
+        &self.error
+    }
+}
+impl std::fmt::Display for RuntimeFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.error.fmt(f)
+    }
+}
 /// Existing production budgets are passed unchanged; tests use a short synthetic future.
 pub(crate) async fn bounded<T>(
     duration: Duration,
-    future: impl Future<Output = WorkspaceResult<T>>,
+    future: impl Future<Output = RuntimeResult<T>>,
     failure: Failure,
     message: &str,
-) -> WorkspaceResult<T> {
+) -> RuntimeResult<T> {
     tokio::time::timeout(duration, future)
         .await
         .unwrap_or_else(|_| Err(failure.tag(crate::runtime_error(message))))
@@ -140,45 +137,78 @@ pub(crate) async fn bounded<T>(
 mod tests {
     use super::*;
     #[test]
-    fn finite_contract_round_trips_and_unknown_or_extra_details_remain_unknown() {
-        let pairs: Vec<_> = include_str!("../../../features/folder-setup/FAILURE-ORIGINS.md")
+    fn contract_pairs_are_output_only_and_generic_error_details_never_become_provenance() {
+        let expected: Vec<_> = include_str!("../../../features/folder-setup/FAILURE-ORIGINS.md")
             .lines()
             .filter(|line| line.starts_with("| `"))
             .map(|line| {
                 let fields: Vec<_> = line.split('`').collect();
-                (fields[1], fields[3])
+                json!({"phase":fields[1],"reason":fields[3]})
             })
             .collect();
-        assert_eq!(pairs.len(), 24);
-        for (phase, reason) in &pairs {
-            let value = json!({"phase":phase,"reason":reason});
+        let all = [
+            Failure::Version,
+            Failure::Layout,
+            Failure::Native,
+            Failure::Startup,
+            Failure::Discovery,
+            Failure::DiscoveryDeadline,
+            Failure::Transport,
+            Failure::ReadDeadline,
+            Failure::Protocol,
+            Failure::McpSession,
+            Failure::McpInventory,
+            Failure::McpRequest,
+            Failure::McpDeadline,
+            Failure::Callback,
+            Failure::Schema,
+            Failure::HostValidation,
+            Failure::HostDeadline,
+            Failure::Host,
+            Failure::Execution,
+            Failure::ExecutionDeadline,
+            Failure::Publication,
+            Failure::PublicationDeadline,
+            Failure::Terminal,
+            Failure::ScopeNotRead,
+        ];
+        assert_eq!(all.map(Failure::details).as_slice(), expected.as_slice());
+        for details in expected
+            .into_iter()
+            .chain([json!({"private":"PRIVATE_SENTINEL"}), json!(null)])
+        {
+            let raw = ApiError {
+                code: "arbitrary_host_error".into(),
+                message: "PRIVATE_SENTINEL".into(),
+                details: Some(details),
+            };
+            let converted = RuntimeFailure::from(raw.clone());
+            assert_eq!(converted.reason, None);
+            assert_eq!(ApiError::from(converted).details, None);
+            let typed = Failure::Publication.tag(raw);
+            assert_eq!(typed.reason, Some(Failure::Publication));
+            let layered = Failure::Execution.tag(typed);
+            assert_eq!(layered.reason, Some(Failure::Publication));
             assert_eq!(
-                Failure::from_details(Some(&value)).unwrap().details(),
-                value
+                ApiError::from(layered).details,
+                Some(Failure::Publication.details())
             );
-            let mut extra = value;
-            extra["private"] = json!("PRIVATE_SENTINEL");
-            assert_eq!(Failure::from_details(Some(&extra)), None);
-        }
-        for value in [
-            json!({"phase":"PRIVATE_SENTINEL","reason":"PRIVATE_SENTINEL"}),
-            json!({"phase":"host","reason":7}),
-            json!(null),
-        ] {
-            assert_eq!(Failure::from_details(Some(&value)), None);
         }
     }
     #[tokio::test]
     async fn stage_deadlines_retain_local_origin_and_ignore_private_payload() {
         for failure in [Failure::DiscoveryDeadline, Failure::ExecutionDeadline] {
-            let result: WorkspaceResult<()> = bounded(
+            let result: RuntimeResult<()> = bounded(
                 Duration::from_millis(5),
                 std::future::pending(),
                 failure,
                 "Runtime operation timed out",
             )
             .await;
-            assert_eq!(result.unwrap_err().details, Some(failure.details()));
+            assert_eq!(
+                ApiError::from(result.unwrap_err()).details,
+                Some(failure.details())
+            );
         }
         let error = Failure::Publication.tag(ApiError {
             code: "forbidden".into(),
@@ -187,6 +217,9 @@ mod tests {
                 json!({"phase":"host","reason":"validation_denied","raw":"PRIVATE_SENTINEL"}),
             ),
         });
-        assert_eq!(error.details, Some(Failure::Publication.details()));
+        assert_eq!(
+            ApiError::from(error).details,
+            Some(Failure::Publication.details())
+        );
     }
 }

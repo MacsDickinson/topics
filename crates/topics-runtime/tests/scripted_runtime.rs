@@ -708,6 +708,94 @@ fn arbitrary_host_valid_pair_cannot_spoof_runtime_publication_origin() {
     assert_eq!(std::fs::read(source).unwrap(), before);
     assert!(rx.recv_timeout(Duration::from_millis(30)).is_err());
 }
+struct LateScopeSignalHost {
+    base: Arc<Host>,
+    publish_first: bool,
+    entered: mpsc::Sender<()>,
+    release: Mutex<mpsc::Receiver<()>>,
+    finished: mpsc::Sender<()>,
+}
+impl HostTools for LateScopeSignalHost {
+    fn call(&self, tool: &str, args: Value) -> WorkspaceResult<Value> {
+        self.base.call(tool, args)
+    }
+    fn requires_empty_commit(&self) -> bool {
+        true
+    }
+    fn commit_candidates(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> WorkspaceResult<()> {
+        self.base.commit_candidates(candidates, permit)
+    }
+    fn commit_candidates_diagnosed(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> Result<(), topics_runtime::HostCommitError> {
+        if self.publish_first {
+            self.commit_candidates(candidates, permit)
+                .map_err(topics_runtime::HostCommitError::Failed)?;
+        }
+        self.entered.send(()).unwrap();
+        self.release
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap();
+        let _ = self.finished.send(());
+        Err(topics_runtime::HostCommitError::ScopeNotRead)
+    }
+}
+#[test]
+fn typed_host_signal_cannot_override_cancelled_or_published_permit_outcomes() {
+    for publish_first in [false, true] {
+        let (_temp, rt, request, base) = fixture("empty_complete");
+        let source = request.notes_root.join("source.md");
+        let before = std::fs::read(&source).unwrap();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let (finished_tx, finished_rx) = mpsc::channel();
+        let host = Arc::new(LateScopeSignalHost {
+            base: base.clone(),
+            publish_first,
+            entered: entered_tx,
+            release: Mutex::new(release_rx),
+            finished: finished_tx,
+        });
+        let (tx, rx) = mpsc::channel();
+        rt.analysis_start(
+            request.clone(),
+            host,
+            Arc::new(move |event| {
+                let _ = tx.send(event);
+            }),
+        )
+        .unwrap();
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+            RunEvent::TextDelta { .. }
+        ));
+        entered_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(rt.cancel(&request.root_id, &request.run_id), !publish_first);
+        let mut publications = 0;
+        loop {
+            match rx.recv_timeout(Duration::from_secs(5)).unwrap().event {
+                RunEvent::Proposal { .. } if publish_first => publications += 1,
+                RunEvent::Completed if publish_first => break,
+                RunEvent::Cancelled if !publish_first => break,
+                event => panic!("diagnostic signal changed permit outcome: {event:?}"),
+            }
+        }
+        release_tx.send(()).unwrap();
+        finished_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(rx.recv_timeout(Duration::from_millis(50)).is_err());
+        assert_eq!(publications, usize::from(publish_first));
+        assert_eq!(*base.stages.lock().unwrap(), usize::from(publish_first));
+        assert_eq!(std::fs::read(source).unwrap(), before);
+    }
+}
 #[test]
 fn setup_empty_success_publishes_checkpoint_once_through_real_permit() {
     let (_temp, rt, request, base) = fixture("empty_complete");

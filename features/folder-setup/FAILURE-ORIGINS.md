@@ -16,6 +16,51 @@ turn and synthetic source/home were used; evidence:
 `/tmp/topics-host-provenance-red.txt`. This is the exact valid-pair spoof,
 not merely an unknown or extra-key shape test.
 
+The repair removes JSON-to-provenance reconstruction entirely. Private
+`RuntimeFailure` carries `ApiError` plus `Option<Failure>` across runtime,
+transport, MCP and publication results; generic `ApiError` conversion drops
+**all** incoming details, including an exact allowlisted pair. Only conversion
+back to the existing human-facing `ApiError` serializes the typed reason.
+Fallback stage annotation preserves an existing typed reason, never JSON.
+
+`HostTools::commit_candidates_diagnosed` is a default local trait method calling
+the existing `commit_candidates` with the same candidates and permit. Its
+`HostCommitError::Failed(ApiError)` maps to the observed publication boundary.
+The owned setup host explicitly returns `HostCommitError::ScopeNotRead` for its
+existing unread-scope guard. This non-serializable diagnostic signal is not a
+model tool or authority to read, accept, approve or publish; publication still
+requires the same real permit and all existing host/store checks. Published
+and cancelled outcomes still win over any later typed diagnostic signal.
+
+The eight-file repair footprint is five runtime source files (`diagnostics`,
+`lib`, `transport`, `mcp_client`, `commit`), owned setup `host`, scripted runtime
+tests and this report. Result-type plumbing is limited to paths where a typed
+origin previously crossed generic JSON; public workspace DTOs, bridge/model
+denials, store sanitizer and the exact 24 pairs are unchanged. Existing public
+host implementations compile and behave through the default method.
+
+Verification uses the same nonincremental/no-debug dedicated target and empty
+synthetic Codex home described below. The exact public-host spoof is GREEN with
+`publication/preparation_failed`, unchanged source bytes and no Proposal or
+Completed event; the real owned setup read guard remains GREEN with
+`publication/scope_not_read`, zero processed/graph/proposals. The runtime unit
+test covers all 24 exact raw pairs plus unknown shapes: each generic conversion
+has no reason/details, each observed publication annotation becomes publication,
+and a subsequent execution fallback preserves that **typed** reason. A new
+real-runtime test holds and releases the typed signal on both sides of the real
+permit: cancellation stays Cancelled with no publication, while prior guarded
+publication stays Completed once with no late error; notes stay unchanged.
+
+The full targeted regression commands remain the ones below, with passing
+counts now **66 runtime + 29 setup + 42 store = 137 tests** (two new runtime
+integration tests). Evidence is `/tmp/topics-host-provenance-green.txt`;
+package fmt and warning-denied all-target clippy with the existing store
+`test-support` feature also passed. No provider calls, native builds,
+manifest/lock/core DTO edits, main changes or pushes were made. The original
+reviewer must recheck the frozen corrected head; required Claude authentication
+and genuine acceptance remain pending. This repair does not establish the
+initiating cause of the genuine failed attempt.
+
 The genuine 25.1s followup on built `4d3420e` failed with one attempt, zero
 processed sources, empty graph and unknown diagnostics. This instrumentation
 does not establish that failure's initiating cause. No further provider call is
