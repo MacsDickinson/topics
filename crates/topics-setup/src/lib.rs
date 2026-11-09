@@ -3,6 +3,7 @@
 //! Call blocking facade methods on the host's blocking executor. Core owns
 //! consent, graph identity, checkpoints and all decisions; runtime owns the
 //! process, containment and final publication permit. No approval tool lives here.
+mod context;
 mod host;
 #[cfg(test)]
 mod tests;

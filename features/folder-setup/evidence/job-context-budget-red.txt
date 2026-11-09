@@ -1,0 +1,41 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-store)
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 4.30s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test optional_prior_context_cannot_crowd_out_deliverable_selected_sources ... 
+running 1 test
+Synthetic coverage: SetupCoverage { selected: 12, processed: ["profiles/000.md", "profiles/001.md", "meetings/002.md", "meetings/003.md", "meetings/004.md", "meetings/005.md", "meetings/006.md", "meetings/007.md", "meetings/008.md"], failed: ["meetings/009.md", "meetings/010.md", "meetings/011.md"], outstanding: [], excluded: [Exclusion { path: "topics", reason: "Hidden/config folder or app-owned records" }], complete: false, model_calls: 12, transmission_authorizations: 1 }; batch outcomes: [(Completed, None, ["3fa7175d-8999-5d1c-af45-eb4fce5fb349"]), (Completed, None, ["11232006-8572-5391-8c85-20763bfe397d"]), (Completed, None, ["bed9eba8-e728-5f5b-a58e-264e0c68a793"]), (Completed, None, ["5648bed2-489e-5b9f-a821-f9a5c5dbca41"]), (Completed, None, ["bb6887cc-a0d7-5f92-aa46-32e41b9ebb9a"]), (Completed, None, ["860fb050-1421-5824-8d2f-2a9209db8297"]), (Completed, None, ["486311d4-34e1-5d0e-a203-5d2d049e8581"]), (Completed, None, ["5af1e5e4-4ef4-5801-8143-5b55842234e1"]), (Completed, None, ["daf9889e-a314-59a5-977b-952e57dd0e4e"]), (Failed, Some(ApiError { code: "runtime_unavailable", message: "Batch did not finish; retry these inputs or defer them", details: None }), []), (Failed, Some(ApiError { code: "runtime_unavailable", message: "Batch did not finish; retry these inputs or defer them", details: None }), []), (Failed, Some(ApiError { code: "runtime_unavailable", message: "Batch did not finish; retry these inputs or defer them", details: None }), [])]
+
+thread 'optional_prior_context_cannot_crowd_out_deliverable_selected_sources' (6904837) panicked at crates/topics-setup/tests/protocol.rs:1381:13:
+assertion `left == right` failed: optional completed context must not cause otherwise deliverable selected batches to fail
+  left: 9
+ right: 12
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test optional_prior_context_cannot_crowd_out_deliverable_selected_sources ... FAILED
+
+failures:
+
+failures:
+    optional_prior_context_cannot_crowd_out_deliverable_selected_sources
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 18.15s
+
+FAILED
+
+failures:
+
+---- optional_prior_context_cannot_crowd_out_deliverable_selected_sources stdout ----
+
+thread 'optional_prior_context_cannot_crowd_out_deliverable_selected_sources' (6904835) panicked at crates/topics-setup/tests/protocol.rs:35:13:
+synthetic protocol child failed: optional_prior_context_cannot_crowd_out_deliverable_selected_sources
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    optional_prior_context_cannot_crowd_out_deliverable_selected_sources
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 18.17s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`

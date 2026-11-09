@@ -1,0 +1,132 @@
+Command: cargo test -p topics-runtime --all-targets --offline -- --test-threads=1
+Default features only; native-live/provider tests disabled; isolated synthetic CODEX_HOME; own target, debug0/incremental0.
+
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-core)
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-runtime)
+    Finished `test` profile [unoptimized] target(s) in 5.31s
+     Running unittests src/lib.rs (/tmp/topics-setup-target/debug/deps/topics_runtime-74d1d70c3dd38ea0)
+
+running 31 tests
+test bridge::tests::authenticated_poison_revokes_unpublished_preparation ... ok
+test bridge::tests::duplicate_key_forbidden_last_wins_frames_poison ... ok
+test bridge::tests::malformed_or_unknown_authenticated_mcp_frames_discard_previous_buffer ... ok
+test bridge::tests::review_cancelled_inflight_mcp_request_cannot_buffer ... ok
+test bridge::tests::review_full_strict_envelope_and_handshake_cases ... ok
+test bridge::tests::review_preinitialize_second_connection_poison_is_shared ... ok
+test bridge::tests::review_sdk_ignored_frames_poison_previous_buffer ... ok
+test bridge::tests::review_unauthenticated_rate_limit_does_not_abort_authorized_session ... ok
+test bridge::tests::sdk_negotiation_fixed_inventory_and_unselected_private_error_denial ... ok
+test bridge::tests::wrong_session_token_expired_and_replay_cannot_open_sdk_session ... ok
+test commit::tests::published_result_cannot_be_revoked_or_overwritten ... ok
+test commit::tests::revoke_does_not_wait_for_final_publication_action ... ok
+test environment::tests::dotenv_absent_allows_default_missing_or_existing_home_and_explicit_home ... ok
+test environment::tests::dotenv_existing_file_or_directory_blocks_default_and_explicit_home ... ok
+test environment::tests::dotenv_metadata_error_is_not_treated_as_absence ... ok
+test environment::tests::dotenv_symlinks_including_dangling_links_block_launch ... ok
+test environment::tests::invalid_codex_home_fails_closed_without_creating_it ... ok
+test environment::tests::only_small_validated_allowlist_is_copied ... ok
+test isolation::tests::aggregate_budget_does_not_spawn_after_expiry_and_limits_next_helper ... ok
+test isolation::tests::healthy_probe_can_finish_after_the_former_two_second_startup_cutoff ... ok
+test isolation::tests::helper_failures_cannot_masquerade_as_permission_denial ... ok
+test isolation::tests::inherited_output_pipe_cannot_outlive_probe_deadline ... ok
+test isolation::tests::oversized_input_is_rejected_before_spawn_and_bounded_input_round_trips ... ok
+test isolation::tests::timed_out_probe_is_killed_and_reaped ... ok
+test targeted_review_tests::safety_codes_have_actionable_sanitized_remediation ... ok
+test targeted_review_tests::second_commit_gate_rejects_failed_state ... ok
+test transport::tests::interleaved_notification_keeps_request_id_and_no_jsonrpc ... ok
+test transport::tests::interrupt_ack_requires_terminal_and_interleaving ... ok
+test transport::tests::malformed_unknown_id_exit_and_approval_fail_closed ... ok
+test transport::tests::output_frame_and_no_newline_are_bounded ... ok
+test transport::tests::stderr_is_drained_and_children_reaped ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.22s
+
+     Running unittests src/bin/topics-mcp-proxy.rs (/tmp/topics-setup-target/debug/deps/topics_mcp_proxy-2dbab0f4219411fd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance.rs (/tmp/topics-setup-target/debug/deps/acceptance-ae2bc1715a34ef01)
+
+running 5 tests
+test malformed_model_output_and_authority_fields_are_rejected ... ok
+test missing_event_identity_cannot_be_mistaken_for_current_run ... ok
+test native_root_canonical_symlink_unicode_quotes_denied_sibling_allowed ... ok
+test tool_boundary_denies_spoofed_wrong_session_expired_and_unknown ... ok
+test unknown_effective_tool_surface_blocks_selected_bytes ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s
+
+     Running tests/clone_boundary.rs (/tmp/topics-setup-target/debug/deps/clone_boundary-2bd402e43120d768)
+
+running 2 tests
+test clonefile_ancestor_cannot_copy_protected_descendant ... ok
+test fclonefileat_ancestor_cannot_copy_protected_descendant ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests/config_override_native.rs (/tmp/topics-setup-target/debug/deps/config_override_native-fdc2ecc47366ea78)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/live_codex.rs (/tmp/topics-setup-target/debug/deps/live_codex-9583b842c768f585)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/proxy_lifecycle.rs (/tmp/topics-setup-target/debug/deps/proxy_lifecycle-866f559401f8ffb8)
+
+running 1 test
+test proxy_exits_after_authenticated_parent_disconnect_with_open_stdin ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running tests/review_privacy.rs (/tmp/topics-setup-target/debug/deps/review_privacy-b8b90ee1a28131b4)
+
+running 4 tests
+test canonical_uuid_aliases_and_missing_nullable_candidates_are_rejected ... ok
+test inherited_notifications_providers_endpoints_telemetry_and_prompt_files_fail_closed ... ok
+test native_probe_capture_and_wait_are_bounded ... ok
+test returned_non_ephemeral_thread_cannot_transmit ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.26s
+
+     Running tests/schema_pin.rs (/tmp/topics-setup-target/debug/deps/schema_pin-3ee204ab252e7f2b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/scripted_runtime.rs (/tmp/topics-setup-target/debug/deps/scripted_runtime-47b18a37aee2b238)
+
+running 15 tests
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+test review_cancel_and_timeout_revoke_late_prepared_publication ... ok
+test review_cancel_stalled_host_has_bounded_terminal_and_releases_run_slot ... ok
+test review_child_environment_allowlist ... ok
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test review_published_outcome_survives_host_stall_and_error ... ok
+test review_staging_panic_emits_one_error_and_runtime_remains_usable ... ok
+test setup_empty_default_host_keeps_existing_no_publication_behavior ... ok
+test setup_empty_failed_and_cancelled_turns_never_checkpoint ... ok
+test setup_empty_revocation_denies_prepared_checkpoint ... ok
+test setup_empty_success_publishes_checkpoint_once_through_real_permit ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.64s
+
+     Running unittests examples/measure_native_probes.rs (/tmp/topics-setup-target/debug/examples/measure_native_probes-3087dec9bdbecf4b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+Exit: 0

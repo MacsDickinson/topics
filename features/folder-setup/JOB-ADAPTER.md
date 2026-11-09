@@ -1,13 +1,12 @@
 # Setup adapter implementation and verification status
 
-Current canonical checkpoint: authorized `4815346` (local cherry-pick `47112e9`),
-following the `bfe9f65` contract. Runnable-core baseline RED is captured in
-`job-adapter-red.txt`: all 10 original protocol cases reached the previous
-facade `4260dfc` and failed on its absent orchestration behavior. The current
-adapter has passed 13 protocol cases across subset/focused runs, plus three
-publication/tool-boundary unit cases; complete job coverage remains blocked by upstream empty-checkpoint
-and completed-draft-context regressions. Evidence separates these failures from
-the earlier service-stub failures; no assertion was relaxed to claim full GREEN.
+Current canonical checkpoint: authorized `ddc2c4d` (local `efa16df`), following
+`bfe9f65`, `4815346`, `b57be61`, `7488504` and `7154524`. All 22 setup tests pass:
+19 real orchestrator/service/scripted-child protocol cases and three unit cases,
+including genuine runtime publication fences. Runnable-core baseline RED used
+facade `4260dfc`; its ten original cases failed on absent orchestration behavior,
+not compiler/runner failures. Original privacy, source-count, call-count, empty
+completion and completed-context assertions were retained through core repairs.
 
 ## Desktop facade
 
@@ -51,7 +50,7 @@ are not serialized to the model.
 sources processed, with none selected failed or outstanding. Exclusions remain
 explicit and are never claimed analysed; selected completion never means whole
 folder coverage. The coordinator confirmed this interpretation after reserved
-app-record disclosure exposed a core predicate regression; its repair is upstream.
+app-record disclosure exposed a core predicate regression, repaired in `ddc2c4d`.
 
 `max_turns_per_batch` is the total reviewed **attempt** budget, including failed
 and cancelled attempts. Every attempt launches exactly one runtime turn with its
@@ -71,7 +70,7 @@ all save/confirm/correction decisions; desktop owns UI behavior and action count
 | Approved scenario | Owned protocol test / evidence |
 | --- | --- |
 | setup 1: local folder setup | `inventory_is_local_and_consent_starts_one_bounded_job` |
-| setup 2: empty/returning | empty terminal runtime tests; core/desktop entry behavior remains upstream |
+| setup 2: empty/returning | Core/desktop entry behavior; coordinator starts only an existing consented job |
 | setup 3: one exact-manifest consent | inventory test, 100-document test, `private_sources_and_unrelated_topic_inventory_never_reach_the_child` |
 | setup 4: changed waiting scope | `pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs` |
 | setup 5: one sourced graph / copied evidence | `hundred_documents_use_exact_multiple_scopes_and_one_draft_graph`, `multiple_tool_calls_validate_the_runtime_combined_buffer_once` |
@@ -89,55 +88,67 @@ and service. Runtime-bearing test processes use synthetic Codex homes; sources
 and absolute app-data paths are synthetic temp directories. Channel/process waits
 and job budgets are bounded; deterministic barriers exercise publication races.
 
-Completed independent of core stubs:
+Final evidence:
 
-- `job-empty-red.txt`: 4 scripted tests, 2 behavioral failures before the terminal
-  branch change, 2 compatibility/failure tests passing; exit 101.
-- `job-empty-green.txt`: all 15 real scripted runtime tests pass after the change,
-  including successful empty checkpoints, revocation, failed/cancelled empty
-  turns and existing default-host behavior; 36.46s, exit 0.
-- Scope/approval/privacy-tool denial unit test: 1 passes without core setup APIs.
-- `job-runtime-regressions.txt`: all 58 default-feature runtime regression tests
-  pass, including the 15 scripted cases. Native-live/provider tests are disabled.
-- `job-subset-green.txt`: 10 unaffected real orchestrator/service/scripted-child
-  protocol cases pass in 42.64s, including 100 documents / five turns, retry,
-  privacy, ambiguity, root switch and SQLite rebuild. Empty success and completed
-  context remain explicit exclusions pending upstream repairs.
-- `job-budget-snapshot-green.txt`: exhaustion, reviewed retry budget and async
-  consent-conflict snapshot regressions pass after their recorded RED cases.
-- `job-correction-history.txt`: scoped accepted correction, human-text privacy,
-  suppression on later analysis, and historical/current disagreement pass with
-  the actual service and scripted child.
-- `cargo fmt -p topics-setup -p topics-runtime --check` and warning-denied clippy
-  for both crates/all targets pass at the implementation checkpoint; rerun after
-  integrating runnable core and any resulting changes.
+- `job-final-green.txt`: all 22 setup tests pass; 19 protocol cases take 93.96s,
+  three unit cases take 3.07s, with no skipped/ignored cases.
+- `job-runtime-final-green.txt`: final default-feature runtime regressions;
+  genuine/native-live/provider cases remain disabled.
+- `job-context-budget-red.txt` / `job-context-budget-green.txt`: twelve 24 KiB
+  source bodies, one per turn; before packing only nine completed, afterwards all
+  twelve complete with exact source bytes, bounded replies, stable graph IDs,
+  intact dependencies and explicit partial-context notice (17.70s focused run).
+- `job-adapter-red.txt`: actual previous-facade RED against runnable core.
+- `job-empty-red.txt` / `job-empty-green.txt`: real empty-terminal fence RED/GREEN
+  and default-host/failure/cancel compatibility.
+- `job-unread-red.txt` / `job-unread-green.txt`: no source read cannot become
+  analysed-file coverage; failure keeps zero processed files.
+- `job-reconsent-red.txt` and final GREEN: renewed exact consent retains original
+  completed checkpoint IDs and sends three outstanding sources from a newly
+  combined five-source manifest batch.
+- `job-budget-snapshot-green.txt`, `job-correction-history.txt` and final GREEN:
+  bounded retry, optimistic controls, async consent state, human correction/text
+  privacy, suppression and dated disagreement.
+- `JOB-FIXTURE.md` and its evidence: separate graph_claim mode, shared renderer,
+  exact serde_json path quoting, unchanged graph mode and no production fake backend.
 
-`job-protocol-red.txt`, `job-service-stub-red.txt` and
-`job-protocol-stub-red.txt` capture real upstream not_implemented failures,
-**not adapter coverage**. They cannot substantiate GREEN, identity correctness,
-privacy containment of live notes, restart correctness or completed source coverage.
+The initial `job-protocol-red.txt`, `job-service-stub-red.txt` and
+`job-protocol-stub-red.txt` are historical upstream not_implemented evidence, not
+adapter coverage. `job-empty-service-red.txt`, `job-context-red.txt` and
+`job-reserved-exclusion-diagnostic.txt` record the real upstream failures fixed
+by the explicitly authorized core checkpoints; the original assertions now pass.
+
+## Combined context budget
+
+Core's draft projection is bounded to 200 records / 1 MiB. The frozen runtime's
+actual limits are stricter: 512 KiB per frame and 256 KiB per host tool response.
+The adapter accounts for the runtime's actual candidate_schema and serialized SDK
+and direct-mode envelopes. It keeps all selected source bytes and eligible
+accepted context, including corrections, mandatory. It packs only optional prior
+draft context into remaining space, retaining whole canonical records/citations,
+identity hints and available endpoint dependencies. A partial-context notice says
+that omitted context is not negative evidence. Nothing is removed from storage or
+coverage because optional retrieval context did not fit; privacy still comes from
+core's exact capability/hash/consent filters.
 
 ## Remaining integration and review
 
-Await authorized core repairs and canonical amendments for reconsent, inference
-and confirmation; do not invent signatures. Empty terminal extraction currently
-fails core's general minimum-one-candidate validator before publication;
-completed draft context currently omits prior batches. Their exact failures are
-`job-empty-service-red.txt` and `job-context-red.txt`. Retain both assertions and
-verify the complete suite after the authorized fix. Check privacy and cross-batch
-mapping, empty checkpoint IDs, changed
-unsent scope, exact completed coverage, human edit preservation and lock ordering.
-The test corpus deliberately includes copies, same-name people, private and
-unrelated sentinels, failed turns and changed bytes. Core/manager must also verify
-accepted corrections and historical disagreement across scoped context.
+All owned protocol cases and required checks are complete. Independent review
+and manager-owned product acceptance remain. The synthetic 100-document fixture
+uses exact copied assertions to prove five bounded turns, one transmission consent,
+all selected source coverage, stable IDs/citations and no false independent
+corroboration. Separate fixtures cover ambiguity, private/unrelated data, prior
+human correction, dates, errors, changed inputs, restart and index rebuild. These
+are protocol tests, not an import-duration or semantic-extraction benchmark.
 
-Core scope limits stay at 100 sources / 2 MiB; the adapter/runtime retain the
-stricter existing 64 combined candidate buffer and 2 MiB transport payload.
-A scope near the raw-byte cap may exceed the transport cap after JSON/citation
-encoding; fail closed and preview smaller batches rather than increasing limits.
-Accepted-context association uses the existing core source_context boundary;
-large accepted inventories may make that existing local traversal expensive.
-These paths require measurement with runnable services and the synthetic corpus.
+Core scopes remain bounded to 100 sources / 2 MiB; raw core proposal limits remain
+200 candidates / 2 MiB. The adapter/runtime retain their existing stricter 64
+combined candidates, 512 KiB frames and 256 KiB host replies. Mandatory sources and
+accepted context that do not fit fail closed with a smaller-batch action; they are
+never truncated. An individually oversized document requires narrower upstream
+projection or exclusion rather than a larger frame. Accepted-context association
+uses the existing core source_context boundary; large accepted inventories can
+make that local traversal expensive and remain subject to the existing timeout.
 
 Manager owns root/core manifests, lockfile, integration, independent Claude review
 (including the actual runtime diff), genuine pinned-Codex synthetic acceptance and
