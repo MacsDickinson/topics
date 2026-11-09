@@ -517,3 +517,76 @@ test("manifest request and reviewed budget reserve room for evidence and context
     page.getByText(/space reserved for citations and context/i),
   ).toBeVisible();
 });
+
+test("batch failure explanations allow only exact frozen reason pairs", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await setupJob(page);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as any).calls.some((c: any) => c.command === "setup_job_watch"),
+      ),
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    const w = window as any;
+    const details = [
+      { phase: "turn", reason: "model_terminal_failed" },
+      { phase: "publication", reason: "scope_not_read" },
+      {
+        phase: "turn",
+        reason: "model_terminal_failed",
+        extra: "SENTINEL_PRIVATE",
+      },
+      { phase: "turn", reason: "scope_not_read" },
+      { phase: "other", reason: "SENTINEL_PRIVATE" },
+      ["SENTINEL_PRIVATE"],
+      null,
+    ];
+    const payload = {
+      ...structuredClone(w.setupJob),
+      revision: 2,
+      status: "finished_with_gaps",
+      coverage: {
+        ...w.setupJob.coverage,
+        complete: false,
+        failed: ["Meetings/one.md"],
+      },
+      batches: details.map((detail, i) => ({
+        batch_id: `batch-${i}`,
+        status: "failed",
+        scope_id: null,
+        run_id: null,
+        attempt: 1,
+        error: {
+          code: "SENTINEL_PRIVATE",
+          message: "SENTINEL_PRIVATE",
+          details: detail,
+        },
+        proposal_ids: [],
+        completed_source_ids: [],
+      })),
+    };
+    for (const fn of Object.values(w.listeners))
+      (fn as Function)({ event: "setup_job_event", id: 2, payload });
+  });
+  await expect(page.getByText("The model reported a failed turn.")).toHaveCount(
+    1,
+  );
+  await expect(
+    page.getByText(
+      "The selected notes were not read, so this batch was not saved.",
+    ),
+  ).toHaveCount(1);
+  await expect(
+    page.getByText("This batch could not be completed."),
+  ).toHaveCount(5);
+  await expect(
+    page.getByText("SENTINEL_PRIVATE", { exact: false }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Retry failed" }),
+  ).toBeVisible();
+});

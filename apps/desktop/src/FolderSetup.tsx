@@ -39,6 +39,23 @@ function formatBytes(bytes: number): string {
   return `${bytes} bytes`;
 }
 const roles: FolderRole[] = ["reference", "project", "meeting", "log", "other"];
+function batchFailureExplanation(details: unknown): string {
+  if (details && typeof details === "object" && !Array.isArray(details)) {
+    const record = details as Record<string, unknown>;
+    const keys = Object.keys(record);
+    if (
+      keys.length === 2 &&
+      keys.includes("phase") &&
+      keys.includes("reason")
+    ) {
+      if (record.phase === "turn" && record.reason === "model_terminal_failed")
+        return "The model reported a failed turn.";
+      if (record.phase === "publication" && record.reason === "scope_not_read")
+        return "The selected notes were not read, so this batch was not saved.";
+    }
+  }
+  return "This batch could not be completed.";
+}
 function Evidence({ sources }: { sources: SourceRef[] }) {
   return (
     <details>
@@ -834,6 +851,17 @@ export function FolderSetup({
               <Button disabled={busy} onClick={() => control("retry_failed")}>
                 Retry failed
               </Button>
+            )}
+            {job.batches.some((batch) => batch.status === "failed") && (
+              <ul aria-label="Batch failures">
+                {job.batches
+                  .filter((batch) => batch.status === "failed")
+                  .map((batch) => (
+                    <li key={batch.batch_id}>
+                      {batchFailureExplanation(batch.error?.details)}
+                    </li>
+                  ))}
+              </ul>
             )}
             <details>
               <summary>Coverage details</summary>

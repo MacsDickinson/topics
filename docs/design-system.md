@@ -140,3 +140,5 @@ the disabled preview action.
 ```
 
 A stale setup job keeps completed work visible and presents a new exact manifest before renewed authorization. Label changed, unchanged and newly selected sources in text and show exclusions; do not imply that a new file inherited an earlier grant. Topic diffs pair prior reported understanding with new cited evidence. Confirming a connection lists its named endpoints and sources separately from confirming statements. Supplemental context displays the user's exact saved words without marking facts confirmed.
+
+For failed setup batches, show a short static explanation beside coverage and the retry action when an exact supported failure reason is available. Unknown or malformed details use a generic failure message; never place raw runtime error text or arbitrary details in the interface.

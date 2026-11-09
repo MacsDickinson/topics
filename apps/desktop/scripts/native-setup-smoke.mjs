@@ -174,7 +174,10 @@ try {
       "--config",
       "src-tauri/tauri.native-test.conf.json",
     ]);
-  if (process.env.TOPICS_SETUP_RECONSENT_ONLY !== "1") {
+  if (
+    process.env.TOPICS_SETUP_RECONSENT_ONLY !== "1" &&
+    process.env.TOPICS_SETUP_FAILURE_ONLY !== "1"
+  ) {
     await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
     for (const file of [
       "index.sqlite3",
@@ -186,21 +189,37 @@ try {
     env.TOPICS_TEST_SETUP_RESTART = "1";
     await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
   }
-  const reconsentRoot = join(fixture, "reconsent-notes");
-  mkdirSync(join(reconsentRoot, "meetings"), { recursive: true });
-  for (let i = 0; i < 41; i++)
+  if (process.env.TOPICS_SETUP_FAILURE_ONLY !== "1") {
+    const reconsentRoot = join(fixture, "reconsent-notes");
+    mkdirSync(join(reconsentRoot, "meetings"), { recursive: true });
+    for (let i = 0; i < 41; i++)
+      writeFileSync(
+        join(reconsentRoot, "meetings", `${String(i).padStart(3, "0")}.md`),
+        "# Synthetic Alex A42\n\nAlex A42 leads Ledger.\n",
+      );
+    writeFileSync(rendered.mode_file, "hold_second");
+    rmSync(rendered.log_file, { force: true });
+    env.TOPICS_APP_DATA_DIR = join(fixture, "reconsent-app-data");
+    env.TOPICS_TEST_WORKSPACE_ROOT = reconsentRoot;
+    env.TOPICS_TEST_SETUP_RECONSENT = "1";
+    env.TOPICS_TEST_SETUP_RESTART = "0";
+    env.TOPICS_TEST_MODE_FILE = rendered.mode_file;
+    await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
+  } else {
+    const failureRoot = join(fixture, "failure-notes");
+    mkdirSync(failureRoot);
     writeFileSync(
-      join(reconsentRoot, "meetings", `${String(i).padStart(3, "0")}.md`),
-      "# Synthetic Alex A42\n\nAlex A42 leads Ledger.\n",
+      join(failureRoot, "one.md"),
+      "# Synthetic note\n\nAlex leads Ledger.\n",
     );
-  writeFileSync(rendered.mode_file, "hold_second");
-  rmSync(rendered.log_file, { force: true });
-  env.TOPICS_APP_DATA_DIR = join(fixture, "reconsent-app-data");
-  env.TOPICS_TEST_WORKSPACE_ROOT = reconsentRoot;
-  env.TOPICS_TEST_SETUP_RECONSENT = "1";
-  env.TOPICS_TEST_SETUP_RESTART = "0";
-  env.TOPICS_TEST_MODE_FILE = rendered.mode_file;
-  await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
+    writeFileSync(rendered.mode_file, "fail_first");
+    rmSync(rendered.log_file, { force: true });
+    env.TOPICS_APP_DATA_DIR = join(fixture, "failure-app-data");
+    env.TOPICS_TEST_WORKSPACE_ROOT = failureRoot;
+    env.TOPICS_TEST_SETUP_FAILURE = "1";
+    env.TOPICS_TEST_MODE_FILE = rendered.mode_file;
+    await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
+  }
   for (const [path, expected] of sources)
     if (
       createHash("sha256").update(readFileSync(path)).digest("hex") !== expected
