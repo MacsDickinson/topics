@@ -27,6 +27,11 @@ pub type EventSink = Arc<dyn Fn(WorkspaceRunEvent) + Send + Sync>;
 /// There is intentionally no approval, filesystem, or generic service capability.
 pub trait HostTools: Send + Sync + 'static {
     fn call(&self, tool: &str, arguments: Value) -> WorkspaceResult<Value>;
+    /// Opt in when a successful empty turn must publish a durable checkpoint.
+    /// Existing hosts keep the historical empty-turn behavior by default.
+    fn requires_empty_commit(&self) -> bool {
+        false
+    }
     fn commit_candidates(
         &self,
         candidates: Vec<Candidate>,

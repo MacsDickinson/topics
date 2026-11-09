@@ -70,8 +70,11 @@ for line in sys.stdin:
   def toolcall(call,tool,args):
    emit({{'id':call,'method':'item/tool/call','params':{{'threadId':thread,'turnId':turn,'callId':str(call),'namespace':'topics','tool':tool,'arguments':args}}}})
    reply=json.loads(sys.stdin.readline());assert reply['id']==call;return reply
-  reply=toolcall(10000,'propose_changes',{{'candidates':[{{'kind':'topic','topic':{{'id':'10000000-0000-4000-8000-000000000001','topic_kind':'person','name':'Synthetic Alex','aliases':[],'sensitivity':'cloud_allowed'}}}}]}});assert reply['result']['success']
+  if not mode.startswith('empty'):
+   reply=toolcall(10000,'propose_changes',{{'candidates':[{{'kind':'topic','topic':{{'id':'10000000-0000-4000-8000-000000000001','topic_kind':'person','name':'Synthetic Alex','aliases':[],'sensitivity':'cloud_allowed'}}}}]}});assert reply['result']['success']
   emit({{'method':'item/agentMessage/delta','params':{{'threadId':thread,'turnId':turn,'itemId':'message','delta':'buffered'}}}})
+  if mode in ['empty_complete','empty_failed']:
+   emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':'completed' if mode=='empty_complete' else 'failed'}}}}}});continue
   if mode=='invalid_after_buffer':
    assert 'error' in toolcall(10001,'read_file',{{'path':'private.md'}})
    emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':'completed'}}}}}});continue
@@ -595,4 +598,128 @@ fn review_child_environment_allowlist() {
     );
     assert!(!temp.path().join("trace").exists());
     assert!(!temp.path().join("keys").exists());
+}
+
+/// Setup opts in because even an empty extraction needs a durable checkpoint.
+struct EmptyCheckpointHost {
+    base: Arc<Host>,
+    entered: Option<mpsc::Sender<()>>,
+    release: Mutex<Option<mpsc::Receiver<()>>>,
+    finished: Option<mpsc::Sender<bool>>,
+}
+impl HostTools for EmptyCheckpointHost {
+    fn call(&self, tool: &str, args: Value) -> WorkspaceResult<Value> {
+        self.base.call(tool, args)
+    }
+    fn requires_empty_commit(&self) -> bool {
+        true
+    }
+    fn commit_candidates(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> WorkspaceResult<()> {
+        assert!(candidates.is_empty(), "empty turn cannot fabricate proposals");
+        if let Some(entered) = &self.entered {
+            entered.send(()).unwrap();
+        }
+        if let Some(release) = self.release.lock().unwrap().take() {
+            release.recv_timeout(Duration::from_secs(10)).unwrap();
+        }
+        let result = self.base.commit_candidates(candidates, permit);
+        if let Some(finished) = &self.finished {
+            let _ = finished.send(result.is_err());
+        }
+        result
+    }
+}
+fn empty_host(base: Arc<Host>) -> Arc<EmptyCheckpointHost> {
+    Arc::new(EmptyCheckpointHost {
+        base,
+        entered: None,
+        release: Mutex::new(None),
+        finished: None,
+    })
+}
+#[test]
+fn setup_empty_success_publishes_checkpoint_once_through_real_permit() {
+    let (_temp, rt, request, base) = fixture("empty_complete");
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(request, empty_host(base.clone()), Arc::new(move |e| {
+        let _ = tx.send(e);
+    })).unwrap();
+    let mut publications = 0;
+    loop {
+        match rx.recv_timeout(Duration::from_secs(15)).unwrap().event {
+            RunEvent::Proposal { .. } => publications += 1,
+            RunEvent::Completed => break,
+            RunEvent::Error { error } => panic!("empty setup success failed: {error}"),
+            _ => {}
+        }
+    }
+    assert_eq!(*base.stages.lock().unwrap(), 1, "successful empty extraction must checkpoint");
+    assert_eq!(publications, 1);
+    assert_eq!(*base.calls.lock().unwrap(), 0);
+}
+#[test]
+fn setup_empty_revocation_denies_prepared_checkpoint() {
+    let (_temp, rt, request, base) = fixture("empty_complete");
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let (finished_tx, finished_rx) = mpsc::channel();
+    let host = Arc::new(EmptyCheckpointHost {
+        base: base.clone(),
+        entered: Some(entered_tx),
+        release: Mutex::new(Some(release_rx)),
+        finished: Some(finished_tx),
+    });
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(request.clone(), host, Arc::new(move |e| {
+        let _ = tx.send(e);
+    })).unwrap();
+    entered_rx.recv_timeout(Duration::from_secs(15)).expect("empty checkpoint preparation must reach real fence");
+    assert!(rt.cancel(&request.root_id, &request.run_id));
+    release_tx.send(()).unwrap();
+    assert!(finished_rx.recv_timeout(Duration::from_secs(2)).unwrap());
+    loop {
+        match rx.recv_timeout(Duration::from_secs(5)).unwrap().event {
+            RunEvent::Cancelled => break,
+            RunEvent::TextDelta { .. } => {}
+            event => panic!("revoked empty completion emitted {event:?}"),
+        }
+    }
+    assert_eq!(*base.stages.lock().unwrap(), 0);
+}
+#[test]
+fn setup_empty_failed_and_cancelled_turns_never_checkpoint() {
+    for mode in ["empty_failed", "empty_cancel"] {
+        let (_temp, rt, request, base) = fixture(mode);
+        let (tx, rx) = mpsc::channel();
+        rt.analysis_start(request.clone(), empty_host(base.clone()), Arc::new(move |e| {
+            let _ = tx.send(e);
+        })).unwrap();
+        assert!(matches!(rx.recv_timeout(Duration::from_secs(15)).unwrap().event, RunEvent::TextDelta { .. }));
+        if mode == "empty_cancel" {
+            assert!(rt.cancel(&request.root_id, &request.run_id));
+        }
+        let event = rx.recv_timeout(Duration::from_secs(10)).unwrap().event;
+        assert!(if mode == "empty_cancel" { matches!(event, RunEvent::Cancelled) } else { matches!(event, RunEvent::Error { .. }) });
+        assert_eq!(*base.stages.lock().unwrap(), 0);
+    }
+}
+#[test]
+fn setup_empty_default_host_keeps_existing_no_publication_behavior() {
+    let (_temp, rt, request, base) = fixture("empty_complete");
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(request, base.clone(), Arc::new(move |e| {
+        let _ = tx.send(e);
+    })).unwrap();
+    loop {
+        match rx.recv_timeout(Duration::from_secs(15)).unwrap().event {
+            RunEvent::Completed => break,
+            RunEvent::TextDelta { .. } => {}
+            event => panic!("default empty behavior changed: {event:?}"),
+        }
+    }
+    assert_eq!(*base.stages.lock().unwrap(), 0);
 }
