@@ -529,9 +529,18 @@ impl Runtime {
                         }
                         if status != "completed" {
                             s.pending.clear();
-                            return Err(runtime_error(
+                            let mut failure = runtime_error(
                                 "Model turn did not complete successfully; candidates discarded",
-                            ));
+                            );
+                            // Derive only from this validated terminal status, never
+                            // from the provider's arbitrary error message/details.
+                            if status == "failed" {
+                                failure.details = Some(json!({
+                                    "phase": "turn",
+                                    "reason": "model_terminal_failed"
+                                }));
+                            }
+                            return Err(failure);
                         }
                         if s.failed {
                             s.pending.clear();

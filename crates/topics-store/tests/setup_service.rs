@@ -31,6 +31,10 @@ fn failed_batch_persists_only_exact_allowlisted_diagnostic_pairs() {
         ),
         (Some(json!({"phase":"turn","reason":sentinel})), None),
         (
+            Some(json!({"phase":"turn","reason":{"private":sentinel}})),
+            None,
+        ),
+        (
             Some(json!({"phase":sentinel,"reason":"scope_not_read"})),
             None,
         ),

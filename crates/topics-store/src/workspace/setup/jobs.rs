@@ -331,21 +331,42 @@ impl WorkspaceService {
                 .ok_or_else(|| error("forbidden", "Setup attempt is no longer running"))?;
             revoke(ctx, &request.capability.run_id)?;
             b.status = SetupBatchStatus::Failed;
-            // Provider strings may contain arbitrary private bytes. Persist only a stable human action.
-            b.error = Some(error(
+            // Provider strings may contain arbitrary private bytes. Persist only
+            // the generic human action and reconstructed allowlisted constants.
+            let mut failure = error(
                 if request.error.code == "cancelled" {
                     "cancelled"
                 } else {
                     "runtime_unavailable"
                 },
                 "Batch did not finish; retry these inputs or defer them",
-            ));
+            );
+            failure.details = safe_failure_details(request.error.details.as_ref());
+            b.error = Some(failure);
             job.status = SetupJobStatus::Ready;
             bump(&mut job)?;
             coverage_refresh(&mut job);
             save_job(ctx, &job)?;
             Ok(job)
         })
+    }
+}
+fn safe_failure_details(details: Option<&Value>) -> Option<Value> {
+    let object = details?.as_object()?;
+    if object.len() != 2 {
+        return None;
+    }
+    match (
+        object.get("phase")?.as_str()?,
+        object.get("reason")?.as_str()?,
+    ) {
+        ("turn", "model_terminal_failed") => {
+            Some(serde_json::json!({"phase":"turn","reason":"model_terminal_failed"}))
+        }
+        ("publication", "scope_not_read") => {
+            Some(serde_json::json!({"phase":"publication","reason":"scope_not_read"}))
+        }
+        _ => None,
     }
 }
 fn coverage_refresh(job: &mut SetupJob) {

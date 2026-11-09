@@ -118,10 +118,17 @@ impl HostTools for SetupHost {
         permit: CommitPermit,
     ) -> WorkspaceResult<()> {
         if !self.read_sources.load(Ordering::Acquire) {
-            return Err(error(
+            // Publication is host-only; this diagnostic never enters a model
+            // tool response or its scoped context.
+            let mut failure = error(
                 "forbidden",
                 "The model must read its exact scoped sources before reporting source coverage",
-            ));
+            );
+            failure.details = Some(serde_json::json!({
+                "phase": "publication",
+                "reason": "scope_not_read"
+            }));
+            return Err(failure);
         }
         if *self
             .validated

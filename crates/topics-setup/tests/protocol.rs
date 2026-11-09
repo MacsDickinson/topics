@@ -1373,6 +1373,14 @@ fn assert_failed_diagnostic(mode: &str, phase: &str, reason: &str) {
     assert!(done.batches[0].completed_source_ids.is_empty());
     assert_eq!(fs::read(path).unwrap(), original);
     assert_eq!(f.transmissions().len(), usize::from(mode == "fail_first"));
+    let model_context = serde_json::to_string(&f.transmissions()).unwrap();
+    for diagnostic in [
+        "model_terminal_failed",
+        "scope_not_read",
+        "PRIVATE_ERROR_SENTINEL",
+    ] {
+        assert!(!model_context.contains(diagnostic));
+    }
     let failure = done.batches[0].error.as_ref().unwrap();
     assert_eq!(failure.code, "runtime_unavailable");
     assert!(

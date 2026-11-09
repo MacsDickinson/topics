@@ -198,6 +198,15 @@ fn malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates()
             matches!(terminal.event, RunEvent::Error { .. }),
             "{mode}: {terminal:?}"
         );
+        if let RunEvent::Error { error } = &terminal.event {
+            assert_eq!(
+                error.details,
+                (mode == "failed").then(|| json!({
+                    "phase":"turn", "reason":"model_terminal_failed"
+                })),
+                "unknown or other failures must not be guessed from broad error codes: {mode}"
+            );
+        }
         assert_eq!(*host.stages.lock().unwrap(), 0, "{mode}");
         assert!(rx.recv_timeout(Duration::from_millis(30)).is_err());
     }

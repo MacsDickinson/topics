@@ -49,6 +49,11 @@ The store regression additionally exercises exact allowed pairs and malformed,
 unknown, extra-key, nested and mismatched sentinel-bearing details, including
 durable reopen and rejection of late failure updates.
 
+`cargo test --offline -p topics-store --test setup_service
+failed_batch_persists_only_exact_allowlisted_diagnostic_pairs -- --nocapture`
+also failed before implementation: **0 passed, 1 failed**, at the first allowed
+pair (`left: None`). RED tests were committed separately as `3088fae`.
+
 ## Limits and readiness
 
 These two reasons diagnose future locally observed failures. They do not recover
@@ -56,3 +61,47 @@ the initiating cause of the genuine native attempt whose artifacts retained
 only `runtime_unavailable`. All production caps, timeouts, cancellation fences,
 retry policy and buffer discard semantics stay unchanged. Scripted regressions
 do not establish genuine native acceptance; independent review is still pending.
+
+Remaining blind spots intentionally stay unknown: startup/version/config/native
+preflight failures, SDK/schema/host validation failures, deadlines and missing
+terminal/disconnected worker paths. `model_terminal_failed` identifies a terminal
+status, not its upstream cause, and says nothing about auth or transience.
+`scope_not_read` identifies the local completion guard, not why the model did not
+obtain its scope. These two pairs may not diagnose a future genuine failure.
+
+## GREEN validation and handoff
+
+With the same low-debug, nonincremental, dedicated target environment above:
+
+| Command | Result |
+| --- | --- |
+| `cargo test --offline -p topics-setup --test protocol safe_reason -- --nocapture` | 2 passed; distinct exact pairs, zero coverage/publication, unchanged notes |
+| `cargo test --offline -p topics-setup -p topics-runtime` | 24 setup tests (3 unit + 21 protocol), 58 runtime tests passed; native-live feature disabled |
+| `cargo test --offline -p topics-store --test setup_service --test setup_amendments` | 30 passed (23 service + 7 amendments); sanitizer covers 14 input shapes |
+| `cargo fmt -p topics-runtime -p topics-setup -p topics-store -- --check` | passed |
+| `cargo clippy --offline -p topics-runtime -p topics-setup -p topics-store --all-targets --features topics-store/test-support -- -D warnings` | passed |
+| `git diff --check` | passed |
+
+Runtime-bearing suites used an empty temporary `CODEX_HOME`. The setup protocol
+also isolates each test child with its own synthetic home. Full regressions
+include 100-document coverage, human retry without duplicate graph records,
+pause/root-switch publication races and restart/SQLite rebuild. The runtime
+unknown/malformed/wrong-turn/exit cases also assert diagnostic `null`, while an
+explicit failed terminal retains the known pair. Diagnostics and terminal error
+sentinels are absent from model context. Store tests prove no sentinel retention,
+durable reopen, and no second failure update on the same revoked attempt.
+
+The first all-target clippy invocation omitted the existing store `test-support`
+feature and could not compile unrelated fault-injection tests; the documented
+feature-enabled command passed. Branch-local `cargo fmt --all -- --check` finds
+pre-existing formatting in `crates/topics-bdd/src/bin/setup-bdd.rs`; this lane
+does not edit BDD files. The coordinator confirms assembled integration already
+contains that formatting correction and will recheck after applying this diff.
+
+Scenario ownership remains the approved `continuity.feature` scenario
+"Failed inputs do not masquerade as complete folder coverage" (failure/retry),
+with the existing setup protocol tests owning runtime boundary evidence. No
+Gherkin/shared binding, core source, UI, manifest or lock changes are included.
+The desktop owner separately renders static explanations from the frozen pairs.
+Independent review targets the final branch head; genuine provider retry remains
+held for reviewed diagnostic/harness sources. Original `46dc9ee` stays in history.

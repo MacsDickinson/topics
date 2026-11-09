@@ -373,6 +373,9 @@ impl SetupCoordinator {
                         return Ok(job);
                     }
                     let failure = match terminal {
+                        // Store owns the closed diagnostic sanitizer and generic
+                        // persisted message; do not erase the local reason here.
+                        RunEvent::Error { error } => error,
                         RunEvent::Cancelled => error(
                             "cancelled",
                             "Model turn cancelled; its buffered draft was discarded",
@@ -501,10 +504,7 @@ impl SetupCoordinator {
             let job = self.inner.with_service(|service| {
                 service.setup_batch_fail(SetupBatchFailRequest {
                     capability: capability.clone(),
-                    error: error(
-                        &failure.code,
-                        "Could not start this model batch; retry when runtime is available",
-                    ),
+                    error: failure.clone(),
                 })
             })?;
             self.inner.publish_for(stopped, job);
