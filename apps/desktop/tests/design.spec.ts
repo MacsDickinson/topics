@@ -37,11 +37,11 @@ test('synthetic sources, scope review and unavailable runtime render', async ({ 
 async function contrastPair(locator: import('@playwright/test').Locator, kind: 'border' | 'placeholder' | 'text') {
   const colors = await locator.evaluate((el, kind) => {
     const style = getComputedStyle(el), pseudo = getComputedStyle(el, '::placeholder');
-    let parent = el.parentElement;
-    while (parent && getComputedStyle(parent).backgroundColor === 'rgba(0, 0, 0, 0)') parent = parent.parentElement;
+    const backgrounds: string[] = [];
+    let layer: Element | null = el;
+    while (layer) { backgrounds.push(getComputedStyle(layer).backgroundColor); layer = layer.parentElement; }
     return { foreground: kind === 'border' ? style.borderTopColor : kind === 'placeholder' ? pseudo.color : style.color,
-      opacity: kind === 'placeholder' ? Number(pseudo.opacity) : 1, background: style.backgroundColor,
-      surrounding: parent ? getComputedStyle(parent).backgroundColor : 'rgb(255, 255, 255)' };
+      opacity: kind === 'placeholder' ? Number(pseudo.opacity) : 1, backgrounds };
   }, kind);
   const parse = (value: string) => {
     const parts = value.match(/[\d.]+/g)?.map(Number);
@@ -49,8 +49,11 @@ async function contrastPair(locator: import('@playwright/test').Locator, kind: '
     return [parts[0], parts[1], parts[2], parts[3] ?? 1];
   };
   const blend = (front: number[], back: number[], opacity = 1) => front.slice(0, 3).map((v, i) => v * front[3] * opacity + back[i] * (1 - front[3] * opacity)).concat(1);
-  const surrounding = blend(parse(colors.surrounding), [255, 255, 255, 1]);
-  const background = blend(parse(colors.background), surrounding);
+  // Composite every ancestor. Hover transitions can produce an alpha surface;
+  // blending that directly onto white would falsely fail dark-theme icons.
+  let surrounding = [255, 255, 255, 1];
+  for (const value of colors.backgrounds.slice(1).reverse()) surrounding = blend(parse(value), surrounding);
+  const background = blend(parse(colors.backgrounds[0]), surrounding);
   const foreground = blend(parse(colors.foreground), background, colors.opacity);
   const luminance = (rgb: number[]) => rgb.slice(0, 3).map(v => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
   const ratio = (a: number[], b: number[]) => { const [low, high] = [luminance(a), luminance(b)].sort((x, y) => x - y); return (high + 0.05) / (low + 0.05); };
@@ -58,6 +61,26 @@ async function contrastPair(locator: import('@playwright/test').Locator, kind: '
 }
 
 for (const scheme of ['light', 'dark'] as const) {
+  test(`${scheme} selected navigation, privacy and uncertainty remain readable`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await workspaceFixture(page, { populated: true });
+    const topics = page.getByRole('button', { name: 'Topics', exact: true });
+    await topics.click();
+    expect((await contrastPair(topics, 'text')).againstControl).toBeGreaterThanOrEqual(4.5);
+    await page.getByRole('button', { name: 'Ledger', exact: true }).click();
+    const warning = page.locator('.understanding .uncertainty');
+    expect((await contrastPair(warning, 'text')).againstControl).toBeGreaterThanOrEqual(4.5);
+    const privacy = page.locator('.topic-privacy .badge');
+    expect((await contrastPair(privacy, 'text')).againstControl).toBeGreaterThanOrEqual(4.5);
+    const icon = topics.locator('.icon');
+    expect((await contrastPair(icon, 'text')).againstControl).toBeGreaterThanOrEqual(3);
+    await topics.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    expect(await topics.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
+    console.log(`${scheme}: selected navigation ${(await contrastPair(topics, 'text')).againstControl.toFixed(2)}, uncertainty ${(await contrastPair(warning, 'text')).againstControl.toFixed(2)}, privacy ${(await contrastPair(privacy, 'text')).againstControl.toFixed(2)}`);
+  });
+
   test(`${scheme} rendered field and primary states meet contrast thresholds`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await workspaceFixture(page, { empty: true });

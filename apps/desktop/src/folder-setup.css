@@ -1,18 +1,204 @@
-.folder-setup { max-width: 960px; }
-.setup-tree, .setup-tree ul { list-style: none; padding-left: 0; }
-.setup-tree > li { border-top: 1px solid var(--color-border-default); padding: var(--space-4) 0; }
-.setup-folder, .setup-dates { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: space-between; }
-.folder-setup details { margin: var(--space-2) 0; }
-.folder-setup blockquote { margin: var(--space-2) 0; padding-left: var(--space-3); border-left: 3px solid var(--color-border-default); white-space: pre-wrap; overflow-wrap: anywhere; }
-.setup-graph { width: 100%; max-height: 420px; border: 1px solid var(--color-border-default); background: var(--color-background-subtle); }
-.setup-graph rect { fill: var(--color-background-panel); stroke: var(--color-border-strong); }
-.setup-graph text { fill: var(--color-text-primary); font: var(--type-body); }
-.folder-setup li { overflow-wrap: anywhere; }
-.setup-graph line { stroke: var(--color-text-secondary); stroke-width: 2; }
-.setup-graph line.inferred { stroke-dasharray: 6 4; }
-.context-review article { border-top: 1px solid var(--color-border-default); padding: var(--space-3) 0; }
-.setup-folder > label:first-child { display: inline-flex; align-items: center; gap: var(--space-2); }
-.setup-folder > label:first-child input { margin: 0; }
-.setup-graph [role='button'] { cursor: pointer; }
-.setup-graph [role='button']:focus-visible { outline: 3px solid var(--color-border-focus); outline-offset: 2px; }
-.setup-tree ul { padding-left: var(--space-4); }
+/* New setup and contextual review reuse the same field, section and decision primitives. */
+.folder-setup {
+  max-width: 1040px;
+}
+.setup-tree,
+.setup-tree ul {
+  list-style: none;
+  padding: 0;
+}
+.setup-tree > li {
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--color-border-default);
+}
+.setup-tree > li > p {
+  max-width: 76ch;
+  color: var(--color-text-muted);
+  font: var(--type-meta);
+}
+.setup-tree ul {
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--color-border-default);
+  margin-left: var(--space-2);
+}
+.setup-tree ul > li {
+  padding: var(--space-3) 0;
+}
+.setup-folder {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-4);
+}
+.setup-folder > label:first-child {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 180px;
+  font: var(--type-body);
+  font-weight: 600;
+  padding-top: var(--space-2);
+}
+.setup-folder > label:last-child {
+  min-width: 160px;
+  font: var(--type-meta);
+}
+.setup-folder .icon {
+  color: var(--color-text-muted);
+}
+.setup-tree details {
+  margin-top: var(--space-2);
+}
+.setup-tree details ul {
+  margin: var(--space-2) 0;
+}
+.setup-tree .check {
+  align-items: baseline;
+}
+.setup-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--color-border-default);
+}
+.folder-setup > .consent,
+.folder-setup .consent {
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+}
+.folder-setup .consent li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-info);
+}
+.folder-setup .consent .check {
+  margin-top: var(--space-5);
+}
+.folder-setup .consent > .ui-button {
+  margin: var(--space-3) var(--space-2) 0 0;
+}
+.folder-setup blockquote {
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-border-info);
+}
+.folder-setup > .run-panel {
+  margin: 0 0 var(--space-6);
+}
+.folder-setup .run-panel .ui-button {
+  margin: var(--space-2) var(--space-2) 0 0;
+}
+.folder-setup .content-section > .actions {
+  margin: 0 0 var(--space-4);
+}
+.folder-setup .content-section > .actions button[aria-pressed="true"] {
+  background: var(--color-background-selected);
+  border-color: var(--color-text-accent);
+  color: var(--color-text-accent);
+}
+.setup-graph {
+  width: 100%;
+  max-height: 420px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-card);
+  background: var(--color-background-subtle);
+}
+.setup-graph rect {
+  fill: var(--color-background-panel);
+  stroke: var(--color-border-strong);
+}
+.setup-graph text {
+  fill: var(--color-text-primary);
+  font: var(--type-body);
+}
+.setup-graph line {
+  stroke: var(--color-text-secondary);
+  stroke-width: 2;
+}
+.setup-graph line.inferred {
+  stroke-dasharray: 6 4;
+}
+.setup-graph [role="button"] {
+  cursor: pointer;
+}
+.setup-graph [role="button"]:focus-visible {
+  outline: 3px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+.draft-topic-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0;
+}
+.draft-topic-detail {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+}
+.draft-topic-detail > div,
+.setup-relationship,
+.setup-issue {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-default);
+}
+.setup-issue .ui-button {
+  margin-top: var(--space-2);
+}
+.context-review {
+  border-top: 1px solid var(--color-border-default);
+  padding-top: var(--space-5);
+  margin-top: var(--space-5);
+}
+.context-review article {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.context-review article > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: 0;
+}
+.context-review article .actions {
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.context-review article .actions .ui-button {
+  padding: var(--space-1) var(--space-2);
+  min-height: 32px;
+}
+.context-review > .ui-button {
+  margin-top: var(--space-4);
+}
+.context-composer {
+  padding: var(--space-5);
+  margin-top: var(--space-5);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-card);
+  background: var(--color-background-subtle);
+}
+.context-composer > .field {
+  margin: var(--space-4) 0;
+}
+.context-composer > .ui-button,
+.context-review .consent > .ui-button {
+  margin: var(--space-3) var(--space-2) 0 0;
+}
+.context-review .consent h4 {
+  margin-top: var(--space-4);
+}
+@media (max-width: 760px) {
+  .setup-dates {
+    grid-template-columns: 1fr;
+  }
+  .setup-folder > label:last-child {
+    width: 100%;
+  }
+  .folder-setup .consent,
+  .context-composer,
+  .draft-topic-detail {
+    padding: var(--space-4);
+  }
+}

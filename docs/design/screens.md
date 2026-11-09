@@ -5,14 +5,14 @@ These specifications describe existing flows and desired interaction behavior, b
 ```text
 Desktop shell                         Narrow window
 ┌────────────┬─────────────────────┐  ┌─────────┬──────────────┐
-│ navigation │ page title + status │  │ nav     │ page title   │
-│ current    │ list  │ detail      │  │         │ list         │
-│ actions    │       │ evidence    │  │         │ detail       │
-│ root/status│       │ actions     │  │         │ actions      │
+│ navigation │ page title + action │  │ labelled top navigation│
+│ current    │ list  │ detail      │  ├────────────────────────┤
+│ actions    │       │ evidence    │  │ title, list, reader    │
+│ root/status│       │ actions     │  │ actions in reading order│
 └────────────┴─────────────────────┘  └─────────┴──────────────┘
 ```
 
-The shell keeps Topics, Search, Inbox, History and Sources accessible, with Analyse notes and New topic actions and root/runtime context. Distinguish active navigation from focus. At constrained widths, preserve labels and stack inner panes before reading becomes cramped; permit scrolling without clipping controls.
+The shell groups Topics/Sources under Library and Inbox/History under Review, with a real quick search, Set up folder, Analyse notes and New topic actions plus full root/runtime context. Distinguish active navigation from focus. At constrained widths, preserve labels and stack inner panes before reading becomes cramped; permit document scrolling without clipping controls. Initial connection is the only content task until a root exists; Search is not rendered underneath it. See [redesign](redesign.md) for the React primitive and parallel-feature integration contract.
 
 ## Read and inspect
 

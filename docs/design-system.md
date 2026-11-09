@@ -1,6 +1,6 @@
 # Topics design system
 
-Status: reconciled with the desktop implementation on 2026-11-09. The CSS in [`tokens.css`](../apps/desktop/src/tokens.css) and [`style.css`](../apps/desktop/src/style.css) is the source of truth for implemented values. The guidance below also identifies desired behavior that still needs verification or implementation. See the [reference review](design/reference-review.md) and [screen specifications](design/screens.md).
+Status: structurally redesigned on 2026-11-09. The implementation uses [`tokens.css`](../apps/desktop/src/tokens.css), [`ui.tsx`](../apps/desktop/src/ui.tsx), [`ui.css`](../apps/desktop/src/ui.css) and the consolidated [`style.css`](../apps/desktop/src/style.css). See the [redesign plan and integration contract](design/redesign.md), [reference review](design/reference-review.md) and [screen specifications](design/screens.md). Browser evidence does not establish native or screen-reader acceptance.
 
 ## Principles
 
@@ -18,11 +18,37 @@ Topics is a local-first reading and review workspace. Give notes and evidence ro
 
 Spacing is `--space-1` through `--space-6` (4, 8, 12, 16, 24, 32px). Radii are `--radius-control` 8px, `--radius-card` 10px, `--radius-panel` 14px and `--radius-pill` 999px. `--motion-fast` is 120ms ease; `--elevation-panel` supplies a theme-specific subtle shadow. Reduced-motion CSS removes transitions and animation. Existing CSS still contains literal spacing and dimensions; these tokens are available, not a claim of complete migration.
 
-The local system font stack requires no network. Composite `--type-page`, `--type-section`, `--type-body` and `--type-meta` define 26px/1.25/650, 17px/1.4/600, 14px/1.55/400 and 12px/1.5/400 respectively. Headings use the first two; not all text uses a composite token. A separate reading or control type role is not implemented.
+The local system font stack requires no network. Composite `--type-page`, `--type-section`, `--type-body` and `--type-meta` define 26px/1.25/650, 17px/1.4/600, 14px/1.55/400 and 12px/1.5/400 respectively. `--type-reading` adds 16px/1.7/400 for original notes; `--type-control` adds 13px/1.4/500 for controls and labels. Accepted claim values enlarge the reading role to 20px/1.5/500 to make the understanding dominant. These roles share the local stack in both themes; color remains independent.
 
-## Implemented CSS primitives
+## Implemented React primitives and patterns
 
-These are CSS classes and native elements, not a React component library. Global buttons, inputs, textareas and selects share control styling and focus-visible outlines; `.primary` and `.quiet` modify buttons. `.badge` has `.pending`, `.accepted` and `.conflict` variants; `.error`, `.notice`, `.empty`, `.candidate`, `.run-panel` and `.source-evidence` provide shared surfaces. Navigation uses `aria-current`, while topic and source selection use `aria-pressed`. Hover, disabled and focus-visible styles exist; distinct pressed and busy button variants are not established. For example, `<span class="badge pending">Pending</span>` is a non-interactive status label. Keep meanings in text as well as color. Native input and textarea placeholders use `--color-text-placeholder` at full opacity in both themes; for example, `<input placeholder="Meetings/one.md">` keeps its associated label and uses the shared field border and placeholder roles. `--color-border-strong` defines field boundaries against panel and subtle surfaces, and primary hover uses `--color-background-action-hover` with `--color-text-on-action`.
+Shared components in `ui.tsx` are used across the shell and screens. They contain no IPC, consent or business state:
+
+| Component | Contract and use |
+| --- | --- |
+| `Icon` | Small local SVG set, always decorative and hidden from assistive technology. Pair it with visible text or a named containing control. |
+| `Button` | Native button props/ref, `primary`, `secondary`, `quiet`, `danger`, optional icon and `busy`. Busy exposes `aria-busy` and disables the native control; screens retain request guards. Supply `type="button"` inside forms unless submitting. |
+| `PageHeader` | One page heading, description and optional action slot. `level={2}` supports proposal headers without introducing extra page headings. |
+| `Badge`, `PrivacyBadge` | Non-interactive named status/privacy chips; neutral/info/warning/success/danger semantic tones. Privacy never implies analysis consent. |
+| `EmptyState` | Heading, small identity icon and useful next step. Loading and failures remain separate states. |
+| `Section` | Named semantic section with heading, description and optional actions. Keep related reading or decision content together. |
+| `Field` | A stable id, visible associated label and one native control. Optional hint/error are linked through `aria-describedby`; errors set `aria-invalid`. It does not reset drafts or perform validation requests. |
+
+```tsx
+<PageHeader title="Sources" description="Your local Markdown library." />
+<Field id="source-sensitivity" label="Source sensitivity"
+  hint="Local-only notes are always excluded from analysis.">
+  <select value={sensitivity} onChange={onChange}>
+    <option value="local_only">Local-only</option>
+  </select>
+</Field>
+<PrivacyBadge sensitivity="local_only" />
+<Button variant="primary" disabled={!confirmed} onClick={onSave}>Save starting map</Button>
+```
+
+Global native controls provide default, hover, pressed, focus-visible and disabled states. Fields use the contrast-checked strong boundary and full-opacity placeholder role; primary controls use on-action text in both themes. Navigation uses `aria-current` and an inset selection bar; topic/source buttons use `aria-pressed`, a boundary and the same selection cue. The shell's actual Cmd/Ctrl+K handler opens Search and focuses/selects its input, while disconnected setup remains visible.
+
+The stylesheet defines `.focused-form`, `.form-grid`, `.form-section`, `.review-footer`, `.source-row`, `.candidate`, `.run-panel` and `.source-evidence` for shared screen patterns. A review footer sits after scope, consent and exact before/after context, never implying automatic approval. Native `details/summary` disclosures retain complete evidence and revision identities. Opening a disclosure grants no permission. Source passages use semantic figures/captions; original note text stays whitespace-preserving, selectable React text.
 
 ## Component and state guidance
 
@@ -37,7 +63,7 @@ These are CSS classes and native elements, not a React component library. Global
 
 All controls must be reachable and operable by keyboard in a logical order. Provide a visible focus indicator distinct from selection, preserve focus after updates or restore it to a sensible trigger, and do not trap it except in a correctly managed modal. Associate labels, descriptions and errors; give icon-only actions names. Use semantic headings, lists and landmarks; announce meaningful progress without flooding live regions. Check text contrast at least 4.5:1 (3:1 for large text), and essential control boundaries, icons and focus indicators at least 3:1 against adjacent colors. Do not depend on color, hover or animation to convey state. Respect `prefers-reduced-motion` and test keyboard, zoom and screen reader behavior.
 
-At comfortable desktop widths use navigation plus a flexible content area; list/detail screens may add a second column. At narrow widths, stack list above detail and form columns into one, keep navigation reachable and actions visible, and wrap long paths and unbroken content without horizontal page overflow. Existing 1050/760/480px breakpoints are implementation facts, not universal targets; validate minimum supported window size and zoom before changing them. Reading areas should have a comfortable line length (roughly 60–80 characters), preserve note whitespace, wrap long paths and offer access to complete evidence. Do not hide provenance behind truncation. Keep long reviews navigable without losing the decision context.
+At comfortable desktop widths use a 232px floating sidebar and a flexible content area; Topics and Sources add a 252px list beside the reader. At 1180px these tighten to 208/210px; at 980px list/detail stack. At 760px the sidebar becomes a labelled top navigation strip and form columns stack; 480px further simplifies navigation grouping. These are implementation breakpoints, not universal device targets. Test long paths and unbroken content without horizontal page overflow. Reading areas use roughly 72ch, preserve note whitespace and offer complete evidence. Keep long reviews navigable without losing decision context. The skip link targets the main landmark, and cancelling manual capture or folder settings restores focus to the actual trigger.
 
 ## Change discipline
 

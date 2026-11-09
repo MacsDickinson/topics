@@ -1,13 +1,23 @@
-import { ContextReview } from './ContextReview';
-import { FolderSetup } from './FolderSetup';
-import { createRoot } from 'react-dom/client';
-import { useEffect, useRef, useState } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { Search } from './Search';
-import { Sources } from './Sources';
-import { ipc, apiError, errorHelp } from './ipc';
-import { ProposalEditor } from './ProposalEditor';
-import { TopicDetail } from './TopicDetail';
+import { ContextReview } from "./ContextReview";
+import { FolderSetup } from "./FolderSetup";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  Icon,
+  PageHeader,
+  PrivacyBadge,
+  Section,
+} from "./ui";
+import { createRoot } from "react-dom/client";
+import { useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { Search } from "./Search";
+import { Sources } from "./Sources";
+import { ipc, apiError, errorHelp } from "./ipc";
+import { ProposalEditor } from "./ProposalEditor";
+import { TopicDetail } from "./TopicDetail";
 import {
   emptySpec,
   emptyDraft,
@@ -16,7 +26,7 @@ import {
   ScopeFields,
   ScopeReview,
   type ScopeDraft,
-} from './Scope';
+} from "./Scope";
 import type {
   ApiError,
   Candidate,
@@ -29,37 +39,44 @@ import type {
   Topic,
   TopicView,
   WorkspaceRunEvent,
-} from './workspace-types';
-import './style.css';
-if (import.meta.env.VITE_NATIVE_TEST === '1')
-  await import('@wdio/tauri-plugin');
-type Screen = 'search' | 'topics' | 'inbox' | 'history' | 'analyse' | 'sources' | 'setup';
+} from "./workspace-types";
+import "./style.css";
+if (import.meta.env.VITE_NATIVE_TEST === "1")
+  await import("@wdio/tauri-plugin");
+type Screen =
+  | "search"
+  | "topics"
+  | "inbox"
+  | "history"
+  | "analyse"
+  | "sources"
+  | "setup";
 type ActiveRun = { root: string; id: string; seq: number };
 function validEvent(value: unknown): value is WorkspaceRunEvent {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== "object") return false;
   const e = value as WorkspaceRunEvent;
   if (
-    typeof e.root_id !== 'string' ||
-    typeof e.run_id !== 'string' ||
+    typeof e.root_id !== "string" ||
+    typeof e.run_id !== "string" ||
     !Number.isSafeInteger(e.seq) ||
     e.seq < 0 ||
     !e.event ||
-    typeof e.event !== 'object'
+    typeof e.event !== "object"
   )
     return false;
   switch (e.event.kind) {
-    case 'text_delta':
-      return typeof e.event.text === 'string';
-    case 'proposal':
-      return typeof e.event.proposal_id === 'string';
-    case 'error':
+    case "text_delta":
+      return typeof e.event.text === "string";
+    case "proposal":
+      return typeof e.event.proposal_id === "string";
+    case "error":
       return (
         !!e.event.error &&
-        typeof e.event.error.message === 'string' &&
-        typeof e.event.error.code === 'string'
+        typeof e.event.error.message === "string" &&
+        typeof e.event.error.code === "string"
       );
-    case 'completed':
-    case 'cancelled':
+    case "completed":
+    case "cancelled":
       return true;
     default:
       return false;
@@ -68,16 +85,17 @@ function validEvent(value: unknown): value is WorkspaceRunEvent {
 function App() {
   const [root, setRoot] = useState<RootRef | null>();
   const rootRef = useRef<RootRef | null>(null);
+  const formTrigger = useRef<HTMLButtonElement | null>(null);
   const selectedTopicId = useRef<string | null>(null);
   const epoch = useRef(0),
     detailSeq = useRef(0),
     refreshSeq = useRef(0),
     scopeSeq = useRef(0),
     chatScopeSeq = useRef(0);
-  const [screen, setScreen] = useState<Screen>('search');
+  const [screen, setScreen] = useState<Screen>("search");
   const [autoSetup, setAutoSetup] = useState(false);
   const [settings, setSettings] = useState(false),
-    [path, setPath] = useState(''),
+    [path, setPath] = useState(""),
     [create, setCreate] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]),
     [proposals, setProposals] = useState<Proposal[]>([]),
@@ -88,20 +106,20 @@ function App() {
     [error, setError] = useState<ApiError | null>(null),
     [bootError, setBootError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState("");
   const [spec, setSpec] = useState<ScopeDraft>(emptyDraft),
     [preview, setPreview] = useState<ScopePreview | null>(null),
     [confirmed, setConfirmed] = useState(false);
   const [chatPreview, setChatPreview] = useState<ScopePreview | null>(null),
     [chatConfirmed, setChatConfirmed] = useState(false);
-  const [message, setMessage] = useState(''),
+  const [message, setMessage] = useState(""),
     [manual, setManual] = useState(false),
-    [name, setName] = useState(''),
-    [kind, setKind] = useState<Topic['topic_kind']>('thread'),
+    [name, setName] = useState(""),
+    [kind, setKind] = useState<Topic["topic_kind"]>("thread"),
     [manualSensitivity, setManualSensitivity] =
-      useState<Sensitivity>('unknown');
+      useState<Sensitivity>("unknown");
   const [run, setRun] = useState<ActiveRun | null>(null),
-    [stream, setStream] = useState('');
+    [stream, setStream] = useState("");
   const runRef = useRef<ActiveRun | null>(null),
     pendingStart = useRef(false),
     earlyEvents = useRef<WorkspaceRunEvent[]>([]),
@@ -128,19 +146,19 @@ function App() {
     ++detailSeq.current;
     setTopic(null);
     setTopicLoading(false);
-    setMessage('');
+    setMessage("");
     invalidateScope();
   };
   async function refresh(selected: RootRef, generation = epoch.current) {
     const sequence = ++refreshSeq.current;
     const results = await Promise.allSettled([
-      ipc<{ topics: Topic[] }>('workspace_topics_list', {
+      ipc<{ topics: Topic[] }>("workspace_topics_list", {
         root_id: selected.root_id,
       }),
-      ipc<{ proposals: Proposal[] }>('workspace_proposals_list', {
+      ipc<{ proposals: Proposal[] }>("workspace_proposals_list", {
         root_id: selected.root_id,
       }),
-      ipc<{ operations: Operation[] }>('workspace_history_list', {
+      ipc<{ operations: Operation[] }>("workspace_history_list", {
         root_id: selected.root_id,
       }),
     ]);
@@ -149,18 +167,18 @@ function App() {
       sequence !== refreshSeq.current
     )
       return;
-    if (results[0].status === 'fulfilled') setTopics(results[0].value.topics);
-    if (results[1].status === 'fulfilled')
+    if (results[0].status === "fulfilled") setTopics(results[0].value.topics);
+    if (results[1].status === "fulfilled")
       setProposals(
         results[1].value.proposals.filter(
           (p) => p.root_id === selected.root_id,
         ),
       );
-    if (results[2].status === 'fulfilled')
+    if (results[2].status === "fulfilled")
       setOperations(results[2].value.operations);
-    const failure = results.find((r) => r.status === 'rejected');
-    if (failure?.status === 'rejected') report(failure.reason);
-    return results[1].status === 'fulfilled'
+    const failure = results.find((r) => r.status === "rejected");
+    if (failure?.status === "rejected") report(failure.reason);
+    return results[1].status === "fulfilled"
       ? { proposals: results[1].value.proposals }
       : undefined;
   }
@@ -175,12 +193,12 @@ function App() {
     if (topicChanged) {
       setTopic(null);
       setTopicLoading(true);
-      setMessage('');
+      setMessage("");
       invalidateChatScope();
     }
     setError(null);
     try {
-      const result = await ipc<TopicView>('workspace_topic_get', {
+      const result = await ipc<TopicView>("workspace_topic_get", {
         root_id: selected.root_id,
         topic_id: id,
       });
@@ -219,21 +237,21 @@ function App() {
     )
       return;
     active.seq = value.seq;
-    if (value.event.kind === 'text_delta') {
+    if (value.event.kind === "text_delta") {
       const delta = value.event.text;
       setStream((text) => (text + delta).slice(-100000));
-    } else if (['completed', 'cancelled', 'error'].includes(value.event.kind)) {
+    } else if (["completed", "cancelled", "error"].includes(value.event.kind)) {
       runRef.current = null;
       setRun(null);
       pendingStart.current = false;
       earlyEvents.current = [];
-      if (value.event.kind === 'error') {
+      if (value.event.kind === "error") {
         report(value.event.error);
-        setNotice('Run failed. No model changes were accepted.');
-      } else if (value.event.kind === 'cancelled')
-        setNotice('Run stopped. No model changes were accepted.');
+        setNotice("Run failed. No model changes were accepted.");
+      } else if (value.event.kind === "cancelled")
+        setNotice("Run stopped. No model changes were accepted.");
       else {
-        setNotice('Analysis complete. Review proposed changes in Inbox.');
+        setNotice("Analysis complete. Review proposed changes in Inbox.");
         const selected = rootRef.current;
         if (selected) {
           const generation = epoch.current;
@@ -243,14 +261,14 @@ function App() {
               !runRef.current &&
               result?.proposals.some(
                 (p) =>
-                  p.status === 'accepted' &&
+                  p.status === "accepted" &&
                   p.candidates.length === 0 &&
-                  p.origin.kind === 'analysis' &&
+                  p.origin.kind === "analysis" &&
                   p.origin.run_id === value.run_id,
               )
             )
               setNotice(
-                'No new changes. Your accepted understanding is already up to date for this selection.',
+                "No new changes. Your accepted understanding is already up to date for this selection.",
               );
           });
         }
@@ -264,7 +282,7 @@ function App() {
     let disposed = false;
     let unlisten: (() => void) | undefined;
     eventReady.current = listen<WorkspaceRunEvent>(
-      'workspace_run_event',
+      "workspace_run_event",
       (event) => receiveRef.current(event.payload),
     ).then((fn) => {
       if (disposed) fn();
@@ -272,12 +290,12 @@ function App() {
     });
     void eventReady.current.catch(() => undefined);
     const generation = epoch.current;
-    void ipc<{ root: RootRef | null }>('workspace_root_get')
+    void ipc<{ root: RootRef | null }>("workspace_root_get")
       .then((result) => {
         if (disposed || !current(generation)) return;
         rootRef.current = result.root;
         setRoot(result.root);
-        setPath(result.root?.path || '');
+        setPath(result.root?.path || "");
         if (result.root) void refresh(result.root, generation);
       })
       .catch((e) => {
@@ -294,24 +312,25 @@ function App() {
   }, []);
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        if (!rootRef.current) return;
         event.preventDefault();
-        setScreen('search');
+        setScreen("search");
         setManual(false);
         setSettings(false);
         requestAnimationFrame(() => {
-          const input = document.querySelector<HTMLInputElement>('#search');
+          const input = document.querySelector<HTMLInputElement>("#search");
           input?.focus();
           input?.select();
         });
       }
     };
-    window.addEventListener('keydown', shortcut);
-    return () => window.removeEventListener('keydown', shortcut);
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
   }, []);
   async function checkRuntime() {
     try {
-      setRuntime(await ipc<RuntimeStatus>('workspace_runtime_status'));
+      setRuntime(await ipc<RuntimeStatus>("workspace_runtime_status"));
     } catch (e) {
       setRuntime({
         available: false,
@@ -329,9 +348,9 @@ function App() {
     pendingStart.current = false;
     earlyEvents.current = [];
     setError(null);
-    setNotice('Stopping run…');
+    setNotice("Stopping run…");
     try {
-      const result = await ipc<{ cancelled: boolean }>('workspace_run_cancel', {
+      const result = await ipc<{ cancelled: boolean }>("workspace_run_cancel", {
         root_id: active.root,
         run_id: active.id,
       });
@@ -339,15 +358,15 @@ function App() {
       setRun(null);
       setNotice(
         result.cancelled
-          ? 'Run stopped. No model changes were accepted.'
-          : 'Run is no longer active. Review Inbox for any completed proposals.',
+          ? "Run stopped. No model changes were accepted."
+          : "Run is no longer active. Review Inbox for any completed proposals.",
       );
       if (!result.cancelled && rootRef.current)
         await refresh(rootRef.current, generation);
     } catch (e) {
       if (current(generation, active.root)) {
         setNotice(
-          'Cancellation was not confirmed. Retry Stop run or change notes folder.',
+          "Cancellation was not confirmed. Retry Stop run or change notes folder.",
         );
         report(e);
       }
@@ -358,7 +377,7 @@ function App() {
     setBusy(true);
     setError(null);
     try {
-      const chosen = await ipc<string | null>('workspace_choose_root');
+      const chosen = await ipc<string | null>("workspace_choose_root");
       if (chosen !== null) {
         setPath(chosen);
         setCreate(false);
@@ -380,39 +399,39 @@ function App() {
     pendingStart.current = false;
     earlyEvents.current = [];
     setRun(null);
-    setStream('');
-    setNotice('');
+    setStream("");
+    setNotice("");
     rootRef.current = null;
     setRoot(null);
     setTopics([]);
     setSpec(emptyDraft);
-    setName('');
-    setKind('thread');
-    setManualSensitivity('unknown');
+    setName("");
+    setKind("thread");
+    setManualSensitivity("unknown");
     setProposals([]);
     setOperations([]);
     clearTopic();
     setManual(false);
     try {
       if (active)
-        await ipc('workspace_run_cancel', {
+        await ipc("workspace_run_cancel", {
           root_id: active.root,
           run_id: active.id,
         });
       const result = await ipc<{
         root: RootRef;
         index: { document_count: number; warnings: string[] };
-      }>('workspace_root_set', { path: path.trim(), create });
+      }>("workspace_root_set", { path: path.trim(), create });
       if (!current(generation)) return;
       rootRef.current = result.root;
       setRoot(result.root);
       setPath(result.root.path);
       setSettings(false);
       setAutoSetup(true);
-      setScreen('setup');
+      setScreen("setup");
       setCreate(false);
       if (result.index.warnings?.length)
-        setNotice(result.index.warnings.join('\n'));
+        setNotice(result.index.warnings.join("\n"));
       await refresh(result.root, generation);
     } catch (e) {
       if (current(generation)) report(e);
@@ -437,7 +456,7 @@ function App() {
             [...topic.current_claims, ...topic.history]
               .flatMap((c) =>
                 c.sources.flatMap((s) =>
-                  s.kind === 'passage' ? [s.source.path] : [],
+                  s.kind === "passage" ? [s.source.path] : [],
                 ),
               )
               .concat(
@@ -447,7 +466,7 @@ function App() {
         ]
       : [];
     try {
-      const result = await ipc<ScopePreview>('workspace_scope_preview', {
+      const result = await ipc<ScopePreview>("workspace_scope_preview", {
         root_id: selected.root_id,
         spec: chat ? { ...emptySpec, files: chatFiles } : parseScope(spec),
       });
@@ -469,8 +488,8 @@ function App() {
   const scopeReady = (scope: ScopePreview | null, consent: boolean) =>
     !!scope &&
     scope.root_id === root?.root_id &&
-    scope.sources.every((s) => s.sensitivity !== 'local_only') &&
-    (!scope.sources.some((s) => s.sensitivity === 'unknown') || consent);
+    scope.sources.every((s) => s.sensitivity !== "local_only") &&
+    (!scope.sources.some((s) => s.sensitivity === "unknown") || consent);
   const canSend = scopeReady(preview, confirmed),
     canSendChat = scopeReady(chatPreview, chatConfirmed);
   async function start(chat = false) {
@@ -489,8 +508,8 @@ function App() {
     const generation = epoch.current;
     setBusy(true);
     setError(null);
-    setNotice('');
-    setStream('');
+    setNotice("");
+    setStream("");
     pendingStart.current = true;
     earlyEvents.current = [];
     try {
@@ -502,11 +521,11 @@ function App() {
         confirm_unknown: consent,
       };
       const result = await ipc<{ run_id: string }>(
-        chat ? 'workspace_chat_start' : 'workspace_analysis_start',
+        chat ? "workspace_chat_start" : "workspace_analysis_start",
         chat ? { ...request, topic_id: topic!.topic.id, message } : request,
       );
       if (!current(generation, selected.root_id)) {
-        void ipc('workspace_run_cancel', {
+        void ipc("workspace_run_cancel", {
           root_id: selected.root_id,
           run_id: result.run_id,
         }).catch(() => undefined);
@@ -518,13 +537,13 @@ function App() {
       pendingStart.current = false;
       for (const event of earlyEvents.current.splice(0)) receive(event);
       (chat ? invalidateChatScope : invalidateAnalysisScope)();
-      if (chat) setMessage('');
+      if (chat) setMessage("");
     } catch (e) {
       if (current(generation, selected.root_id)) {
         pendingStart.current = false;
         earlyEvents.current = [];
         report(e);
-        if (apiError(e).code === 'stale_scope')
+        if (apiError(e).code === "stale_scope")
           (chat ? invalidateChatScope : invalidateAnalysisScope)();
       }
     } finally {
@@ -539,20 +558,20 @@ function App() {
     setBusy(true);
     setError(null);
     try {
-      await ipc('workspace_proposal_decide', {
+      await ipc("workspace_proposal_decide", {
         root_id: selected.root_id,
         proposal_id: proposal.id,
         expected_fingerprint: proposal.fingerprint,
         decision:
           candidates === null
-            ? { kind: 'reject' }
-            : { kind: 'approve', candidates },
+            ? { kind: "reject" }
+            : { kind: "approve", candidates },
       });
       if (current(generation, selected.root_id)) {
         setNotice(
           candidates === null
-            ? 'Proposal rejected.'
-            : 'Changes accepted. Your source notes were not rewritten.',
+            ? "Proposal rejected."
+            : "Changes accepted. Your source notes were not rewritten.",
         );
         await refresh(selected, generation);
         if (
@@ -561,6 +580,10 @@ function App() {
           current(generation, selected.root_id)
         )
           await openTopic(detailId);
+        // The decided proposal is replaced; keep keyboard focus in the result.
+        requestAnimationFrame(() => {
+          document.querySelector<HTMLElement>(".inbox h1")?.focus();
+        });
       }
     } catch (e) {
       if (current(generation, selected.root_id)) report(e);
@@ -577,7 +600,7 @@ function App() {
     try {
       const candidates: Candidate[] = [
         {
-          kind: 'topic',
+          kind: "topic",
           topic: {
             id: crypto.randomUUID(),
             topic_kind: kind,
@@ -587,15 +610,18 @@ function App() {
           },
         },
       ];
-      await ipc('workspace_manual_propose', {
+      await ipc("workspace_manual_propose", {
         root_id: selected.root_id,
         candidates,
       });
       if (current(generation, selected.root_id)) {
         setManual(false);
-        setName('');
-        setScreen('inbox');
+        setName("");
+        setScreen("inbox");
         await refresh(selected, generation);
+        requestAnimationFrame(() => {
+          document.querySelector<HTMLElement>(".inbox h1")?.focus();
+        });
       }
     } catch (e) {
       if (current(generation, selected.root_id)) report(e);
@@ -610,12 +636,12 @@ function App() {
     setBusy(true);
     setError(null);
     try {
-      await ipc('workspace_undo', {
+      await ipc("workspace_undo", {
         root_id: selected.root_id,
         operation_id: id,
       });
       if (current(generation, selected.root_id)) {
-        setNotice('Undo recorded in history.');
+        setNotice("Undo recorded in history.");
         clearTopic();
         await refresh(selected, generation);
       }
@@ -634,9 +660,9 @@ function App() {
     setError(null);
     invalidateScope();
     try {
-      await ipc('workspace_sensitivity_set', {
+      await ipc("workspace_sensitivity_set", {
         root_id: selected.root_id,
-        target: { kind: 'topic', id },
+        target: { kind: "topic", id },
         sensitivity: value,
       });
       if (current(generation, selected.root_id)) {
@@ -649,8 +675,8 @@ function App() {
       if (current(generation, selected.root_id)) setBusy(false);
     }
   }
-  const appDataBootError = !!bootError?.message.includes('TOPICS_APP_DATA_DIR');
-  const pendingCount = proposals.filter((p) => p.status === 'pending').length;
+  const appDataBootError = !!bootError?.message.includes("TOPICS_APP_DATA_DIR");
+  const pendingCount = proposals.filter((p) => p.status === "pending").length;
   const navigate = (next: Screen) => {
     window.scrollTo(0, 0);
     setScreen(next);
@@ -658,124 +684,233 @@ function App() {
     setSettings(false);
     setError(null);
   };
+  const openManual = (trigger: HTMLButtonElement) => {
+    formTrigger.current = trigger;
+    setManual(true);
+    setSettings(false);
+    setError(null);
+  };
+  const closeForm = () => {
+    setManual(false);
+    setSettings(false);
+    requestAnimationFrame(() => {
+      const trigger = formTrigger.current;
+      (trigger?.isConnected ? trigger : document.getElementById(trigger?.id || ""))?.focus();
+    });
+  };
+  const quickSearch = () => {
+    navigate("search");
+    requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>("#search");
+      input?.focus();
+      input?.select();
+    });
+  };
   return (
     <div className="workspace">
-      <aside className="sidebar">
+      <a className="skip-link" href="#workspace-content">
+        Skip to content
+      </a>
+      <aside className="sidebar" aria-label="Topics workspace">
         <div className="brand">
-          Topics
-          <span className="brand-mark" aria-hidden="true">
-            ◫
+          <span className="brand-mark">
+            <Icon name="topics" />
           </span>
+          Topics
         </div>
+        <button
+          className="quick-search"
+          aria-label="Search"
+          aria-current={
+            screen === "search" && !manual && !settings && root
+              ? "page"
+              : undefined
+          }
+          disabled={!root}
+          onClick={quickSearch}
+        >
+          <Icon name="search" />
+          <span>Search notes</span>
+          <kbd>⌘K</kbd>
+        </button>
         <nav aria-label="Workspace">
-          <button
-            aria-label="Topics"
-            aria-current={screen === 'topics' ? 'page' : undefined}
-            onClick={() => navigate('topics')}
-          >
-            Topics<span>{topics.length || ''}</span>
-          </button>
-          <button
-            aria-current={screen === 'search' ? 'page' : undefined}
-            onClick={() => navigate('search')}
-          >
-            Search<span>⌘K</span>
-          </button>
-          <button
-            aria-current={screen === 'inbox' ? 'page' : undefined}
-            onClick={() => navigate('inbox')}
-          >
-            Inbox<span>{pendingCount || ''}</span>
-          </button>
-          <button
-            aria-current={screen === 'history' ? 'page' : undefined}
-            onClick={() => navigate('history')}
-          >
-            History
-          </button>
-          <button
-            aria-current={screen === 'sources' ? 'page' : undefined}
-            onClick={() => navigate('sources')}
-          >
-            Sources
-          </button>
+          <div className="nav-group">
+            <p className="nav-label">Library</p>
+            <button
+              aria-label="Topics"
+              aria-current={
+                screen === "topics" && !manual && !settings ? "page" : undefined
+              }
+              disabled={!root}
+              onClick={() => navigate("topics")}
+            >
+              <Icon name="topics" />
+              <span>Topics</span>
+              <span className="nav-count">{topics.length || ""}</span>
+            </button>
+            <button
+              aria-current={
+                screen === "sources" && !manual && !settings
+                  ? "page"
+                  : undefined
+              }
+              disabled={!root}
+              onClick={() => navigate("sources")}
+            >
+              <Icon name="file" />
+              <span>Sources</span>
+            </button>
+          </div>
+          <div className="nav-group">
+            <p className="nav-label">Review</p>
+            <button
+              aria-current={
+                screen === "inbox" && !manual && !settings ? "page" : undefined
+              }
+              disabled={!root}
+              onClick={() => navigate("inbox")}
+            >
+              <Icon name="inbox" />
+              <span>Inbox</span>
+              {pendingCount > 0 && (
+                <span className="nav-count">{pendingCount}</span>
+              )}
+            </button>
+            <button
+              aria-current={
+                screen === "history" && !manual && !settings
+                  ? "page"
+                  : undefined
+              }
+              disabled={!root}
+              onClick={() => navigate("history")}
+            >
+              <Icon name="history" />
+              <span>History</span>
+            </button>
+          </div>
         </nav>
         <div className="sidebar-actions">
-          <button disabled={!root} onClick={() => { setAutoSetup(false); navigate('setup'); }}>Set up folder</button>
-          <button disabled={!root} onClick={() => navigate('analyse')}>
-            Analyse notes
-          </button>
-          <button
+          <p className="nav-label">Workspace</p>
+          <Button
+            icon="folder"
             disabled={!root}
+            aria-current={
+              screen === "setup" && !manual && !settings ? "page" : undefined
+            }
             onClick={() => {
-              setManual(true);
-              setSettings(false);
-              setError(null);
+              setAutoSetup(false);
+              navigate("setup");
             }}
           >
+            Set up folder
+          </Button>
+          <Button
+            icon="analyse"
+            disabled={!root}
+            aria-current={
+              screen === "analyse" && !manual && !settings ? "page" : undefined
+            }
+            onClick={() => navigate("analyse")}
+          >
+            Analyse notes
+          </Button>
+          <Button
+            icon="plus"
+            id="sidebar-new-topic"
+            disabled={!root}
+            aria-current={manual ? "page" : undefined}
+            onClick={(e) => openManual(e.currentTarget)}
+          >
             New topic
-          </button>
+          </Button>
         </div>
         <div className="sidebar-bottom">
-          <p className="root-path" title={root?.path}>
-            {root?.path || 'No notes folder selected'}
-          </p>
-          <button
-            className="quiet"
+          <div className="folder-context">
+            <Icon name="folder" />
+            <div>
+              <p className="context-label">Notes folder</p>
+              <p className="root-path">
+                {root?.path || "No notes folder selected"}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="quiet"
+            id="change-notes-folder"
             disabled={appDataBootError}
-            onClick={() => {
+            onClick={(e) => {
+              formTrigger.current = e.currentTarget;
               setSettings(true);
               setManual(false);
               setError(null);
             }}
           >
             Change notes folder
-          </button>
+          </Button>
           {runtime && !bootError && (
-            <div className={`runtime ${runtime.available ? 'ready' : ''}`}>
+            <div className={`runtime ${runtime.available ? "ready" : ""}`}>
               <p>
-                {runtime.available
-                  ? `Codex ${runtime.version || ''} installed`
-                  : runtime.message}
+                <Icon name={runtime.available ? "check" : "info"} />
+                <span>
+                  {runtime.available
+                    ? `Codex ${runtime.version || ""} installed`
+                    : runtime.message}
+                </span>
               </p>
               {!runtime.available && (
-                <button className="quiet" onClick={() => void checkRuntime()}>
+                <Button variant="quiet" onClick={() => void checkRuntime()}>
                   Check runtime again
-                </button>
+                </Button>
               )}
             </div>
           )}
         </div>
       </aside>
-      <main className="workspace-main">
+      <main className="workspace-main" id="workspace-content" tabIndex={-1}>
+        {root === undefined && !bootError && (
+          <p role="status">Opening your workspace…</p>
+        )}
         {!appDataBootError && (settings || root === null) && (
-          <section className="setup">
-            <header className="page-header">
-              <h1>{root ? 'Choose notes folder' : 'Start with your notes'}</h1>
-              <p>
-                Choose an existing folder of Markdown notes, or create a new
-                one. Your original notes stay yours.
-              </p>
-            </header>
+          <section className="setup focused-form">
+            <span className="form-icon">
+              <Icon name="folder" />
+            </span>
+            <PageHeader
+              title={root ? "Choose notes folder" : "Start with your notes"}
+              description="Connect a folder of Markdown notes. Read and search locally, then choose exactly what to analyse."
+            />
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void changeRoot();
               }}
             >
-              <button type="button" disabled={busy} onClick={() => void chooseRoot()}>
-                Choose folder…
-              </button>
-              <label htmlFor="root-path">
-                Notes folder path
+              <div className="folder-picker">
+                <Button
+                  type="button"
+                  icon="folder"
+                  disabled={busy}
+                  onClick={() => void chooseRoot()}
+                >
+                  Choose folder…
+                </Button>
+                <p className="muted">
+                  Choose an existing folder or enter its full path below.
+                </p>
+              </div>
+              <Field
+                id="root-path"
+                label="Notes folder path"
+                hint="Your original notes stay yours. Connecting a folder does not send its contents."
+              >
                 <input
-                  id="root-path"
                   placeholder="/absolute/path/to/notes"
                   value={path}
                   onChange={(e) => setPath(e.target.value)}
                   required
                 />
-              </label>
+              </Field>
               <label className="check">
                 <input
                   type="checkbox"
@@ -784,14 +919,18 @@ function App() {
                 />
                 Create a new notes folder
               </label>
-              <div className="actions">
-                <button className="primary" disabled={busy || !path.trim()}>
+              <div className="review-footer">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={busy || !path.trim()}
+                >
                   Use notes folder
-                </button>
+                </Button>
                 {root && (
-                  <button type="button" onClick={() => setSettings(false)}>
+                  <Button type="button" onClick={closeForm}>
                     Cancel
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
@@ -807,8 +946,8 @@ function App() {
             <p>{bootError.message}</p>
             <p>
               {appDataBootError
-                ? 'Set TOPICS_APP_DATA_DIR to a non-empty absolute path, then restart Topics.'
-                : 'Choose an available notes folder above to recover this workspace.'}
+                ? "Set TOPICS_APP_DATA_DIR to a non-empty absolute path, then restart Topics."
+                : "Choose an available notes folder above to recover this workspace."}
             </p>
           </section>
         )}
@@ -822,9 +961,9 @@ function App() {
                 <pre>{JSON.stringify(error.details, null, 2)}</pre>
               </details>
             )}
-            <button className="quiet" onClick={() => setError(null)}>
+            <Button variant="quiet" onClick={() => setError(null)}>
               Dismiss error
-            </button>
+            </Button>
           </div>
         )}
         {notice && (
@@ -832,333 +971,427 @@ function App() {
             {notice}
           </p>
         )}
-        {manual ? (
-          <section className="manual-form">
-            <header className="page-header">
-              <h1>New topic</h1>
-              <p>
-                Capture a topic by hand. You’ll review the proposal before it
-                becomes accepted knowledge.
-              </p>
-            </header>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void manualPropose();
-              }}
-            >
-              <label htmlFor="topic-name">
-                Topic name
-                <input
-                  id="topic-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                  required
-                />
-              </label>
-              <label>
-                Kind
-                <select
-                  value={kind}
-                  onChange={(e) =>
-                    setKind(e.target.value as Topic['topic_kind'])
-                  }
-                >
-                  <option value="thread">Thread</option>
-                  <option value="person">Person</option>
-                  <option value="project">Project</option>
-                </select>
-              </label>
-              <label>
-                Sensitivity
-                <select
-                  value={manualSensitivity}
-                  onChange={(e) =>
-                    setManualSensitivity(e.target.value as Sensitivity)
-                  }
-                >
-                  <option value="unknown">Unknown</option>
-                  <option value="local_only">Local-only</option>
-                  <option value="cloud_allowed">Cloud allowed</option>
-                </select>
-              </label>
-              <div className="actions">
-                <button className="primary" disabled={busy || !name.trim()}>
-                  Create proposal
-                </button>
-                <button type="button" onClick={() => setManual(false)}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </section>
-        ) : (
-          <>
-            {screen === 'search' && !bootError && (
-              <Search key={root?.root_id || `none-${epoch.current}`} />
-            )}
-            {screen === 'topics' && (
-              <div className="topic-workspace">
-                <section className="topic-list">
-                  <header className="page-header">
-                    <h1>Topics</h1>
-                    <p>People, projects and ongoing threads.</p>
-                  </header>
-                  {topics.length === 0 ? (
-                    <div className="empty">
-                      <h2>No accepted topics yet</h2>
-                      <p>
-                        Add Markdown notes to this folder, then analyse a
-                        selection.
-                      </p>
-                      <p>You can also create a topic proposal by hand.</p>
-                    </div>
-                  ) : (
-                    <div className="topic-rows">
-                      {topics.map((t) => (
-                        <button
-                          key={t.id}
-                          aria-label={t.name}
-                          aria-pressed={topic?.topic.id === t.id}
-                          onClick={() => void openTopic(t.id)}
-                        >
-                          <span>{t.name}</span>
-                          <span className="muted">
-                            {t.topic_kind === 'person'
-                              ? 'Person'
-                              : t.topic_kind === 'project'
-                                ? 'Project'
-                                : 'Thread'}
-                            {t.sensitivity === 'local_only'
-                              ? ' · Local-only'
-                              : ''}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </section>
-                <section className="topic-detail" aria-label="Topic detail">
-                  {topicLoading ? (
-                    <p aria-live="polite">Opening topic…</p>
-                  ) : topic ? (
-                    <>
-                      <TopicDetail
-                        rootId={root!.root_id}
-                        view={topic}
-                        topics={topics}
-                        busy={busy}
-                        sensitivity={(s) => void sensitivity(s)}
-                      />
-                      <ContextReview key={`${root!.root_id}-${topic.topic.id}`} rootId={root!.root_id} topicId={topic.topic.id} onSaved={() => { void refresh(root!); void openTopic(topic.topic.id); }} />
-                      <section className="chat">
-                        <h2>Ask or correct</h2>
-                        <p className="muted">
-                          Explain what should change. Changes return to Inbox
-                          for your review.
-                        </p>
-                        <label htmlFor="topic-message">
-                          Message about this topic
-                          <textarea
-                            id="topic-message"
-                            rows={3}
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="What should I know about this topic?"
-                          />
-                        </label>
-                        <button
-                          disabled={
-                            busy ||
-                            !!run ||
-                            topic.topic.sensitivity !== 'cloud_allowed'
-                          }
-                          onClick={() => void getPreview(true)}
-                        >
-                          Preview chat sources
-                        </button>
-                        {chatPreview && (
-                          <ScopeReview
-                            preview={chatPreview}
-                            confirmed={chatConfirmed}
-                            setConfirmed={setChatConfirmed}
-                          />
-                        )}
-                        <div className="actions">
-                          <button
-                            className="primary"
-                            disabled={
-                              !message.trim() ||
-                              !canSendChat ||
-                              busy ||
-                              !!run ||
-                              !runtime?.available ||
-                              topic.topic.sensitivity !== 'cloud_allowed'
-                            }
-                            onClick={() => void start(true)}
-                          >
-                            Send message
-                          </button>
-                        </div>
-                        {topic.topic.sensitivity !== 'cloud_allowed' && (
-                          <p className="notice">
-                            {topic.topic.sensitivity === 'local_only'
-                              ? 'This topic is local-only. Its context cannot be sent to Codex.'
-                              : 'Set this topic to Cloud allowed before chatting. Local-only sources remain excluded.'}
-                          </p>
-                        )}
-                      </section>
-                    </>
-                  ) : (
-                    topics.length > 0 && (
-                      <div className="empty">
-                        <h2>Choose a topic</h2>
-                        <p>
-                          Read its accepted understanding, evidence and earlier
-                          revisions.
-                        </p>
-                      </div>
-                    )
-                  )}
-                </section>
-              </div>
-            )}
-            {screen === 'setup' && root && <FolderSetup key={root.root_id} rootId={root.root_id} runtime={runtime?.available ? `Codex ${runtime.version || ''}` : null} onReturning={() => { if (autoSetup) setScreen('topics'); }} onSaved={() => void refresh(root)} />}
-            {screen === 'analyse' && (
-              <section className="analysis-view">
-                <header className="page-header">
-                  <h1>Analyse notes</h1>
-                  <p>
-                    Select a small set of notes. Nothing is accepted until you
-                    review it.
-                  </p>
-                </header>
-                <ScopeFields
-                  spec={spec}
-                  disabled={busy || !!run}
-                  onChange={(value) => {
-                    setSpec(value);
-                    invalidateAnalysisScope();
-                  }}
-                />
-                <button
-                  disabled={busy || !!run || !root || !hasPaths(spec)}
-                  onClick={() => void getPreview()}
-                >
-                  Preview selection
-                </button>
-                {preview && (
-                  <ScopeReview
-                    preview={preview}
-                    confirmed={confirmed}
-                    setConfirmed={setConfirmed}
+        {root &&
+          !settings &&
+          !bootError &&
+          (manual ? (
+            <section className="manual-form focused-form">
+              <span className="form-icon">
+                <Icon name="plus" />
+              </span>
+              <PageHeader
+                title="New topic"
+                description="Capture a person, project or thread. You’ll review the proposal before it becomes accepted knowledge."
+              />
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void manualPropose();
+                }}
+              >
+                <Field id="topic-name" label="Topic name">
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoFocus
+                    required
                   />
-                )}
-                <div className="actions">
-                  <button
-                    className="primary"
-                    disabled={
-                      !canSend ||
-                      !preview?.sources.length ||
-                      busy ||
-                      !!run ||
-                      !runtime?.available
-                    }
-                    onClick={() => void start()}
-                  >
-                    Start analysis
-                  </button>
+                </Field>
+                <div className="form-grid">
+                  <Field id="topic-kind" label="Kind">
+                    <select
+                      value={kind}
+                      onChange={(e) =>
+                        setKind(e.target.value as Topic["topic_kind"])
+                      }
+                    >
+                      <option value="thread">Thread</option>
+                      <option value="person">Person</option>
+                      <option value="project">Project</option>
+                    </select>
+                  </Field>
+                  <Field id="manual-sensitivity" label="Sensitivity">
+                    <select
+                      value={manualSensitivity}
+                      onChange={(e) =>
+                        setManualSensitivity(e.target.value as Sensitivity)
+                      }
+                    >
+                      <option value="unknown">Unknown</option>
+                      <option value="local_only">Local-only</option>
+                      <option value="cloud_allowed">Cloud allowed</option>
+                    </select>
+                  </Field>
                 </div>
-                {!runtime?.available && (
-                  <p className="notice">
-                    Check the runtime status in the sidebar before starting.
-                    Selection previews remain available.
-                  </p>
-                )}
-              </section>
-            )}
-            {screen === 'inbox' && (
-              <section className="inbox">
-                <header className="page-header">
-                  <h1>Inbox</h1>
-                  <p>
-                    Proposals need your review. Approval is the only way they
-                    become accepted knowledge.
-                  </p>
-                </header>
-                {proposals.length === 0 && (
-                  <div className="empty">
-                    <h2>Nothing to review</h2>
-                    <p>
-                      Analyse a selection of notes or create a topic proposal.
+                <p className="muted">
+                  Local-only topics cannot be sent for analysis. Unknown
+                  sensitivity requires an explicit decision before chat.
+                </p>
+                <div className="review-footer">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={busy || !name.trim()}
+                  >
+                    Create proposal
+                  </Button>
+                  <Button type="button" onClick={closeForm}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </section>
+          ) : (
+            <>
+              {screen === "search" && <Search key={root.root_id} />}
+              {screen === "topics" && (
+                <section className="topics-view">
+                  <PageHeader
+                    title="Topics"
+                    description="People, projects and the threads that connect your notes."
+                    actions={
+                      <Button
+                        id="new-topic-action"
+                        icon="plus"
+                        onClick={(e) => openManual(e.currentTarget)}
+                      >
+                        New topic
+                      </Button>
+                    }
+                  />
+                  <div className="topic-workspace">
+                    <section className="topic-list" aria-label="Topic library">
+                      <div className="list-heading">
+                        <h2>Your topics</h2>
+                        <span className="muted">{topics.length}</span>
+                      </div>
+                      {topics.length === 0 ? (
+                        <EmptyState title="No accepted topics yet">
+                          <p>
+                            Add Markdown notes, then analyse a selection. You
+                            can also create a topic proposal by hand.
+                          </p>
+                        </EmptyState>
+                      ) : (
+                        <div className="topic-rows">
+                          {topics.map((t) => (
+                            <button
+                              className="library-row"
+                              key={t.id}
+                              aria-label={t.name}
+                              aria-pressed={selectedTopicId.current === t.id}
+                              onClick={() => void openTopic(t.id)}
+                            >
+                              <span className="topic-row-icon">
+                                <Icon name={t.topic_kind} />
+                              </span>
+                              <span className="row-content">
+                                <strong>{t.name}</strong>
+                                <span className="row-meta">
+                                  {t.topic_kind === "person"
+                                    ? "Person"
+                                    : t.topic_kind === "project"
+                                      ? "Project"
+                                      : "Thread"}
+                                </span>
+                                <PrivacyBadge sensitivity={t.sensitivity} />
+                              </span>
+                              {selectedTopicId.current === t.id && (
+                                <Icon name="chevron" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                    <section
+                      className="topic-detail"
+                      aria-label="Topic detail"
+                      aria-busy={topicLoading}
+                    >
+                      {topicLoading ? (
+                        <p role="status">Opening topic…</p>
+                      ) : topic ? (
+                        <>
+                          <TopicDetail
+                            rootId={root.root_id}
+                            view={topic}
+                            topics={topics}
+                            busy={busy}
+                            sensitivity={(s) => void sensitivity(s)}
+                          />
+                          <ContextReview
+                            key={`${root.root_id}-${topic.topic.id}`}
+                            rootId={root.root_id}
+                            topicId={topic.topic.id}
+                            onSaved={() => {
+                              void refresh(root);
+                              void openTopic(topic.topic.id);
+                            }}
+                          />
+                          <Section
+                            title="Ask or correct"
+                            description="Explain what should change. Generated changes return to Inbox for your review."
+                            className="chat"
+                          >
+                            <Field
+                              id="topic-message"
+                              label="Message about this topic"
+                            >
+                              <textarea
+                                rows={3}
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                placeholder="What should I know about this topic?"
+                              />
+                            </Field>
+                            <Button
+                              disabled={
+                                busy ||
+                                !!run ||
+                                topic.topic.sensitivity !== "cloud_allowed"
+                              }
+                              onClick={() => void getPreview(true)}
+                            >
+                              Preview chat sources
+                            </Button>
+                            {chatPreview && (
+                              <ScopeReview
+                                preview={chatPreview}
+                                confirmed={chatConfirmed}
+                                setConfirmed={setChatConfirmed}
+                              />
+                            )}
+                            <div className="actions">
+                              <Button
+                                variant="primary"
+                                disabled={
+                                  !message.trim() ||
+                                  !canSendChat ||
+                                  busy ||
+                                  !!run ||
+                                  !runtime?.available ||
+                                  topic.topic.sensitivity !== "cloud_allowed"
+                                }
+                                onClick={() => void start(true)}
+                              >
+                                Send message
+                              </Button>
+                            </div>
+                            {topic.topic.sensitivity !== "cloud_allowed" && (
+                              <p className="notice">
+                                {topic.topic.sensitivity === "local_only"
+                                  ? "This topic is local-only. Its context cannot be sent to Codex."
+                                  : "Set this topic to Cloud allowed before chatting. Local-only sources remain excluded."}
+                              </p>
+                            )}
+                          </Section>
+                        </>
+                      ) : (
+                        <EmptyState
+                          title={
+                            topics.length
+                              ? "Choose a topic"
+                              : "Your understanding starts here"
+                          }
+                        >
+                          <p>
+                            Read accepted statements, explore evidence and
+                            follow earlier revisions.
+                          </p>
+                        </EmptyState>
+                      )}
+                    </section>
+                  </div>
+                </section>
+              )}
+              {screen === "setup" && (
+                <FolderSetup
+                  key={root.root_id}
+                  rootId={root.root_id}
+                  runtime={
+                    runtime?.available ? `Codex ${runtime.version || ""}` : null
+                  }
+                  onReturning={() => {
+                    if (autoSetup) setScreen("topics");
+                  }}
+                  onSaved={() => void refresh(root)}
+                />
+              )}
+              {screen === "analyse" && (
+                <section className="analysis-view">
+                  <PageHeader
+                    title="Analyse notes"
+                    description="Choose the context first. Every proposed change comes back to you for review."
+                  />
+                  <ol className="flow-steps" aria-label="Analysis steps">
+                    <li aria-current={!preview ? "step" : undefined}>
+                      <span>1</span>Select notes
+                    </li>
+                    <li aria-current={preview ? "step" : undefined}>
+                      <span>2</span>Review and authorize
+                    </li>
+                    <li>
+                      <span>3</span>Review proposals in Inbox
+                    </li>
+                  </ol>
+                  <div className="form-section">
+                    <ScopeFields
+                      spec={spec}
+                      disabled={busy || !!run}
+                      onChange={(value) => {
+                        setSpec(value);
+                        invalidateAnalysisScope();
+                      }}
+                    />
+                    <Button
+                      disabled={busy || !!run || !hasPaths(spec)}
+                      onClick={() => void getPreview()}
+                    >
+                      Preview selection
+                    </Button>
+                  </div>
+                  {preview && (
+                    <ScopeReview
+                      preview={preview}
+                      confirmed={confirmed}
+                      setConfirmed={setConfirmed}
+                    />
+                  )}
+                  <div className="review-footer">
+                    <Button
+                      variant="primary"
+                      disabled={
+                        !canSend ||
+                        !preview?.sources.length ||
+                        busy ||
+                        !!run ||
+                        !runtime?.available
+                      }
+                      onClick={() => void start()}
+                    >
+                      Start analysis
+                    </Button>
+                    <p className="muted">
+                      Only the reviewed selection may be sent.
                     </p>
                   </div>
-                )}
-                {proposals.map((p) => (
-                  <ProposalEditor
-                    key={`${p.id}-${p.status}-${p.fingerprint}`}
-                    proposal={p}
-                    topics={topics}
-                    busy={busy}
-                    decide={(c) => decide(p, c)}
+                  {!runtime?.available && (
+                    <p className="notice">
+                      Check the runtime status in the sidebar before starting.
+                      Selection previews remain available.
+                    </p>
+                  )}
+                </section>
+              )}
+              {screen === "inbox" && (
+                <section className="inbox">
+                  <PageHeader
+                    title="Inbox"
+                    description="Review proposed understanding. Nothing becomes accepted knowledge until you approve it."
+                    actions={
+                      <Badge tone={pendingCount ? "warning" : "neutral"}>
+                        {pendingCount} pending
+                      </Badge>
+                    }
                   />
-                ))}
-              </section>
-            )}
-            {screen === 'history' && (
-              <section className="history">
-                <header className="page-header">
-                  <h1>History</h1>
-                  <p>
-                    Accepted changes and undo operations. Earlier knowledge
-                    remains in the record.
-                  </p>
-                </header>
-                {operations.length === 0 && (
-                  <p className="empty">No recorded changes yet.</p>
-                )}
-                {operations.map((o) => (
-                  <article className="operation" key={o.id}>
-                    <div>
-                      <h2>{o.description}</h2>
-                      <p className="muted">
-                        {new Date(o.created_at).toLocaleString()} · {o.status}
+                  {proposals.length === 0 && (
+                    <EmptyState title="Nothing to review" icon="inbox">
+                      <p>
+                        Analyse a selection of notes or create a topic proposal.
                       </p>
-                      <details>
-                        <summary>Change identity</summary>
-                        <p className="path">{o.id}</p>
-                      </details>
-                    </div>
-                    <button
-                      disabled={busy || o.status !== 'committed'}
-                      onClick={() => void undo(o.id)}
-                    >
-                      Undo
-                    </button>
-                  </article>
-                ))}
-              </section>
-            )}
-            {screen === 'sources' && root && (
-              <Sources
-                key={root.root_id}
-                root={root}
-                disabled={busy || !!run}
-                onError={report}
-                onChanged={invalidateScope}
-              />
-            )}
-          </>
-        )}
+                    </EmptyState>
+                  )}
+                  {proposals.map((p) => (
+                    <ProposalEditor
+                      key={`${p.id}-${p.status}-${p.fingerprint}`}
+                      proposal={p}
+                      topics={topics}
+                      busy={busy}
+                      decide={(c) => decide(p, c)}
+                    />
+                  ))}
+                </section>
+              )}
+              {screen === "history" && (
+                <section className="history">
+                  <PageHeader
+                    title="History"
+                    description="A record of accepted changes and undo operations. Earlier knowledge stays in the record."
+                  />
+                  {operations.length === 0 && (
+                    <EmptyState title="No recorded changes yet" icon="history">
+                      <p>
+                        Accepted proposals and privacy decisions will appear
+                        here.
+                      </p>
+                    </EmptyState>
+                  )}
+                  <div className="operation-list">
+                    {operations.map((o) => (
+                      <article className="operation" key={o.id}>
+                        <span className="operation-icon">
+                          <Icon name="history" />
+                        </span>
+                        <div className="operation-body">
+                          <h2>{o.description}</h2>
+                          <div className="operation-meta">
+                            <time dateTime={o.created_at}>
+                              {new Date(o.created_at).toLocaleString()}
+                            </time>
+                            <Badge
+                              tone={
+                                o.status === "committed"
+                                  ? "success"
+                                  : o.status === "conflict"
+                                    ? "danger"
+                                    : "neutral"
+                              }
+                            >
+                              {o.status}
+                            </Badge>
+                          </div>
+                          <details>
+                            <summary>Change identity</summary>
+                            <p className="path">{o.id}</p>
+                          </details>
+                          {o.status !== "committed" && (
+                            <p className="muted">
+                              Only committed changes can be undone.
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          icon="undo"
+                          disabled={busy || o.status !== "committed"}
+                          onClick={() => void undo(o.id)}
+                        >
+                          Undo
+                        </Button>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {screen === "sources" && (
+                <Sources
+                  key={root.root_id}
+                  root={root}
+                  disabled={busy || !!run}
+                  onError={report}
+                  onChanged={invalidateScope}
+                />
+              )}
+            </>
+          ))}
         {(run || stream) && (
           <section className="run-panel" aria-label="Analysis progress">
             <div className="run-heading">
-              <h2>{run ? 'Working on your selection' : 'Run response'}</h2>
-              {run && <button onClick={() => void stop()}>Stop run</button>}
+              <h2>{run ? "Working on your selection" : "Run response"}</h2>
+              {run && <Button onClick={() => void stop()}>Stop run</Button>}
             </div>
             <div role="log" aria-live="polite" className="stream">
-              {stream || 'Waiting for the runtime…'}
+              {stream || "Waiting for the runtime…"}
             </div>
           </section>
         )}
@@ -1166,4 +1399,4 @@ function App() {
     </div>
   );
 }
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById("root")!).render(<App />);

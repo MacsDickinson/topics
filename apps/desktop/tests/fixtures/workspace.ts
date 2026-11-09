@@ -56,7 +56,7 @@ export const proposal = {
 // Browser transport fixture only. Never imported by application code or native tests.
 export async function workspaceFixture(
   page: Page,
-  options: { empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean } = {},
+  options: { populated?: boolean; empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean } = {},
 ) {
   await page.addInitScript(
     ({ ids, topic, claim, proposal, hash, options }) => {
@@ -69,9 +69,9 @@ export async function workspaceFixture(
       w.root = options.empty
         ? null
         : { root_id: ids.root, path: '/synthetic/notes' };
-      w.topics = [];
+      w.topics = options.populated ? [structuredClone(topic)] : [];
       w.proposals = [];
-      w.claims = [];
+      w.claims = options.populated ? [structuredClone(claim)] : [];
       w.operations = [];
       w.emitRun = (
         seq: number,
@@ -144,6 +144,12 @@ export async function workspaceFixture(
               return { id: 'context-one', topic_id: request.topic_id, text: request.text, recorded_at: '2026-11-03T00:00:00Z' };
             case 'setup_confirm_preview':
               return { schema: 1, receipt_id: 'confirm-one', root_id: request.root_id, kind: 'confirm', job_id: null, job_revision: null, requested_ids: request.revision_ids, included_ids: request.revision_ids, dependency_ids: [], deferred_ids: [], candidates: [], revisions: w.claims.filter((c: any) => request.revision_ids.includes(c.revision_id)), expected_hashes: {}, fingerprint: hash, max_records_per_operation: 100, operation_count: 1, created_at: '2026-11-03T00:00:00Z' };
+            case 'setup_correction_preview': {
+              const before = w.claims.filter((c: any) => request.revision_ids.includes(c.revision_id));
+              const after = before.map((c: any) => ({ ...c, value: request.replacement, revision_id: 'corrected-revision', supersedes: [c.revision_id] }));
+              const rule = { id: 'corrected-rule', topic_id: request.topic_id, predicate: request.predicate, match_value: before[0].value, replacement: request.replacement, scope: request.rule_scope, source_revision_id: 'corrected-revision' };
+              return { statement: { id: 'statement-one', topic_id: request.topic_id, text: request.statement, recorded_at: '2026-11-03T00:00:00Z' }, before, after, rule, receipt: { schema: 1, receipt_id: 'correction-receipt', root_id: request.root_id, kind: 'correction', job_id: null, job_revision: null, requested_ids: request.revision_ids, included_ids: request.revision_ids, dependency_ids: [], deferred_ids: [], candidates: after.map((c: any) => ({ kind: 'correction', claim: c, rule })), revisions: after, expected_hashes: {}, fingerprint: hash, max_records_per_operation: 100, operation_count: 1, created_at: '2026-11-03T00:00:00Z' } };
+            }
             case 'setup_topic_review':
               return { topic: { topic, current_claims: w.claims, connections: [], unresolved: [], history: [], warnings: [] }, reviews: w.claims.map((c: any) => ({ id: 'review', record_id: c.revision_id, state: 'from_notes', receipt_id: 'receipt-one', statement_id: null, recorded_at: '2026-11-03T00:00:00Z' })) };
             case 'workspace_choose_root':

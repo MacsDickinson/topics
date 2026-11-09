@@ -285,9 +285,9 @@ test('missing runtime leaves topic browsing and manual proposal capture availabl
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'New topic', exact: true }),
+    page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }),
   ).toBeEnabled();
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await expect(page.getByLabel('Topic name', { exact: true })).toBeVisible();
 });
 
@@ -330,7 +330,7 @@ test('manual fallback stages a proposal and still needs explicit human approval'
   page,
 }) => {
   await workspaceFixture(page, { unavailable: true });
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await page.getByLabel('Topic name', { exact: true }).fill('Quiet project');
   await page.getByRole('button', { name: 'Create proposal' }).click();
   await expect(page.getByLabel('Topic name', { exact: true })).toHaveValue(
@@ -503,7 +503,7 @@ test('an older list refresh cannot overwrite newer workspace data', async ({
     },
     { topic },
   );
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await page
     .getByLabel('Topic name', { exact: true })
     .fill('Fresh pending topic');
@@ -751,7 +751,7 @@ test('review F4 refresh of the same topic preserves chat draft and consent', asy
   await page
     .getByLabel('Allow these unknown-sensitivity notes for this run')
     .check();
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await page.getByLabel('Topic name', { exact: true }).fill('Another topic');
   await page.getByRole('button', { name: 'Create proposal' }).click();
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
@@ -776,13 +776,13 @@ test('review F4 source inventory loading is distinct from an empty folder', asyn
     page.getByText('Loading source notes…', { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText('No Markdown notes found.', { exact: false }),
+    page.getByRole('heading', { name: 'No Markdown notes found' }),
   ).toHaveCount(0);
   await page.evaluate(() =>
     (window as any).defer.workspace_sources_list.resolve({ sources: [] }),
   );
   await expect(
-    page.getByText('No Markdown notes found.', { exact: false }),
+    page.getByRole('heading', { name: 'No Markdown notes found' }),
   ).toBeVisible();
 });
 

@@ -1,6 +1,8 @@
-import { Evidence, SourceEvidence } from './Evidence';
-import { endpointLabel } from './ProposalEditor';
-import type { Sensitivity, Topic, TopicView } from './workspace-types';
+import { Evidence, SourceEvidence } from "./Evidence";
+import { endpointLabel } from "./ProposalEditor";
+import { Badge, EmptyState, Field, Icon, PrivacyBadge, Section } from "./ui";
+import type { Sensitivity, Topic, TopicView } from "./workspace-types";
+
 export function TopicDetail({
   view,
   rootId,
@@ -16,109 +18,143 @@ export function TopicDetail({
 }) {
   return (
     <>
-      <header className="page-header topic-header">
-        <div>
-          <p className="muted">
-            {view.topic.topic_kind === 'person'
-              ? 'Person'
-              : view.topic.topic_kind === 'project'
-                ? 'Project'
-                : 'Thread'}
-          </p>
-          <h1>{view.topic.name}</h1>
-          {view.topic.aliases.length > 0 && (
-            <p>Also known as {view.topic.aliases.join(', ')}</p>
-          )}
+      <header className="topic-identity">
+        <div className="identity-heading">
+          <span className="identity-icon">
+            <Icon name={view.topic.topic_kind} />
+          </span>
+          <div>
+            <p className="muted">
+              {view.topic.topic_kind === "person"
+                ? "Person"
+                : view.topic.topic_kind === "project"
+                  ? "Project"
+                  : "Thread"}
+            </p>
+            <h2>{view.topic.name}</h2>
+            {view.topic.aliases.length > 0 && (
+              <p className="muted">
+                Also known as {view.topic.aliases.join(", ")}
+              </p>
+            )}
+          </div>
         </div>
-        <label>
-          Sensitivity
-          <select
-            disabled={busy}
-            value={view.topic.sensitivity}
-            onChange={(e) => sensitivity(e.target.value as Sensitivity)}
-          >
-            <option value="unknown">Unknown</option>
-            <option value="cloud_allowed">Cloud allowed</option>
-            <option value="local_only">Local-only</option>
-          </select>
-        </label>
+        <div className="topic-privacy">
+          <PrivacyBadge sensitivity={view.topic.sensitivity} />
+          <Field id="topic-sensitivity" label="Sensitivity">
+            <select
+              disabled={busy}
+              value={view.topic.sensitivity}
+              onChange={(e) => sensitivity(e.target.value as Sensitivity)}
+            >
+              <option value="unknown">Unknown</option>
+              <option value="cloud_allowed">Cloud allowed</option>
+              <option value="local_only">Local-only</option>
+            </select>
+          </Field>
+        </div>
       </header>
       {view.warnings.map((w, i) => (
         <p className="notice" key={i}>
           {w}
         </p>
       ))}
-      <section>
-        <h2>Current understanding</h2>
+      <Section
+        title="Current understanding"
+        className="understanding"
+        description="Accepted statements, with their evidence and remaining uncertainty."
+      >
         {view.current_claims.length === 0 && (
-          <p className="empty">
-            No accepted claims yet. Analyse notes or ask about this topic to
-            propose new understanding.
-          </p>
+          <EmptyState title="No accepted claims yet" icon="thread">
+            <p>
+              Analyse notes or ask about this topic to propose new
+              understanding.
+            </p>
+          </EmptyState>
         )}
         {view.current_claims.map((c) => (
           <article className="accepted-claim" key={c.revision_id}>
-            <div className="claim-line">
-              <h3>{c.predicate}</h3>
-              <p>{c.value}</p>
-            </div>
-            {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-            <details><summary>Sources ({c.sources.length})</summary><Evidence sources={c.sources} rootId={rootId} /></details>
+            <h3 className="claim-property">{c.predicate}</h3>
+            <p className="claim-value">{c.value}</p>
+            {c.uncertainty && (
+              <p className="uncertainty">
+                <Icon name="info" />
+                <span>
+                  <strong>Uncertainty</strong> <span>{c.uncertainty}</span>
+                </span>
+              </p>
+            )}
+            <details className="claim-provenance">
+              <summary>Sources ({c.sources.length})</summary>
+              <Evidence sources={c.sources} rootId={rootId} />
+            </details>
           </article>
         ))}
-      </section>
+      </Section>
       {view.connections.length > 0 && (
-        <section>
-          <h2>Connections</h2>
+        <Section title="Connections">
           {view.connections.map((c) => (
-            <article className="accepted-claim" key={c.id}>
+            <article className="relationship" key={c.id}>
               <p>
-                {endpointLabel(c.from, topics)} <strong>{c.relation}</strong>{' '}
+                {endpointLabel(c.from, topics)} <strong>{c.relation}</strong>{" "}
                 {endpointLabel(c.to, topics)}
               </p>
               {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-              <details><summary>Sources ({c.sources.length})</summary>{c.sources.map((s, i) => (
-                <SourceEvidence source={s} key={i} />
-              ))}</details>
+              <details>
+                <summary>Sources ({c.sources.length})</summary>
+                {c.sources.map((s, i) => (
+                  <SourceEvidence source={s} key={i} />
+                ))}
+              </details>
             </article>
           ))}
-        </section>
+        </Section>
       )}
       {view.unresolved.length > 0 && (
-        <section>
-          <h2>Unresolved mentions</h2>
+        <Section title="Unresolved mentions">
           {view.unresolved.map(
             (c, i) =>
-              c.kind === 'unresolved_identity' && (
-                <p key={i}>
-                  “{c.name}” could refer to{' '}
+              c.kind === "unresolved_identity" && (
+                <p className="notice" key={i}>
+                  “{c.name}” could refer to{" "}
                   {c.candidates
                     .map((id) => topics.find((t) => t.id === id)?.name || id)
-                    .join(' or ')}
+                    .join(" or ")}
                   . More evidence is needed.
                 </p>
               ),
           )}
-        </section>
+        </Section>
       )}
       <details className="revision-history">
-        <summary>Revision history ({view.history.length})</summary>
-        {view.history.length === 0 && <p>No earlier revisions.</p>}
+        <summary>
+          <Icon name="history" /> Revision history ({view.history.length})
+        </summary>
+        {view.history.length === 0 && (
+          <p className="muted">No earlier revisions.</p>
+        )}
         {view.history.map((c) => (
           <article key={c.revision_id} className="accepted-claim">
+            <div className="revision-meta">
+              <time dateTime={c.recorded_at}>
+                {new Date(c.recorded_at).toLocaleString()}
+              </time>
+              <Badge>
+                {view.current_claims.some(
+                  (head) => head.revision_id === c.revision_id,
+                )
+                  ? "Current"
+                  : "Earlier revision"}
+              </Badge>
+            </div>
             <p>
               <strong>{c.predicate}</strong>: {c.value}
             </p>
-            <p className="muted">
-              {new Date(c.recorded_at).toLocaleString()}
-              {view.current_claims.some(
-                (head) => head.revision_id === c.revision_id,
-              )
-                ? ' · Current'
-                : ' · Earlier revision'}
-            </p>
             {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-            <details><summary>Sources ({c.sources.length})</summary><Evidence sources={c.sources} rootId={rootId} /></details>
+            <details>
+              <summary>Sources ({c.sources.length})</summary>
+              <Evidence sources={c.sources} rootId={rootId} />
+            </details>
           </article>
         ))}
       </details>

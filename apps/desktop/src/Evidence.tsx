@@ -1,37 +1,43 @@
-import { useEffect, useState } from 'react';
-import { ipc, apiError } from './ipc';
+import { useEffect, useState } from "react";
+import { ipc, apiError } from "./ipc";
+import { Badge, Icon } from "./ui";
 import type {
   Evidence as EvidenceType,
   SourceRef,
   UserStatement,
-} from './workspace-types';
+} from "./workspace-types";
 
 export function SourceEvidence({ source }: { source: SourceRef }) {
   return (
-    <div className="source-evidence">
-      <p className="path">{source.path}</p>
-      <p className="muted">Original note passage</p>
+    <figure className="source-evidence">
+      <figcaption>
+        <Icon name="file" />
+        <span className="path">{source.path}</span>
+        <Badge>Original note passage</Badge>
+      </figcaption>
       <blockquote>{source.excerpt}</blockquote>
-      <p className="muted">
-        {source.locator.heading && `${source.locator.heading} · `}Bytes{' '}
-        {source.locator.start_byte}–{source.locator.end_byte}
-      </p>
-      <details>
-        <summary>Source identity</summary>
-        <p className="path">Document: {source.document_hash}</p>
-        <p className="path">Passage: {source.passage_hash}</p>
-      </details>
-    </div>
+      <div className="evidence-meta">
+        <p>
+          {source.locator.heading && <span>{source.locator.heading} · </span>}
+          Bytes {source.locator.start_byte}–{source.locator.end_byte}
+        </p>
+        <details>
+          <summary>Source identity</summary>
+          <p className="path">Document: {source.document_hash}</p>
+          <p className="path">Passage: {source.passage_hash}</p>
+        </details>
+      </div>
+    </figure>
   );
 }
 function StatementEvidence({ rootId, id }: { rootId: string; id: string }) {
   const [statement, setStatement] = useState<UserStatement | null>(null),
-    [error, setError] = useState('');
+    [error, setError] = useState("");
   useEffect(() => {
     let active = true;
     setStatement(null);
-    setError('');
-    void ipc<UserStatement>('workspace_statement_get', {
+    setError("");
+    void ipc<UserStatement>("workspace_statement_get", {
       root_id: rootId,
       statement_id: id,
     })
@@ -46,8 +52,11 @@ function StatementEvidence({ rootId, id }: { rootId: string; id: string }) {
     };
   }, [rootId, id]);
   return (
-    <div className="source-evidence user-source">
-      <p>Your correction</p>
+    <figure className="source-evidence user-source">
+      <figcaption>
+        <Icon name="quote" />
+        <strong>Your correction</strong>
+      </figcaption>
       {statement ? (
         <>
           <blockquote>{statement.text}</blockquote>
@@ -56,13 +65,13 @@ function StatementEvidence({ rootId, id }: { rootId: string; id: string }) {
           </p>
         </>
       ) : (
-        <p className="muted">{error || 'Loading the recorded statement…'}</p>
+        <p className="muted">{error || "Loading the recorded statement…"}</p>
       )}
       <details>
         <summary>Statement identity</summary>
         <p className="path">{id}</p>
       </details>
-    </div>
+    </figure>
   );
 }
 export function Evidence({
@@ -78,7 +87,7 @@ export function Evidence({
         <p className="muted">No cited evidence. Review carefully.</p>
       )}
       {sources.map((evidence, i) =>
-        evidence.kind === 'passage' ? (
+        evidence.kind === "passage" ? (
           <SourceEvidence key={i} source={evidence.source} />
         ) : (
           <StatementEvidence
