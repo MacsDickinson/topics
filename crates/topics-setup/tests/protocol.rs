@@ -311,7 +311,7 @@ fn failed_turn_preserves_other_batches_and_retry_does_not_duplicate() {
         "failed_turn_preserves_other_batches_and_retry_does_not_duplicate",
         || {
             let f = Fixture::new(6, "fail_first");
-            let job = f.authorize(2);
+            let job = f.authorize_attempts(2, 4);
             f.coordinator.start(f.request(&job)).unwrap();
             let gaps = f.done(&job);
             assert!(!gaps.coverage.complete);
@@ -572,7 +572,7 @@ fn unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed
         "unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources",
         || {
             let f = Fixture::new(6, "hold_second");
-            let job = f.authorize(2);
+            let job = f.authorize_attempts(2, 4);
             f.coordinator.start(f.request(&job)).unwrap();
             let deadline = Instant::now() + Duration::from_secs(30);
             while f.transmissions().len() < 2 {
@@ -698,7 +698,7 @@ fn restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids() {
         "restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids",
         || {
             let f = Fixture::new(6, "hold_second");
-            let job = f.authorize(2);
+            let job = f.authorize_attempts(2, 4);
             f.coordinator.start(f.request(&job)).unwrap();
             let deadline = Instant::now() + Duration::from_secs(30);
             while f.transmissions().len() < 2 {
@@ -828,13 +828,62 @@ fn multiple_tool_calls_validate_the_runtime_combined_buffer_once() {
 
 #[test]
 fn reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn() {
-    isolated("reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn", || {
-        let f = Fixture::new(2, "empty");
-        let job = f.authorize_attempts(2, 4);
-        f.coordinator.start(f.request(&job)).expect("reviewed retry budget permits one turn per attempt");
-        let done = f.done(&job);
-        assert!(done.coverage.complete);
-        assert_eq!(done.coverage.model_calls, 1, "a retry budget does not cause automatic extra turns");
-        assert_eq!(f.transmissions().len(), 1);
-    });
+    isolated(
+        "reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn",
+        || {
+            let f = Fixture::new(2, "empty");
+            let job = f.authorize_attempts(2, 4);
+            f.coordinator
+                .start(f.request(&job))
+                .expect("reviewed retry budget permits one turn per attempt");
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            assert_eq!(
+                done.coverage.model_calls, 1,
+                "a retry budget does not cause automatic extra turns"
+            );
+            assert_eq!(f.transmissions().len(), 1);
+        },
+    );
+}
+
+#[test]
+fn next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest() {
+    isolated(
+        "next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest",
+        || {
+            let f = Fixture::new(4, "graph");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            let sent = f.transmissions();
+            assert_eq!(sent.len(), 2);
+            assert!(
+                sent[0]["context"]["draft_context"]["topics"]
+                    .as_array()
+                    .unwrap()
+                    .is_empty()
+            );
+            let context = &sent[1]["context"]["draft_context"];
+            assert_eq!(
+                context["topics"].as_array().unwrap().len(),
+                2,
+                "later turn needs scoped canonical IDs from the completed draft, not independent topic lists"
+            );
+            assert_eq!(context["connections"].as_array().unwrap().len(), 1);
+            let reviewed: std::collections::BTreeSet<_> = done
+                .manifest
+                .batches
+                .iter()
+                .flat_map(|b| b.sources.iter().map(|s| s.source.path.as_str()))
+                .collect();
+            for source in context["connections"][0]["sources"].as_array().unwrap() {
+                assert!(
+                    reviewed.contains(source["path"].as_str().unwrap()),
+                    "completed draft context cannot widen the reviewed manifest"
+                );
+            }
+        },
+    );
 }
