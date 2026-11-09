@@ -4,7 +4,6 @@ import {
   mkdirSync,
   writeFileSync,
   readFileSync,
-  chmodSync,
   rmSync,
   existsSync,
   symlinkSync,
@@ -63,31 +62,8 @@ const cargoHome = join(fixture, "cargo-home");
 mkdirSync(cargoHome);
 // Use the installed package cache without reading the user's Cargo config or credentials.
 symlinkSync(registrySource, join(cargoHome, "registry"), "dir");
-const flagsSource = readFileSync(
-  join(repo, "crates/topics-runtime/src/protocol.rs"),
-  "utf8",
-);
-const flagsBlock = flagsSource.match(
-  /pub const DISABLED: &\[&str\] = &\[([\s\S]*?)\];/,
-)?.[1];
-if (!flagsBlock) throw new Error("Cannot read runtime disabled flag list");
-const flags = [...flagsBlock.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-const child = join(fixture, "scripted-codex"),
-  mode = join(fixture, "mode"),
-  log = join(fixture, "transmissions.jsonl");
-const template = readFileSync(childTemplate, "utf8");
-writeFileSync(
-  child,
-  template
-    .replace("@SETTINGS@", JSON.stringify(mode))
-    .replace("@LOG@", JSON.stringify(log))
-    .replace("@FLAGS@", JSON.stringify(flags)),
-);
-chmodSync(child, 0o700);
-writeFileSync(
-  mode,
-  process.env.TOPICS_SETUP_GRAPH_ONLY === "1" ? "graph" : "graph_claim",
-);
+const fixtureOutput = join(fixture, "runtime-fixture");
+mkdirSync(fixtureOutput);
 const env = {
   ...process.env,
   HOME: session.HOME,
@@ -102,24 +78,27 @@ const env = {
   TOPICS_TEST_XDG_DATA: session.XDG_DATA_HOME,
   TOPICS_TEST_SANDBOX: fixture,
   TOPICS_TEST_WORKSPACE_ROOT: notes,
-  TOPICS_TEST_CODEX: child,
   TOPICS_TEST_SETUP: "1",
   TOPICS_TEST_GRAPH_ONLY:
     process.env.TOPICS_SETUP_GRAPH_ONLY === "1" ? "1" : "0",
-  TOPICS_TEST_SETUP_LOG: log,
   VITE_NATIVE_TEST: "1",
   TOPICS_TEST_REAL_APP_BINARY: join(target, "debug/topics-desktop"),
   TOPICS_TEST_APP_LAUNCHER: join(desktop, "scripts/native-app-launcher.mjs"),
   PATH: `${join(desktop, "node_modules/.bin")}:${toolchainBin}:${process.env.PATH}`,
 };
-async function run(command, args) {
-  await new Promise((resolveRun, rejectRun) => {
+async function run(command, args, capture = false) {
+  return await new Promise((resolveRun, rejectRun) => {
     const child = spawn(command, args, {
       cwd: desktop,
       env,
-      stdio: "inherit",
+      stdio: capture ? ["ignore", "pipe", "inherit"] : "inherit",
       detached: true,
     });
+    let output = "";
+    if (capture)
+      child.stdout.on("data", (chunk) => {
+        output += chunk;
+      });
     let timedOut = false;
     const killGroup = (signal) => {
       try {
@@ -146,11 +125,33 @@ async function run(command, args) {
             `${command} ${timedOut ? "timed out" : `exited ${code ?? signal}`}`,
           ),
         );
-      else resolveRun();
+      else resolveRun(output);
     });
   });
 }
 try {
+  const mode =
+    process.env.TOPICS_SETUP_GRAPH_ONLY === "1" ? "graph" : "graph_claim";
+  const rendered = JSON.parse(
+    await run(
+      "cargo",
+      [
+        "run",
+        "-q",
+        "-p",
+        "topics-setup",
+        "--example",
+        "render_fixture",
+        "--",
+        fixtureOutput,
+        mode,
+      ],
+      true,
+    ),
+  );
+  env.TOPICS_TEST_CODEX = rendered.executable;
+  env.TOPICS_CODEX_PATH = rendered.executable;
+  env.TOPICS_TEST_SETUP_LOG = rendered.log_file;
   if (process.env.TOPICS_SETUP_SKIP_BUILD !== "1")
     await run("npm", [
       "run",

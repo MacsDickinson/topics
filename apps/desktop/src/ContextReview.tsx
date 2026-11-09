@@ -2,6 +2,8 @@ import { Badge, Button, Field, Section } from "./ui";
 import { useEffect, useRef, useState } from "react";
 import { ipc, apiError } from "./ipc";
 import { Evidence } from "./Evidence";
+import { endpointLabel } from "./ProposalEditor";
+import type { Topic } from "./workspace-types";
 import type { SetupTopicReview } from "./generated/SetupTopicReview";
 import type { SetupReceipt } from "./generated/SetupReceipt";
 import type { SetupCorrectionPreview } from "./generated/SetupCorrectionPreview";
@@ -17,10 +19,12 @@ const labels = {
 export function ContextReview({
   rootId,
   topicId,
+  topics,
   onSaved,
 }: {
   rootId: string;
   topicId: string;
+  topics: Topic[];
   onSaved: () => void;
 }) {
   const [review, setReview] = useState<SetupTopicReview | null>(null),
@@ -65,7 +69,14 @@ export function ContextReview({
       const value = await fn();
       if (current === generation.current) done(value);
     } catch (e) {
-      if (current === generation.current) setError(apiError(e).message);
+      if (current === generation.current) {
+        const problem = apiError(e);
+        setError(problem.message);
+        if (problem.code === "conflict" || problem.code === "stale_evidence") {
+          setReceipt(null);
+          setCorrection(null);
+        }
+      }
     } finally {
       if (current === generation.current) setBusy(false);
     }
@@ -147,6 +158,55 @@ export function ContextReview({
       {!review && !error && <p role="status">Loading review state…</p>}
       {review && (
         <>
+          {review.context.length > 0 && (
+            <section>
+              <h3>Your context</h3>
+              {review.context.map((entry) => (
+                <blockquote key={entry.id}>{entry.text}</blockquote>
+              ))}
+            </section>
+          )}
+          {review.topic.connections.length > 0 && (
+            <section>
+              <h3>Connections</h3>
+              {review.topic.connections.map((connection) => (
+                <article key={connection.id}>
+                  <p>
+                    {endpointLabel(connection.from, topics)} —{" "}
+                    {connection.relation} —{" "}
+                    {endpointLabel(connection.to, topics)}
+                  </p>
+                  <details>
+                    <summary>Sources ({connection.sources.length})</summary>
+                    {connection.sources.map((source, i) => (
+                      <blockquote key={i}>
+                        <strong>{source.path}</strong>
+                        <p>{source.excerpt}</p>
+                      </blockquote>
+                    ))}
+                  </details>
+                  <Button
+                    disabled={busy}
+                    onClick={() =>
+                      void act(
+                        () =>
+                          ipc<SetupReceipt>(
+                            "setup_connection_confirm_preview",
+                            {
+                              root_id: rootId,
+                              connection_ids: [connection.id],
+                            },
+                          ),
+                        setReceipt,
+                      )
+                    }
+                  >
+                    Confirm this connection
+                  </Button>
+                </article>
+              ))}
+            </section>
+          )}
           {review.topic.current_claims.map((c) => {
             const state = review.reviews.find(
               (r) => r.record_id === c.revision_id,
@@ -169,6 +229,12 @@ export function ContextReview({
                       : "Accepted, not personally verified"}
                   </Badge>
                 </p>
+                {(c.valid_from || c.valid_to) && (
+                  <p>
+                    Reported period: {c.valid_from || "unspecified start"} to{" "}
+                    {c.valid_to || "unspecified end"}
+                  </p>
+                )}
                 <details>
                   <summary>Sources ({c.sources.length})</summary>
                   <Evidence sources={c.sources} rootId={rootId} />
@@ -222,7 +288,7 @@ export function ContextReview({
                 onClick={() =>
                   void act(
                     () =>
-                      ipc("workspace_user_statement", {
+                      ipc("setup_context_add", {
                         root_id: rootId,
                         topic_id: topicId,
                         text: context,
@@ -270,22 +336,36 @@ export function ContextReview({
               <h3>
                 {correction
                   ? "Review correction"
-                  : "Confirm displayed statements"}
+                  : receipt.connections.length > 0
+                    ? "Confirm displayed connections"
+                    : "Confirm displayed statements"}
               </h3>
               {correction && (
                 <>
                   <p>Your statement: {correction.statement.text}</p>
                   <h4>Before</h4>
                   {correction.before.map((c) => (
-                    <p key={c.revision_id}>
-                      {c.predicate}: {c.value}
-                    </p>
+                    <article key={c.revision_id}>
+                      <p>
+                        {c.predicate}: {c.value}
+                      </p>
+                      <details>
+                        <summary>Sources ({c.sources.length})</summary>
+                        <Evidence sources={c.sources} rootId={rootId} />
+                      </details>
+                    </article>
                   ))}
                   <h4>After</h4>
                   {correction.after.map((c) => (
-                    <p key={c.revision_id}>
-                      {c.predicate}: {c.value}
-                    </p>
+                    <article key={c.revision_id}>
+                      <p>
+                        {c.predicate}: {c.value}
+                      </p>
+                      <details>
+                        <summary>Sources ({c.sources.length})</summary>
+                        <Evidence sources={c.sources} rootId={rootId} />
+                      </details>
+                    </article>
                   ))}
                   <p>
                     Future rule: {correction.rule.match_value} →{" "}
@@ -302,12 +382,36 @@ export function ContextReview({
                   {receipt.revisions.map((c) => (
                     <li key={c.revision_id}>
                       {c.predicate}: {c.value}
+                      <details>
+                        <summary>Sources ({c.sources.length})</summary>
+                        <Evidence sources={c.sources} rootId={rootId} />
+                      </details>
+                    </li>
+                  ))}
+                  {receipt.connections.map((connection) => (
+                    <li key={connection.id}>
+                      {endpointLabel(connection.from, topics)} —{" "}
+                      {connection.relation} —{" "}
+                      {endpointLabel(connection.to, topics)}
+                      <details>
+                        <summary>Sources ({connection.sources.length})</summary>
+                        {connection.sources.map((source, i) => (
+                          <blockquote key={i}>
+                            <strong>{source.path}</strong>
+                            <p>{source.excerpt}</p>
+                          </blockquote>
+                        ))}
+                      </details>
                     </li>
                   ))}
                 </ul>
               )}
               <Button variant="primary" disabled={busy} onClick={decide}>
-                {correction ? "Approve correction" : "Confirm statements"}
+                {correction
+                  ? "Approve correction"
+                  : receipt.connections.length > 0
+                    ? "Confirm connection"
+                    : "Confirm statements"}
               </Button>
               <Button
                 onClick={() => {

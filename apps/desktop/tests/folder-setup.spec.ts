@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { workspaceFixture, ids } from "./fixtures/workspace";
+import { workspaceFixture, ids, source } from "./fixtures/workspace";
 
 test("connecting a new folder opens local inventory before analysis", async ({
   page,
@@ -306,4 +306,162 @@ test("tree builds missing intermediate folders from inventory paths and selects 
   await expect(
     page.getByRole("button", { name: "Review manifest" }),
   ).toBeDisabled();
+});
+
+test("changed scope requires a new manifest and explicit consent before resuming", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await setupJob(page);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as any).calls.some((c: any) => c.command === "setup_job_watch"),
+      ),
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    const w = window as any;
+    const payload = {
+      ...structuredClone(w.setupJob),
+      status: "needs_consent",
+      revision: 2,
+    };
+    for (const fn of Object.values(w.listeners))
+      (fn as Function)({ event: "setup_job_event", id: 2, payload });
+  });
+  await page.evaluate(() => {
+    const w = window as any;
+    w.nextManifest = {
+      ...structuredClone(w.setupManifest),
+      batches: [],
+      excluded: [{ path: "Meetings/one.md", reason: "No longer eligible" }],
+    };
+  });
+  await page.getByRole("button", { name: "Preview updated manifest" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Removed from the updated selection" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Authorize and resume" }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Authorize this updated manifest for the remaining job")
+    .check();
+  await page.getByRole("button", { name: "Authorize and resume" }).click();
+  const request = await page.evaluate(
+    () =>
+      (window as any).calls.find(
+        (c: any) => c.command === "setup_job_reconsent",
+      ).args.request,
+  );
+  expect(request).toMatchObject({
+    root_id: ids.root,
+    job_id: "job-one",
+    expected_revision: 2,
+    manifest_id: "manifest-one",
+  });
+});
+
+test("connection confirmation previews only the selected connection", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await showDraft(page);
+  await page.getByRole("button", { name: "Approve selected changes" }).click();
+  await page.evaluate(
+    ({ ids, source }) => {
+      (window as any).reviewConnection = {
+        id: "connection-one",
+        from: { kind: "topic", id: ids.topic },
+        relation: "relates to",
+        to: { kind: "topic", id: ids.topic },
+        uncertainty: null,
+        sources: [source],
+        valid_from: null,
+        valid_to: null,
+      };
+    },
+    { ids, source },
+  );
+  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Ledger", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm this connection" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Confirm displayed connections" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as any).calls.find(
+          (c: any) => c.command === "setup_connection_confirm_preview",
+        ).args.request.connection_ids,
+    ),
+  ).toEqual(["connection-one"]);
+});
+
+test("a returning root opens the saved map and still offers setup", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { returning: true });
+  await expect(
+    page.getByRole("heading", { name: "Topics", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Understand this folder" }),
+  ).toBeVisible();
+});
+
+test("new evidence shows the prior understanding without accepting the proposed replacement", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await setupJob(page);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as any).calls.some((c: any) => c.command === "setup_job_watch"),
+      ),
+    )
+    .toBe(true);
+  await page.evaluate(
+    ({ source }) => {
+      const w = window as any;
+      w.claims = [
+        {
+          ...w.setupJob.graph.items.find(
+            (item: any) => item.item_id === "item-claim",
+          ).candidate.claim,
+          value: "Monday",
+        },
+      ];
+      const next = structuredClone(w.setupJob);
+      next.revision = 2;
+      next.graph.issues.push({
+        id: "replacement",
+        issue_kind: "replacement",
+        key: "Launch differs",
+        item_ids: ["item-claim"],
+        sources: [source],
+        deferred: false,
+      });
+      for (const fn of Object.values(w.listeners))
+        (fn as Function)({ event: "setup_job_event", id: 2, payload: next });
+    },
+    { source },
+  );
+  await page.getByRole("button", { name: "Ledger", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Proposed change" }),
+  ).toBeVisible();
+  await expect(page.getByText("launch: Monday", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("launch: Friday", { exact: true }).first(),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      (window as any).calls.filter((c: any) => c.command === "setup_decide"),
+    ),
+  ).toHaveLength(0);
 });

@@ -2,4 +2,4 @@
 import type { ApiError } from "./ApiError";
 import type { SetupBatchStatus } from "./SetupBatchStatus";
 
-export type SetupBatch = { batch_id: string, status: SetupBatchStatus, scope_id: string | null, run_id: string | null, attempt: number, error: ApiError | null, proposal_ids: Array<string>, };
+export type SetupBatch = { batch_id: string, status: SetupBatchStatus, scope_id: string | null, run_id: string | null, attempt: number, error: ApiError | null, proposal_ids: Array<string>, completed_source_ids: Array<string>, };

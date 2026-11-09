@@ -87,6 +87,7 @@ function App() {
   const rootRef = useRef<RootRef | null>(null);
   const formTrigger = useRef<HTMLButtonElement | null>(null);
   const selectedTopicId = useRef<string | null>(null);
+  const navigationSeq = useRef(0);
   const epoch = useRef(0),
     detailSeq = useRef(0),
     refreshSeq = useRef(0),
@@ -295,8 +296,14 @@ function App() {
         if (disposed || !current(generation)) return;
         rootRef.current = result.root;
         setRoot(result.root);
-        setPath(result.root?.path || "");
-        if (result.root) void refresh(result.root, generation);
+        setPath(result.root?.path || '');
+        if (result.root) {
+          const selected = result.root;
+          void refresh(selected, generation);
+          void ipc<{ entry: string; root_id: string }>('setup_inventory', { root_id: selected.root_id, roles: [] }).then((inventory) => {
+            if (!disposed && current(generation, selected.root_id) && inventory.root_id === selected.root_id && inventory.entry === 'returning' && navigationSeq.current === 0) setScreen('topics');
+          }).catch(() => undefined);
+        }
       })
       .catch((e) => {
         if (!disposed && current(generation)) {
@@ -678,6 +685,7 @@ function App() {
   const appDataBootError = !!bootError?.message.includes("TOPICS_APP_DATA_DIR");
   const pendingCount = proposals.filter((p) => p.status === "pending").length;
   const navigate = (next: Screen) => {
+    navigationSeq.current++;
     window.scrollTo(0, 0);
     setScreen(next);
     setManual(false);
@@ -1124,6 +1132,7 @@ function App() {
                             key={`${root.root_id}-${topic.topic.id}`}
                             rootId={root.root_id}
                             topicId={topic.topic.id}
+                          topics={topics}
                             onSaved={() => {
                               void refresh(root);
                               void openTopic(topic.topic.id);

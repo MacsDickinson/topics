@@ -21,6 +21,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         SetupJobRequest,
         SetupJob,
         SetupJobControlRequest,
+        SetupJobReconsentRequest,
+        SetupConnectionConfirmPreviewRequest,
         SetupBatchStartRequest,
         SetupBatchCapability,
         SetupBatchStageRequest,

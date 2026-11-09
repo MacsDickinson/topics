@@ -56,11 +56,12 @@ describe("Synthetic setup job through native services", () => {
           .trim()
           .split("\n").length,
       ).toEqual(5);
-      await $("button=Review starting map").click();
-      await $("h2=Save starting map").waitForDisplayed();
-      await $("button=Save starting map").click();
+      await $("button=Synthetic Alex A42").click();
+      await $("button=Review topic group").click();
+      await $("h2=Save topic group").waitForDisplayed();
+      await $("button=Save topic group").click();
       await browser.waitUntil(
-        async () => !(await $("h2=Save starting map").isExisting()),
+        async () => !(await $("h2=Save topic group").isExisting()),
         { timeout: 30000 },
       );
       const saved = await browser.execute(
@@ -74,7 +75,7 @@ describe("Synthetic setup job through native services", () => {
         state.job.job_id,
       );
       expect(
-        saved.graph.items.some((item: any) => item.disposition === "saved"),
+        saved.graph.items.every((item: any) => item.disposition === "saved"),
       ).toEqual(true);
       if (process.env.TOPICS_TEST_GRAPH_ONLY === "1") return;
       await $('button[aria-label="Topics"]').click();
@@ -86,13 +87,17 @@ describe("Synthetic setup job through native services", () => {
           (await $(".context-review").getText()).includes("From your notes"),
         { timeout: 10000 },
       );
-      await $(".context-review button=That’s wrong").click();
+      await $(".context-review").$("button=That’s wrong").click();
       await $(".context-review textarea").setValue(
-        "Synthetic Alex uses they/them.",
+        "Synthetic Alex supports Ledger; Alex does not lead Ledger.",
       );
-      await $(".context-review input").setValue("they/them");
+      await $(".context-review input").setValue("supports Ledger");
       await $("button=Preview correction").click();
       await $("h3=Review correction").waitForDisplayed();
+      const previewText = await $(".context-review .consent").getText();
+      expect(previewText).toContain("leads Ledger");
+      expect(previewText).toContain("supports Ledger");
+      expect(previewText).toContain("Future rule");
       await $("button=Approve correction").click();
       await browser.waitUntil(
         async () =>
@@ -100,6 +105,40 @@ describe("Synthetic setup job through native services", () => {
         { timeout: 30000 },
       );
       expect((await $$(".context-review article")).length).toBeGreaterThan(0);
+      await $(".context-review").$("button=Add context").click();
+      await $(".context-review textarea").setValue(
+        "Synthetic context: role changed after review.",
+      );
+      await $("button=Save context").click();
+      await browser.waitUntil(
+        async () =>
+          (await $(".context-review").getText()).includes(
+            "Synthetic context: role changed after review.",
+          ),
+        { timeout: 30000 },
+      );
+      const projection = await browser.execute(async (rootId) => {
+        const core = (window as any).__TAURI__.core;
+        const topics = (
+          await core.invoke("workspace_topics_list", {
+            request: { root_id: rootId },
+          })
+        ).topics;
+        const topic = topics.find(
+          (entry: any) => entry.name === "Synthetic Alex A42",
+        );
+        return core.invoke("setup_topic_review", {
+          request: { root_id: rootId, topic_id: topic.id },
+        });
+      }, state.root.root_id);
+      expect(projection.context.map((entry: any) => entry.text)).toContain(
+        "Synthetic context: role changed after review.",
+      );
+      expect(
+        projection.reviews.filter(
+          (entry: any) => entry.state === "confirmed_by_you",
+        ).length,
+      ).toEqual(1);
     },
   );
 });

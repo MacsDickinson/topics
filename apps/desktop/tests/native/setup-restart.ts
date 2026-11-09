@@ -20,7 +20,8 @@ describe("Synthetic setup restart", () => {
         { timeout: 30000 },
       );
       const text = await $(".context-review").getText();
-      expect(text).toContain("they/them");
+      expect(text).toContain("supports Ledger");
+      expect(text).toContain("Synthetic context: role changed after review.");
     },
   );
 });

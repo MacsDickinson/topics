@@ -267,6 +267,24 @@ service_command!(
     setup_draft_disposition
 );
 service_command!(
+    setup_job_reconsent,
+    SetupJobReconsentRequest,
+    SetupJob,
+    setup_job_reconsent
+);
+service_command!(
+    setup_connection_confirm_preview,
+    SetupConnectionConfirmPreviewRequest,
+    SetupReceipt,
+    setup_connection_confirm_preview
+);
+service_command!(
+    setup_context_add,
+    UserStatementRequest,
+    UserStatement,
+    setup_context_add
+);
+service_command!(
     setup_save_preview,
     SetupSavePreviewRequest,
     SetupReceipt,

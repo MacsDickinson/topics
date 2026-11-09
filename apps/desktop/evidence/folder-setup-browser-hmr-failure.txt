@@ -1,0 +1,82 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts tests/workspace.spec.ts
+
+[WebServer] (node:49663) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 37 tests using 1 worker
+
+(node:49681) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (628ms)
+  ✓   2 tests/folder-setup.spec.ts:48:1 › setup offers tree selection and an exact manifest before building (575ms)
+  ✓   3 tests/folder-setup.spec.ts:87:1 › topic map offers graph and list navigation (611ms)
+  ✓   4 tests/folder-setup.spec.ts:133:1 › draft map exposes one exact starting-map receipt without record checkboxes (386ms)
+  ✓   5 tests/folder-setup.spec.ts:151:1 › a saved topic offers contextual decisions and collapsed evidence (525ms)
+  ✓   6 tests/folder-setup.spec.ts:177:1 › folder chooser cancellation preserves the path and selection waits for explicit use (245ms)
+  ✓   7 tests/folder-setup.spec.ts:202:1 › context is saved as the exact user statement without correction or confirmation (489ms)
+  ✓   8 tests/folder-setup.spec.ts:225:1 › confirmation previews only the enumerated visible revisions (504ms)
+  ✓   9 tests/folder-setup.spec.ts:249:1 › job watch ignores foreign and older snapshots and displays a newer matching update (350ms)
+  ✓  10 tests/folder-setup.spec.ts:297:1 › tree builds missing intermediate folders from inventory paths and selects descendants (281ms)
+  ✓  11 tests/folder-setup.spec.ts:311:1 › changed scope requires a new manifest and explicit consent before resuming (455ms)
+  ✓  12 tests/folder-setup.spec.ts:355:1 › connection confirmation previews only the selected connection (544ms)
+  ✓  13 tests/folder-setup.spec.ts:392:1 › a returning root opens the saved map and still offers setup (264ms)
+  ✓  14 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (263ms)
+  ✓  15 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (355ms)
+  ✓  16 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (1.2s)
+  ✓  17 tests/workspace.spec.ts:199:1 › approval errors preserve edited candidates and rejected proposals never become topics (643ms)
+  ✓  18 tests/workspace.spec.ts:224:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (671ms)
+  ✓  19 tests/workspace.spec.ts:252:1 › changing root cancels run and clears old topic, proposal and delayed reads (624ms)
+  ✓  20 tests/workspace.spec.ts:278:1 › missing runtime leaves topic browsing and manual proposal capture available (332ms)
+  ✓  21 tests/workspace.spec.ts:294:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (396ms)
+  ✓  22 tests/workspace.spec.ts:329:1 › manual fallback stages a proposal and still needs explicit human approval (418ms)
+  ✓  23 tests/workspace.spec.ts:351:1 › omitted dependencies fail visibly and the exact edited subset stays reviewable (619ms)
+  ✓  24 tests/workspace.spec.ts:383:1 › late topic detail read after a root switch cannot reveal old-root evidence (843ms)
+  ✓  25 tests/workspace.spec.ts:426:1 › stale scope, runtime errors and malformed events stay actionable without accepting data (669ms)
+  ✓  26 tests/workspace.spec.ts:479:1 › an older list refresh cannot overwrite newer workspace data (688ms)
+  ✓  27 tests/workspace.spec.ts:521:1 › keyboard search works from topics and narrow screens keep controls reachable (673ms)
+  ✓  28 tests/workspace.spec.ts:546:1 › failed cancellation remains retryable and ignores late output until stop is confirmed (611ms)
+  ✓  29 tests/workspace.spec.ts:578:1 › accepted empty analysis outcome says no new changes without an approval card (606ms)
+  ✘  30 tests/workspace.spec.ts:612:1 › review F1 keyboard paths retain spaces and newlines until explicit preview (10.1s)
+(node:51100) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  31 tests/workspace.spec.ts:637:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval (1.4s)
+  ✓  32 tests/workspace.spec.ts:688:1 › review F2 root boot errors are immediately actionable without runtime-only advice (255ms)
+  ✓  33 tests/workspace.spec.ts:716:1 › review F3 dates only filter an explicit nonblank files or folder selection (315ms)
+  ✓  34 tests/workspace.spec.ts:738:1 › review F4 refresh of the same topic preserves chat draft and consent (1.1s)
+  ✓  35 tests/workspace.spec.ts:767:1 › review F4 source inventory loading is distinct from an empty folder (286ms)
+  ✓  36 tests/workspace.spec.ts:789:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines (1.1s)
+  ✓  37 tests/workspace.spec.ts:811:1 › review F4 include labels distinguish candidates of the same kind (482ms)
+
+
+  1) tests/workspace.spec.ts:612:1 › review F1 keyboard paths retain spaces and newlines until explicit preview 
+
+    Test timeout of 10000ms exceeded.
+
+    Error: locator.pressSequentially: Test timeout of 10000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Markdown files', { exact: true })
+        - locator resolved to <textarea rows="2" id="scope-files" aria-label="Markdown files" placeholder="Meetings/one.md"></textarea>
+      - elementHandle.type("Team Notes/one.md")
+      - element was detached from the DOM, retrying
+
+
+      618 |     .click();
+      619 |   const files = page.getByLabel('Markdown files', { exact: true });
+    > 620 |   await files.pressSequentially('Team Notes/one.md');
+          |               ^
+      621 |   await files.press('Enter');
+      622 |   await files.pressSequentially('Team Notes/two.md');
+      623 |   await expect(files).toHaveValue('Team Notes/one.md\nTeam Notes/two.md');
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/workspace.spec.ts:620:15
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-review-F1-keyboa-9c960-ines-until-explicit-preview/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-review-F1-keyboa-9c960-ines-until-explicit-preview/error-context.md
+
+  1 failed
+    tests/workspace.spec.ts:612:1 › review F1 keyboard paths retain spaces and newlines until explicit preview 
+  36 passed (33.4s)
