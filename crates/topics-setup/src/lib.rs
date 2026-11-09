@@ -104,12 +104,10 @@ impl SetupCoordinator {
                 "Resume the job or review changed transmission consent first",
             ));
         }
-        if job.batches.len() > job.manifest.limits.max_batches as usize
-            || job.manifest.limits.max_turns_per_batch != 1
-        {
+        if job.batches.len() > job.manifest.limits.max_batches as usize {
             return Err(error(
                 "invalid_input",
-                "Setup needs bounded batches with one runtime turn each",
+                "Setup exceeds its reviewed batch budget",
             ));
         }
         let stopped = Arc::new(AtomicBool::new(false));
