@@ -31,13 +31,39 @@ test("both search shortcuts work across screens and select the existing query", 
   const search = page.getByRole("searchbox", { name: "Search notes" });
   await expect(search).toBeFocused();
   await search.fill("Ledger");
+  // Hold the shortcut frame so the test observes both sides of the race.
+  await page.evaluate(() => {
+    const original = window.requestAnimationFrame;
+    const pending: FrameRequestCallback[] = [];
+    (window as any).releaseShortcutFrame = () => {
+      window.requestAnimationFrame = original;
+      for (const callback of pending) original(callback);
+      return pending.length;
+    };
+    window.requestAnimationFrame = (callback) => {
+      pending.push(callback);
+      return pending.length;
+    };
+  });
   await page.keyboard.press("Control+k");
   expect(
     await search.evaluate((el: HTMLInputElement) => [
       el.selectionStart,
       el.selectionEnd,
     ]),
-  ).toEqual([0, 6]);
+  ).toEqual([6, 6]);
+  expect(
+    await page.evaluate(() => (window as any).releaseShortcutFrame()),
+  ).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      search.evaluate((el: HTMLInputElement) => [
+        el.selectionStart,
+        el.selectionEnd,
+      ]),
+    )
+    .toEqual([0, 6]);
+  await expect(search).toBeFocused();
   await page.getByRole("button", { name: "Topics", exact: true }).click();
   await expect(page.getByLabel("Message about this topic")).toHaveValue(
     "Keep this draft",

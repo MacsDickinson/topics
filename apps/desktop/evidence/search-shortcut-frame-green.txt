@@ -1,0 +1,41 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 --repeat-each=10 tests/redesign.spec.ts -g both search shortcuts
+
+[WebServer] (node:20727) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:20847) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (974ms)
+(node:20940) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (604ms)
+(node:21050) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (750ms)
+(node:21482) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   4 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (768ms)
+(node:21872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   5 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (574ms)
+(node:21878) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (583ms)
+(node:21894) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   7 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (618ms)
+(node:21901) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   8 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (581ms)
+(node:21928) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (526ms)
+(node:21942) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  10 tests/redesign.spec.ts:23:1 › both search shortcuts work across screens and select the existing query (562ms)
+
+  10 passed (25.2s)
