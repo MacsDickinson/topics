@@ -47,6 +47,7 @@ describe("Synthetic setup job through native services", () => {
       await $("h2=Choose notes to analyse").waitForDisplayed();
       await $("button=Review manifest").click();
       await $("h2=Review the exact manifest").waitForDisplayed();
+      await $(".consent").$("summary*=Local-only").click();
       expect(await $(".consent").getText()).toContain("private/private.md");
       const authorization = await $(
         'input[type=checkbox][aria-label="Authorize this exact manifest for this job"]',

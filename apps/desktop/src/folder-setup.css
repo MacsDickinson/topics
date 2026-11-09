@@ -232,3 +232,8 @@
   margin: var(--space-5) 0 var(--space-2);
 }
 .folder-setup > .consent + .content-section { margin-top: var(--space-6); }
+.setup-role { min-width: 160px; font: var(--type-meta); }
+.setup-role > span { display: block; margin-bottom: var(--space-1); }
+.setup-exclusions { margin: var(--space-4) 0; }
+.setup-exclusions details { margin: var(--space-2) 0; }
+.setup-exclusions li, .notice li { overflow-wrap: anywhere; }

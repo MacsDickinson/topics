@@ -28,9 +28,8 @@ async function setupJob(page: import("@playwright/test").Page) {
     page.getByRole("heading", { name: "Choose notes to analyse" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Review manifest" }).click();
-  await expect(
-    page.getByText("Meetings/private.md: Local-only").first(),
-  ).toBeVisible();
+  await page.locator(".consent").getByText("Local-only (1)").click();
+  await expect(page.locator(".consent").getByText("Meetings/private.md: Local-only")).toBeVisible();
   await page.getByLabel("Authorize this exact manifest for this job").check();
   await page.getByRole("button", { name: "Build starting map" }).click();
   await expect(
@@ -78,7 +77,9 @@ test("setup offers tree selection and an exact manifest before building", async 
     page.getByRole("button", { name: "Build starting map" }),
   ).toBeDisabled();
   await page.getByLabel("Authorize this exact manifest for this job").check();
-  await page.getByLabel("Through date").fill("2026-11-04");
+  await page.getByRole("button", { name: "Through date: Select date" }).click();
+  await page.getByLabel("Through date date (YYYY-MM-DD)").fill("2026-11-04");
+  await page.getByRole("button", { name: "Apply" }).click();
   await expect(
     page.getByRole("heading", { name: "Review the exact manifest" }),
   ).toHaveCount(0);
@@ -589,4 +590,73 @@ test("batch failure explanations allow only exact frozen reason pairs", async ({
   await expect(
     page.getByRole("button", { name: "Retry failed" }),
   ).toBeVisible();
+});
+
+
+test("date-ineligible oversized notes do not block eligible selected notes", async ({ page }) => {
+  await workspaceFixture(page, { dateExcludedLarge: true });
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await page.getByRole("button", { name: "From date: Select date" }).click();
+  await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-01-01");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByRole("button", { name: "Review manifest" })).toBeEnabled();
+});
+
+
+test("direct exclusion preserves the remaining selection and invalidates consent", async ({ page }) => {
+  await workspaceFixture(page, { dateExcludedLarge: true });
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
+  await page.getByRole("button", { name: "Exclude Meetings/old.md from this run" }).click();
+  await page.getByRole("button", { name: "Exclude Meetings/undated.md from this run" }).click();
+  await expect(page.getByRole("button", { name: "Review manifest" })).toBeEnabled();
+  await page.getByRole("button", { name: "Review manifest" }).click();
+  const request = await page.evaluate(() => (window as any).calls.find((c: any) => c.command === "setup_manifest_preview").args.request);
+  expect(request.spec.files).toEqual(["Meetings/one.md"]);
+  await page.getByLabel("Authorize this exact manifest for this job").check();
+  await page.getByRole("button", { name: "From date: Select date" }).click();
+  await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-01-01");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByRole("heading", { name: "Review the exact manifest" })).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === "setup_job_create").length)).toBe(0);
+});
+
+test("dates validate and BoardUI role selection sends canonical values", async ({ page }) => {
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await page.getByRole("button", { name: "Suggested role for Meetings" }).click();
+  await page.getByRole("option", { name: "project" }).click();
+  await page.getByRole("button", { name: "From date: Select date" }).click();
+  await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-12-01");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByText(/No selected notes match these dates/)).toBeVisible();
+  await page.getByRole("button", { name: "Through date: Select date" }).click();
+  await page.getByLabel("Through date date (YYYY-MM-DD)").fill("2026-02-30");
+  await expect(page.getByText("Enter a valid date in YYYY-MM-DD format.")).toBeVisible();
+  await page.getByLabel("Through date date (YYYY-MM-DD)").fill("2026-11-01");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByRole("alert")).toContainText("From date must be on or before through date");
+  await expect(page.getByRole("button", { name: "Review manifest" })).toBeDisabled();
+  await page.getByRole("button", { name: /From date: 2026-12-01/ }).click();
+  await page.getByRole("button", { name: "Clear" }).click();
+  await page.getByRole("button", { name: "Review manifest" }).click();
+  const request = await page.evaluate(() => (window as any).calls.find((c: any) => c.command === "setup_manifest_preview").args.request);
+  expect(request.spec.date_from).toBeNull();
+  expect(request.spec.date_to).toBe("2026-11-01");
+  expect(request.roles).toEqual([{path: "Meetings", role: "project"}]);
+});
+
+test("date picker cancels drafts, returns focus, and handles keyboard dismissal", async ({ page }) => {
+  await workspaceFixture(page);
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  const trigger = page.getByRole("button", { name: "From date: Select date" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-11-01");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await expect(page.getByLabel("From date date (YYYY-MM-DD)")).toHaveValue("");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
 });

@@ -5,7 +5,6 @@ import {
   Badge,
   Button,
   EmptyState,
-  Field,
   Icon,
   PageHeader,
   Section,
@@ -23,6 +22,17 @@ import type { Candidate } from "./generated/Candidate";
 import type { Endpoint } from "./generated/Endpoint";
 import type { SourceRef } from "./generated/SourceRef";
 import "./folder-setup.css";
+import { Select, DatePicker } from "./boardui/controls";
+import type { Exclusion } from "./generated/Exclusion";
+
+function Exclusions({ entries }: { entries: Exclusion[] }) {
+  const groups = new Map<string, Exclusion[]>();
+  for (const entry of entries) {
+    const reason = entry.reason || "Other exclusion";
+    groups.set(reason, [...(groups.get(reason) || []), entry]);
+  }
+  return <div className="setup-exclusions"><h3>Informational exclusions ({entries.length})</h3>{[...groups].map(([reason, items]) => <details key={reason}><summary>{reason} ({items.length})</summary><ul>{items.map((item, i) => <li key={`${item.path}-${i}`}>{item.path}: {item.reason || "Reason unavailable"}</li>)}</ul></details>)}</div>;
+}
 
 const limits = {
   max_files_per_batch: 20,
@@ -535,44 +545,19 @@ export function FolderSetup({
                 eligible.every((p) => selected.includes(p))
               }
               disabled={!eligible.length || busy}
+              ref={(node) => { if (node) node.indeterminate = eligible.some((p) => selected.includes(p)) && !eligible.every((p) => selected.includes(p)); }}
               onChange={(e) => toggle(eligible, e.target.checked)}
             />{" "}
             {path ? path.split("/").at(-1) : "Root"}
           </label>
           {path && (
-            <label>
-              Suggested role{" "}
-              <select
-                disabled={busy}
-                value={
-                  overrides.find((r) => r.path === path)?.role ||
-                  folder?.role ||
-                  "other"
-                }
-                onChange={(e) => {
-                  const next = [
-                    ...overrides.filter((r) => r.path !== path),
-                    { path, role: e.target.value as FolderRole },
-                  ];
-                  setOverrides(next);
-                  invalidate();
-                  void action(
-                    () =>
-                      ipc<SetupInventory>("setup_inventory", {
-                        root_id: rootId,
-                        roles: next,
-                      }),
-                    setInventory,
-                  );
-                }}
-              >
-                {roles.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="setup-role"><span>Suggested role</span>
+              <Select label={`Suggested role for ${path}`} disabled={busy} value={overrides.find((r) => r.path === path)?.role || folder?.role || "other"} options={roles} onChange={(value) => {
+                const next = [...overrides.filter((r) => r.path !== path), { path, role: value as FolderRole }];
+                setOverrides(next); invalidate();
+                void action(() => ipc<SetupInventory>("setup_inventory", { root_id: rootId, roles: next }), setInventory);
+              }} />
+            </div>
           )}
         </div>
         {folder ? (
@@ -681,75 +666,24 @@ export function FolderSetup({
                         .map(renderFolder)}
                 </ul>
                 <div className="setup-dates">
-                  <Field id="setup-from" label="From date">
-                    <input
-                      type="date"
-                      value={from}
-                      onChange={(e) => {
-                        setFrom(e.target.value);
-                        invalidate();
-                      }}
-                    />
-                  </Field>
-                  <Field id="setup-through" label="Through date">
-                    <input
-                      type="date"
-                      value={through}
-                      onChange={(e) => {
-                        setThrough(e.target.value);
-                        invalidate();
-                      }}
-                    />
-                  </Field>
+                  <DatePicker label="From date" value={from} disabled={busy} onChange={(value) => { setFrom(value); invalidate(); }} />
+                  <DatePicker label="Through date" value={through} disabled={busy} onChange={(value) => { setThrough(value); invalidate(); }} />
                 </div>
-                <h3>Excluded from discovery</h3>
-                <ul>
-                  {inventory.excluded.map((e, i) => (
-                    <li key={i}>
-                      {e.path}: {e.reason}
-                    </li>
-                  ))}
-                </ul>
-                {inventory.documents.some(
-                  (d) =>
-                    selected.includes(d.source.path) &&
-                    d.bytes > limits.max_bytes_per_batch,
-                ) && (
-                  <div className="notice">
-                    <p>
-                      These selected notes exceed the{" "}
-                      {formatBytes(limits.max_bytes_per_batch)} per-batch limit.
-                      Exclude them before previewing.
-                    </p>
-                    <ul>
-                      {inventory.documents
-                        .filter(
-                          (d) =>
-                            selected.includes(d.source.path) &&
-                            d.bytes > limits.max_bytes_per_batch,
-                        )
-                        .map((d) => (
-                          <li key={d.source.source_id}>
-                            {d.source.path} ({formatBytes(d.bytes)})
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                )}
-                <Button
-                  disabled={
-                    busy ||
-                    !selected.length ||
-                    inventory.documents.some(
-                      (d) =>
-                        selected.includes(d.source.path) &&
-                        d.bytes > limits.max_bytes_per_batch,
-                    )
-                  }
-                  onClick={preview}
-                >
-                  Review manifest
-                </Button>
+                <p>Dates are inclusive. Undated notes are excluded when either date is set.</p>
+                <Exclusions entries={inventory.excluded} />
+                {(() => {
+                  const invalidRange = !!from && !!through && from > through;
+                  const eligible = inventory.documents.filter((d) => selected.includes(d.source.path) && (!(from || through) || (!!d.source.date && (!from || d.source.date >= from) && (!through || d.source.date <= through))));
+                  const oversized = eligible.filter((d) => d.bytes > limits.max_bytes_per_batch);
+                  return <>
+                    <p>{selected.length} selected; {eligible.length} within the date range.</p>
+                    {invalidRange && <p role="alert">From date must be on or before through date.</p>}
+                    {!invalidRange && !selected.length && <p>Select at least one note to review a manifest.</p>}
+                    {!invalidRange && selected.length > 0 && !eligible.length && <p>No selected notes match these dates. Change the dates or select another note.</p>}
+                    {!invalidRange && oversized.length > 0 && <div className="notice"><h3>Needs attention</h3><p>These selected notes exceed the {formatBytes(limits.max_bytes_per_batch)} per-batch limit. Exclude them from this run before previewing.</p><ul>{oversized.map((d) => <li key={d.source.source_id}>{d.source.path} ({formatBytes(d.bytes)}) <Button disabled={busy} onClick={() => toggle([d.source.path], false)}>Exclude {d.source.path} from this run</Button></li>)}</ul></div>}
+                    <Button disabled={busy || invalidRange || !eligible.length || oversized.length > 0} onClick={preview}>Review manifest</Button>
+                  </>;
+                })()}
               </Section>
             </>
           )}
@@ -775,14 +709,7 @@ export function FolderSetup({
                   )),
                 )}
               </ul>
-              <h3>Excluded</h3>
-              <ul>
-                {manifest.excluded.map((e, i) => (
-                  <li key={i}>
-                    {e.path}: {e.reason}
-                  </li>
-                ))}
-              </ul>
+              <Exclusions entries={manifest.excluded} />
               <label className="check">
                 <input
                   type="checkbox"
