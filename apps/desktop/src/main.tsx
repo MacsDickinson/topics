@@ -41,6 +41,7 @@ import type {
   WorkspaceRunEvent,
 } from "./workspace-types";
 import "./style.css";
+import "./window-chrome.css";
 if (import.meta.env.VITE_NATIVE_TEST === "1")
   await import("@wdio/tauri-plugin");
 type Screen =
@@ -731,6 +732,9 @@ function App() {
   };
   return (
     <div className="workspace">
+      <div className="window-chrome" aria-hidden="true">
+        <div className="window-chrome-drag" data-tauri-drag-region />
+      </div>
       <a className="skip-link" href="#workspace-content">
         Skip to content
       </a>
