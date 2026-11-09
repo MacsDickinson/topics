@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { ipc, apiError } from "./ipc";
 import type { SetupInventory } from "./generated/SetupInventory";
 import type { SetupManifest } from "./generated/SetupManifest";
 import type { SetupJob } from "./generated/SetupJob";
 import type { SetupReceipt } from "./generated/SetupReceipt";
 import type { SetupDecisionResult } from "./generated/SetupDecisionResult";
-import type { InventoryFolder } from "./generated/InventoryFolder";
 import type { FolderRole } from "./generated/FolderRole";
 import type { FolderRoleOverride } from "./generated/FolderRoleOverride";
 import type { Candidate } from "./generated/Candidate";
+import type { Endpoint } from "./generated/Endpoint";
 import type { SourceRef } from "./generated/SourceRef";
 import "./folder-setup.css";
 
@@ -35,7 +36,31 @@ function Evidence({ sources }: { sources: SourceRef[] }) {
     </details>
   );
 }
-function CandidateText({ candidate }: { candidate: Candidate }) {
+function CandidateText({
+  candidate,
+  context = [],
+}: {
+  candidate: Candidate;
+  context?: Candidate[];
+}) {
+  const endpoint = (value: Endpoint) => {
+    if (value.kind === "source") return "Source passage";
+    const match = context.find((item) =>
+      value.kind === "topic"
+        ? item.kind === "topic" && item.topic.id === value.id
+        : (item.kind === "claim" || item.kind === "correction") &&
+          item.claim.id === value.id,
+    );
+    if (!match)
+      return value.kind === "topic"
+        ? "Topic not available"
+        : "Statement not available";
+    return match.kind === "topic"
+      ? match.topic.name
+      : match.kind === "claim" || match.kind === "correction"
+        ? `${match.claim.predicate}: ${match.claim.value}`
+        : "Item not available";
+  };
   switch (candidate.kind) {
     case "topic":
       return (
@@ -53,14 +78,8 @@ function CandidateText({ candidate }: { candidate: Candidate }) {
     case "connection":
       return (
         <>
-          Relationship:{" "}
-          {candidate.connection.from.kind === "topic"
-            ? candidate.connection.from.id
-            : candidate.connection.from.kind}{" "}
-          — {candidate.connection.relation} —{" "}
-          {candidate.connection.to.kind === "topic"
-            ? candidate.connection.to.id
-            : candidate.connection.to.kind}
+          Relationship: {endpoint(candidate.connection.from)} —{" "}
+          {candidate.connection.relation} — {endpoint(candidate.connection.to)}
         </>
       );
     case "unresolved_identity":
@@ -113,27 +132,61 @@ export function FolderSetup({
     };
   }, [rootId]);
   useEffect(() => {
-    if (!job || !["running", "ready"].includes(job.status)) return;
+    if (!job || !runtime) return;
     const id = job.job_id,
       generation = epoch.current;
-    const timer = window.setInterval(() => {
-      void ipc<SetupJob>("setup_job_get", { root_id: rootId, job_id: id })
-        .then((next) => {
-          if (
-            generation === epoch.current &&
-            next.root_id === rootId &&
-            next.job_id === id
-          )
-            setJob((old) =>
-              old && next.revision >= old.revision ? next : old,
-            );
-        })
-        .catch((e) => {
-          if (generation === epoch.current) setError(apiError(e).message);
-        });
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [rootId, job?.job_id, job?.status]);
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    const update = (next: SetupJob) => {
+      if (
+        !disposed &&
+        generation === epoch.current &&
+        next != null &&
+        typeof next.revision === "number" &&
+        Number.isSafeInteger(next.revision) &&
+        next.graph != null &&
+        Array.isArray(next.graph.items) &&
+        Array.isArray(next.graph.issues) &&
+        next.coverage != null &&
+        Array.isArray(next.coverage.processed) &&
+        Array.isArray(next.coverage.failed) &&
+        Array.isArray(next.coverage.outstanding) &&
+        Array.isArray(next.coverage.excluded) &&
+        next.root_id === rootId &&
+        next.job_id === id
+      ) {
+        setJob((old) => (old && next.revision >= old.revision ? next : old));
+      }
+    };
+    void listen<SetupJob>("setup_job_event", (event) => update(event.payload))
+      .then((remove) => {
+        if (disposed) {
+          remove();
+          return;
+        }
+        unlisten = remove;
+        return ipc<SetupJob>("setup_job_watch", {
+          root_id: rootId,
+          job_id: id,
+        }).then(update);
+      })
+      .catch((e) => {
+        if (!disposed && generation === epoch.current)
+          setError(apiError(e).message);
+      });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [rootId, job?.job_id, runtime]);
+  function acceptJob(next: SetupJob) {
+    if (next.root_id !== rootId) return;
+    setJob((old) =>
+      old && old.job_id === next.job_id && old.revision > next.revision
+        ? old
+        : next,
+    );
+  }
   function invalidate() {
     setManifest(null);
     setConsent(false);
@@ -205,7 +258,7 @@ export function FolderSetup({
         root_id: rootId,
         job_id: created.job_id,
       });
-    }, setJob);
+    }, acceptJob);
   }
   function control(name: "pause" | "resume" | "retry_failed") {
     if (job)
@@ -217,7 +270,7 @@ export function FolderSetup({
             expected_revision: job.revision,
             action: name,
           }),
-        setJob,
+        acceptJob,
       );
   }
   function savePreview(ids: string[] = []) {
@@ -249,6 +302,19 @@ export function FolderSetup({
                 `Save ${result.status}; refresh the receipt.`,
             );
           onSaved();
+          if (job) {
+            const generation = epoch.current;
+            void ipc<SetupJob>("setup_job_get", {
+              root_id: rootId,
+              job_id: job.job_id,
+            })
+              .then((next) => {
+                if (generation === epoch.current) acceptJob(next);
+              })
+              .catch((e) => {
+                if (generation === epoch.current) setError(apiError(e).message);
+              });
+          }
         },
       );
   }
@@ -261,9 +327,24 @@ export function FolderSetup({
     (item) =>
       item.candidate.kind === "topic" && item.candidate.topic.id === topicId,
   );
-  function renderFolder(folder: InventoryFolder): React.ReactNode {
+  // Inventory reports folders containing notes; derive intermediate path segments
+  // for navigation without scanning the filesystem or creating wire records.
+  const folderPaths = new Set<string>();
+  for (const folder of inventory?.folders || []) {
+    if (!folder.path) {
+      folderPaths.add("");
+      continue;
+    }
+    const segments = folder.path.split("/");
+    for (let i = 1; i <= segments.length; i++)
+      folderPaths.add(segments.slice(0, i).join("/"));
+  }
+  const parentOf = (path: string) =>
+    path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+  function renderFolder(path: string): React.ReactNode {
     if (!inventory) return null;
-    const prefix = folder.path ? `${folder.path}/` : "";
+    const folder = inventory.folders.find((entry) => entry.path === path);
+    const prefix = path ? `${path}/` : "";
     const documents = inventory.documents.filter(
       (d) =>
         d.source.path.startsWith(prefix) &&
@@ -276,14 +357,11 @@ export function FolderSetup({
           d.source.sensitivity !== "local_only",
       )
       .map((d) => d.source.path);
-    const children = inventory.folders.filter(
-      (child) =>
-        child.path !== folder.path &&
-        child.path.startsWith(prefix) &&
-        !child.path.slice(prefix.length).includes("/"),
-    );
+    const children = [...folderPaths]
+      .filter((child) => child !== path && parentOf(child) === path)
+      .sort();
     return (
-      <li key={folder.path}>
+      <li key={path}>
         <div className="setup-folder">
           <label>
             <input
@@ -295,66 +373,77 @@ export function FolderSetup({
               disabled={!eligible.length || busy}
               onChange={(e) => toggle(eligible, e.target.checked)}
             />{" "}
-            {folder.path || "Root"}
+            {path ? path.split("/").at(-1) : "Root"}
           </label>
-          <label>
-            Suggested role{" "}
-            <select
-              disabled={busy}
-              value={
-                overrides.find((r) => r.path === folder.path)?.role ||
-                folder.role
-              }
-              onChange={(e) => {
-                const next = [
-                  ...overrides.filter((r) => r.path !== folder.path),
-                  { path: folder.path, role: e.target.value as FolderRole },
-                ];
-                setOverrides(next);
-                invalidate();
-                void action(
-                  () =>
-                    ipc<SetupInventory>("setup_inventory", {
-                      root_id: rootId,
-                      roles: next,
-                    }),
-                  setInventory,
-                );
-              }}
-            >
-              {roles.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
+          {path && (
+            <label>
+              Suggested role{" "}
+              <select
+                disabled={busy}
+                value={
+                  overrides.find((r) => r.path === path)?.role ||
+                  folder?.role ||
+                  "other"
+                }
+                onChange={(e) => {
+                  const next = [
+                    ...overrides.filter((r) => r.path !== path),
+                    { path, role: e.target.value as FolderRole },
+                  ];
+                  setOverrides(next);
+                  invalidate();
+                  void action(
+                    () =>
+                      ipc<SetupInventory>("setup_inventory", {
+                        root_id: rootId,
+                        roles: next,
+                      }),
+                    setInventory,
+                  );
+                }}
+              >
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
-        <p>
-          {folder.reason} {folder.documents} notes; {folder.dated} dated,{" "}
-          {folder.undated} undated; {folder.linked} linked.{" "}
-          {folder.date_from || "No start date"}–
-          {folder.date_to || "no end date"}.
-        </p>
-        <details>
-          <summary>Individual notes ({documents.length})</summary>
-          <ul>
-            {documents.map((d) => (
-              <li key={d.source.source_id}>
-                <label>
-                  <input
-                    type="checkbox"
-                    disabled={d.source.sensitivity === "local_only"}
-                    checked={selected.includes(d.source.path)}
-                    onChange={(e) => toggle([d.source.path], e.target.checked)}
-                  />{" "}
-                  {d.source.path}{" "}
-                  {d.source.sensitivity === "local_only" && "(Local-only)"}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </details>
+        {folder ? (
+          <p>
+            {folder.reason} {folder.documents} notes; {folder.dated} dated,{" "}
+            {folder.undated} undated; {folder.linked} linked.{" "}
+            {folder.date_from || "No start date"}–
+            {folder.date_to || "no end date"}.
+          </p>
+        ) : (
+          <p>Grouping folder; roles are suggestions.</p>
+        )}
+        {documents.length > 0 && (
+          <details>
+            <summary>Individual notes ({documents.length})</summary>
+            <ul>
+              {documents.map((d) => (
+                <li key={d.source.source_id}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      disabled={d.source.sensitivity === "local_only"}
+                      checked={selected.includes(d.source.path)}
+                      onChange={(e) =>
+                        toggle([d.source.path], e.target.checked)
+                      }
+                    />{" "}
+                    {d.source.path}{" "}
+                    {d.source.sensitivity === "local_only" && "(Local-only)"}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         {children.length > 0 && <ul>{children.map(renderFolder)}</ul>}
       </li>
     );
@@ -388,7 +477,7 @@ export function FolderSetup({
                       root_id: rootId,
                       job_id: id,
                     }),
-                  setJob,
+                  acceptJob,
                 )
               }
             >
@@ -408,18 +497,12 @@ export function FolderSetup({
                 eligible bytes. Suggested roles do not change privacy.
               </p>
               <ul className="setup-tree" aria-label="Notes folders">
-                {inventory.folders
-                  .filter(
-                    (folder) =>
-                      !inventory.folders.some(
-                        (parent) =>
-                          parent.path !== folder.path &&
-                          (parent.path
-                            ? folder.path.startsWith(`${parent.path}/`)
-                            : !!folder.path),
-                      ),
-                  )
-                  .map(renderFolder)}
+                {folderPaths.has("")
+                  ? renderFolder("")
+                  : [...folderPaths]
+                      .filter((path) => !path.includes("/"))
+                      .sort()
+                      .map(renderFolder)}
               </ul>
               <div className="setup-dates">
                 <label>
@@ -831,17 +914,67 @@ export function FolderSetup({
                 {receipt.operation_count} operation(s).
               </p>
               {receipt.dependency_ids.length > 0 && (
-                <p>
-                  Required endpoint IDs: {receipt.dependency_ids.join(", ")}
-                </p>
+                <div>
+                  <p>Required endpoints</p>
+                  <ul>
+                    {receipt.dependency_ids.map((id) => {
+                      const item = job.graph.items.find(
+                        (entry) => entry.item_id === id,
+                      );
+                      return (
+                        <li key={id}>
+                          {item ? (
+                            <CandidateText
+                              candidate={item.candidate}
+                              context={job.graph.items.map(
+                                (entry) => entry.candidate,
+                              )}
+                            />
+                          ) : (
+                            "Required item unavailable; refresh this receipt"
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
               {receipt.deferred_ids.length > 0 && (
-                <p>Deferred IDs: {receipt.deferred_ids.join(", ")}</p>
+                <div>
+                  <p>Deferred items</p>
+                  <ul>
+                    {receipt.deferred_ids.map((id) => {
+                      const item = job.graph.items.find(
+                        (entry) => entry.item_id === id,
+                      );
+                      return (
+                        <li key={id}>
+                          {item ? (
+                            <CandidateText
+                              candidate={item.candidate}
+                              context={job.graph.items.map(
+                                (entry) => entry.candidate,
+                              )}
+                            />
+                          ) : (
+                            "Deferred item unavailable; refresh this receipt"
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
               <ul>
                 {receipt.candidates.map((candidate, i) => (
                   <li key={i}>
-                    <CandidateText candidate={candidate} />
+                    <CandidateText
+                      candidate={candidate}
+                      context={[
+                        ...job.graph.items.map((item) => item.candidate),
+                        ...receipt.candidates,
+                      ]}
+                    />
                     {candidate.kind === "connection" && (
                       <Evidence sources={candidate.connection.sources} />
                     )}

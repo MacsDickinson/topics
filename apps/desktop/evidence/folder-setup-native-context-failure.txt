@@ -1,0 +1,98 @@
+
+> @topics/desktop@0.1.0 test:native:workspace
+> node scripts/native-smoke.mjs --workspace
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.57025ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (2.067917ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53.633292
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 46 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.29 kB
+dist/assets/index-LNfaVoJq.css           18.18 kB │ gzip:  4.31 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-IGs35Q8b.js           284.93 kB │ gzip: 87.10 kB
+✓ built in 668ms
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 7.34s
+       Built application at: /tmp/topics-setup-desktop-target/debug/topics-desktop
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (767.3335ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 815.835417
+
+Execution of 1 workers started at 2026-11-09T01:31:52.377Z
+
+[0-0] RUNNING in undefined - file:///tests/native/workspace.ts
+[0-0] Error in "Topic workspace native service journey.creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex"
+Error: Expect $(`.notice`) to have text
+
+Expected: "Undo recorded in history."
+Received: "Changes accepted. Your source notes were not rewritten."
+    at Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/native/workspace.ts:75:32)
+[0-0] FAILED in undefined - file:///tests/native/workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: b9689620-c451-42d8-9535-46fb186c4045
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/workspace.ts
+[webkit 605.1.15 macos #0-0] Topic workspace native service journey
+[webkit 605.1.15 macos #0-0]    ✖ creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 failing (11.4s)
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1) Topic workspace native service journey creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex
+[webkit 605.1.15 macos #0-0] Expect $(`.notice`) to have text
+
+Expected: "Undo recorded in history."
+Received: "Changes accepted. Your source notes were not rewritten."
+[webkit 605.1.15 macos #0-0] Error: Expect $(`.notice`) to have text
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] Expected: "Undo recorded in history."
+[webkit 605.1.15 macos #0-0] Received: "Changes accepted. Your source notes were not rewritten."
+[webkit 605.1.15 macos #0-0]     at Context.<anonymous> (/Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/native/workspace.ts:75:32)
+
+
+Spec Files:	 0 passed, 1 failed, 1 total (100% completed) in 00:00:12  
+
+file:///Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/scripts/native-smoke.mjs:99
+    throw new Error(`${command} exited ${result.status}`);
+          ^
+
+Error: npm exited 1
+    at run (file:///Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/scripts/native-smoke.mjs:99:11)
+    at file:///Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/scripts/native-smoke.mjs:122:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.2

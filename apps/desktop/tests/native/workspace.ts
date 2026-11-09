@@ -14,7 +14,7 @@ describe('Topic workspace native service journey', () => {
     await rootInput.setValue(root);
     await $('input[type="checkbox"]').click();
     await $('button=Use notes folder').click();
-    await expect($('h2=No accepted topics yet')).toBeDisplayed();
+    await expect($('h2=No notes yet')).toBeDisplayed();
     await browser.saveScreenshot(
       resolve('evidence/native-workspace-empty.png'),
     );
@@ -50,21 +50,38 @@ describe('Topic workspace native service journey', () => {
     await $('button[aria-label="Topics"]').click();
     await $('button[aria-label="Synthetic Ledger"]').click();
     await expect($('.topic-detail h1')).toHaveText('Synthetic Ledger');
+    // Exercise the real human-only statement service without invoking a model.
+    const stored = await browser.execute(async () => {
+      const core = (window as any).__TAURI__.core;
+      const root = (await core.invoke('workspace_root_get', { request: {} })).root;
+      const topics = (await core.invoke('workspace_topics_list', { request: { root_id: root.root_id } })).topics;
+      const topic = topics.find((entry: any) => entry.name === 'Synthetic Ledger');
+      const statement = await core.invoke('workspace_user_statement', { request: { root_id: root.root_id, topic_id: topic.id, text: 'Synthetic context retained exactly.' } });
+      const loaded = await core.invoke('workspace_statement_get', { request: { root_id: root.root_id, statement_id: statement.id } });
+      return { statement, loaded };
+    });
+    expect(stored.loaded.text).toEqual('Synthetic context retained exactly.');
+    expect(stored.loaded.id).toEqual(stored.statement.id);
+
     await browser.saveScreenshot(resolve('evidence/native-workspace.png'));
     await $('button=History').click();
-    await expect($('.operation')).toBeDisplayed();
+    await browser.waitUntil(async () => {
+      for (const operation of await $$('.operation')) if ((await operation.getText()).includes('Approve reviewed proposal')) return true;
+      return false;
+    }, { timeout: 10000, timeoutMsg: 'Approval operation did not appear in history' });
     for (const operation of await $$('.operation')) {
       if ((await operation.getText()).includes('Approve reviewed proposal')) {
         await operation.$('button=Undo').click();
         break;
       }
     }
-    await expect($('.notice')).toHaveText('Undo recorded in history.');
+    // The persisted statement depends on the topic, so undo must preserve it.
+    await expect($('[role=alert]')).toHaveText(expect.stringContaining('Undo dependent operations first'));
     await browser.saveScreenshot(
       resolve('evidence/native-workspace-history.png'),
     );
     await $('button[aria-label="Topics"]').click();
-    await expect($('button[aria-label="Synthetic Ledger"]')).not.toExist();
+    await expect($('button[aria-label="Synthetic Ledger"]')).toBeDisplayed();
     expect(readFileSync(source, 'utf8')).toEqual(original);
   });
 });

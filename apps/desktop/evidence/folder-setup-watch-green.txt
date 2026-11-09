@@ -1,0 +1,23 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts
+
+[WebServer] (node:13695) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:13699) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (535ms)
+  ✓   2 tests/folder-setup.spec.ts:48:1 › setup offers tree selection and an exact manifest before building (518ms)
+  ✓   3 tests/folder-setup.spec.ts:87:1 › topic map offers graph and list navigation (505ms)
+  ✓   4 tests/folder-setup.spec.ts:133:1 › draft map exposes one exact starting-map receipt without record checkboxes (367ms)
+  ✓   5 tests/folder-setup.spec.ts:151:1 › a saved topic offers contextual decisions and collapsed evidence (501ms)
+  ✓   6 tests/folder-setup.spec.ts:177:1 › folder chooser cancellation preserves the path and selection waits for explicit use (245ms)
+  ✓   7 tests/folder-setup.spec.ts:202:1 › context is saved as the exact user statement without correction or confirmation (601ms)
+  ✓   8 tests/folder-setup.spec.ts:225:1 › confirmation previews only the enumerated visible revisions (511ms)
+  ✓   9 tests/folder-setup.spec.ts:249:1 › job watch ignores foreign and older snapshots and displays a newer matching update (314ms)
+  ✓  10 tests/folder-setup.spec.ts:297:1 › tree builds missing intermediate folders from inventory paths and selects descendants (287ms)
+
+  10 passed (5.4s)

@@ -56,7 +56,7 @@ export const proposal = {
 // Browser transport fixture only. Never imported by application code or native tests.
 export async function workspaceFixture(
   page: Page,
-  options: { empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean } = {},
+  options: { empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean; nested?: boolean } = {},
 ) {
   await page.addInitScript(
     ({ ids, topic, claim, proposal, hash, options }) => {
@@ -126,6 +126,7 @@ export async function workspaceFixture(
           const request = args?.request;
           switch (command) {
             case 'setup_inventory':
+              if (options.nested) return { schema: 1, root_id: request.root_id, entry: 'new', folders: [{ path: 'Projects/Archive', role: 'project', reason: 'Suggested.', documents: 1, bytes: 28, dated: 1, undated: 0, linked: 0, date_from: '2026-11-01', date_to: '2026-11-01' }], documents: [{ source: { source_id: ids.source, path: 'Projects/Archive/one.md', hash, date: '2026-11-01', sensitivity: 'unknown' }, bytes: 28, title: 'One', linked: false, role: 'project', role_reason: 'Suggested.' }], excluded: [], eligible_bytes: 28, saved_topic_count: 0, resumable_job_ids: [] };
               if (options.inventoryEmpty) return { schema: 1, root_id: request.root_id, entry: 'empty', folders: [], documents: [], excluded: [], eligible_bytes: 0, saved_topic_count: 0, resumable_job_ids: [] };
               return { schema: 1, root_id: request.root_id, entry: 'new', folders: [{ path: 'Meetings', role: 'meeting', reason: 'Suggested from folder name.', documents: 1, bytes: 28, dated: 1, undated: 0, linked: 0, date_from: '2026-11-01', date_to: '2026-11-01' }], documents: [{ source: { source_id: ids.source, path: 'Meetings/one.md', hash, date: '2026-11-01', sensitivity: 'unknown' }, bytes: 28, title: 'Meeting', linked: false, role: 'meeting', role_reason: 'Suggested from folder name.' }], excluded: [{ path: 'Meetings/private.md', reason: 'Local-only' }], eligible_bytes: 28, saved_topic_count: 0, resumable_job_ids: [] };
             case 'setup_manifest_preview':
@@ -136,7 +137,8 @@ export async function workspaceFixture(
               return w.setupJob;
             case 'setup_job_start':
               w.setupJob.status = 'finished'; w.setupJob.coverage.processed = ['Meetings/one.md']; w.setupJob.coverage.outstanding = []; w.setupJob.coverage.complete = true; return w.setupJob;
-            case 'setup_job_get': return w.setupJob;
+            case 'setup_job_get':
+            case 'setup_job_watch': return w.setupJob;
             case 'setup_save_preview':
               return { schema: 1, receipt_id: 'receipt-one', root_id: request.root_id, kind: 'save', job_id: 'job-one', job_revision: 1, requested_ids: request.item_ids, included_ids: ['item-topic', 'item-claim'], dependency_ids: [], deferred_ids: [], candidates: [{ kind: 'topic', topic }, { kind: 'claim', claim }], revisions: [], expected_hashes: {}, fingerprint: hash, max_records_per_operation: 100, operation_count: 1, created_at: '2026-11-03T00:00:00Z' };
             case 'workspace_user_statement':
