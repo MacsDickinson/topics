@@ -29,9 +29,12 @@ Every app launch/test must use synthetic notes and an absolute isolated `TOPICS_
 ```sh
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native:workspace
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native:setup
 ```
 
 The first native suite retains Phase 0 real search/independent CLI root changes/watcher coverage. The workspace suite exercises fresh root creation, actual source preview/inspection/labels, unavailable runtime, manual proposal staging/review/approval, topic browsing and undo. Proxy entry and invalid app-data startup checks run alongside them. Embedded WebDriver does not implement the default action for option clicks; `tests/native/interaction.ts` performs DOM selection plus the change event while preserving React and every real IPC/service call.
+
+The setup suite uses a local scripted provider with the actual Rust runtime and WebView. It covers 100 synthetic notes, exact scope consent, bounded progress, group save, correction, context, restart/index rebuild, renewed consent and safe failure/retry. The source-byte guard excludes only the root's app-owned `topics/` directory; other source changes and symlinks still fail the check.
 
 Genuine installed-runtime testing is a separate explicit opt-in, authorized only for the fictional fixture:
 
@@ -42,5 +45,15 @@ npm run test:native:live
 ```
 
 Only an ephemeral wrapper delegates the unmodified installed runtime to its existing HOME/subscription. GUI, WebKit, notes and Topics app data remain synthetic. The harness never reads credentials/config or prints account metadata. It tests real discovery and correction, fresh-process restart and derived-index rebuild with stable accepted IDs and source-byte checks; timeouts are bounded. This opt-in incurs actual provider requests. It is never silently substituted with scripted model output.
+
+The separate genuine folder-setup journey requires the pinned Codex 0.166.0 and another explicit opt-in:
+
+```sh
+TOPICS_NATIVE_LIVE_SETUP=1 TOPICS_CODEX_PATH=/absolute/installed/codex \
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 \
+npm run test:native:setup:live
+```
+
+It uses fictional notes, exact consent, real model output, explicit baseline/correction approval and exact corrected-revision lineage through restart. Failures preserve only allowlisted local diagnostic categories and restricted synthetic state. Genuine setup acceptance is currently failing; this command is a diagnostic acceptance test, not evidence that the milestone has passed. See [current status](../../docs/folder-setup-progress.md).
 
 Browser transport fixtures are confined to tests and do not establish native/runtime readiness. RED, GREEN, selected screenshots and remaining limits are recorded in `evidence/workspace-progress.md` and adjacent logs. Root workspace/lockfile integration and cross-provider review remain coordinator-owned.
