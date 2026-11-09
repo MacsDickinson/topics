@@ -84,7 +84,17 @@ for line in sys.stdin:
                 'from': {'kind': 'topic', 'id': topics[0]['topic']['id']}, 'relation': 'leads',
                 'to': {'kind': 'topic', 'id': topics[1]['topic']['id']}, 'uncertainty': None,
                 'sources': citations, 'valid_from': None, 'valid_to': None}}
-            call(101, 'propose_changes', {'candidates': topics + [connection]})
+            if mode == 'ambiguous':
+                for topic in topics:
+                    topic['topic']['name'] = 'Joe'
+                    topic['topic']['topic_kind'] = 'person'
+                topics[0]['topic']['aliases'] = ['employee A42']
+                topics[1]['topic']['aliases'] = ['employee B93']
+                candidates = topics + [{'kind': 'unresolved_identity', 'name': 'Joe',
+                    'candidates': [topic['topic']['id'] for topic in topics], 'sources': citations}]
+            else:
+                candidates = topics + [connection]
+            call(101, 'propose_changes', {'candidates': candidates})
         emit({'method': 'item/agentMessage/delta', 'params': {
             'threadId': 'thread', 'turnId': 'turn', 'itemId': 'text', 'delta': 'Synthetic turn buffered'}})
         if mode == 'hold_second' and count == 2:

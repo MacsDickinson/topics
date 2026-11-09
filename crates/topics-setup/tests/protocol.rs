@@ -47,6 +47,7 @@ struct Fixture {
     coordinator: SetupCoordinator,
     root: RootRef,
     files: Vec<String>,
+    lifecycle: Arc<Mutex<()>>,
 }
 impl Fixture {
     fn new(documents: usize, mode: &str) -> Self {
@@ -97,13 +98,15 @@ impl Fixture {
             app_data: temp.path().join("app-data"),
         }));
         let service = Arc::new(Mutex::new(service));
-        let coordinator = SetupCoordinator::new(service.clone(), runtime, Arc::new(Mutex::new(())));
+        let lifecycle = Arc::new(Mutex::new(()));
+        let coordinator = SetupCoordinator::new(service.clone(), runtime, lifecycle.clone());
         Self {
             temp,
             service,
             coordinator,
             root,
             files,
+            lifecycle,
         }
     }
     fn authorize(&self, per_batch: u32) -> SetupJob {
@@ -177,7 +180,8 @@ impl Fixture {
     fn transmissions(&self) -> Vec<Value> {
         fs::read_to_string(self.temp.path().join("transmissions.jsonl"))
             .unwrap_or_default()
-            .lines()
+            .split_inclusive('\n')
+            .filter(|line| line.ends_with('\n'))
             .map(|line| serde_json::from_str(line).unwrap())
             .collect()
     }
@@ -408,6 +412,393 @@ fn pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs()
                 blocked.coverage.selected, 6,
                 "new sources never enter old manifest"
             );
+        },
+    );
+}
+
+#[test]
+fn private_sources_and_unrelated_topic_inventory_never_reach_the_child() {
+    isolated(
+        "private_sources_and_unrelated_topic_inventory_never_reach_the_child",
+        || {
+            let mut f = Fixture::new(4, "graph");
+            let private = "meetings/PRIVATE_PATH_SENTINEL.md";
+            fs::write(
+                PathBuf::from(&f.root.path).join(private),
+                "# PRIVATE_TITLE_SENTINEL\n\nPRIVATE_BYTES_SENTINEL\n",
+            )
+            .unwrap();
+            f.files.push(private.into());
+            {
+                let service = f.service.lock().unwrap();
+                let preview = service
+                    .scope_preview(ScopePreviewRequest {
+                        root_id: f.root.root_id.clone(),
+                        spec: ScopeSpec {
+                            files: vec![private.into()],
+                            folders: vec![],
+                            date_from: None,
+                            date_to: None,
+                        },
+                    })
+                    .unwrap();
+                service
+                    .sensitivity_set(SensitivitySetRequest {
+                        root_id: f.root.root_id.clone(),
+                        target: Endpoint::Source {
+                            source_id: preview.sources[0].source_id.clone(),
+                            locator: Locator {
+                                start_byte: 0,
+                                end_byte: 1,
+                                heading: None,
+                            },
+                        },
+                        sensitivity: Sensitivity::LocalOnly,
+                    })
+                    .unwrap();
+                for (id, name, sensitivity) in [
+                    (
+                        "20000000-0000-4000-8000-000000000001",
+                        "PRIVATE_TOPIC_SENTINEL",
+                        Sensitivity::LocalOnly,
+                    ),
+                    (
+                        "20000000-0000-4000-8000-000000000002",
+                        "UNRELATED_TOPIC_SENTINEL",
+                        Sensitivity::CloudAllowed,
+                    ),
+                ] {
+                    let candidate = Candidate::Topic {
+                        topic: Topic {
+                            id: id.into(),
+                            topic_kind: TopicKind::Thread,
+                            name: name.into(),
+                            aliases: vec![],
+                            sensitivity,
+                        },
+                    };
+                    let proposal = service
+                        .manual_propose(ManualProposeRequest {
+                            root_id: f.root.root_id.clone(),
+                            candidates: vec![candidate.clone()],
+                        })
+                        .unwrap()
+                        .proposal;
+                    service
+                        .proposal_decide(ProposalDecideRequest {
+                            root_id: f.root.root_id.clone(),
+                            proposal_id: proposal.id,
+                            decision: Decision::Approve {
+                                candidates: vec![candidate],
+                            },
+                            expected_fingerprint: proposal.fingerprint,
+                        })
+                        .unwrap();
+                }
+            }
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert_eq!(done.coverage.processed.len(), 4);
+            assert!(done.coverage.excluded.iter().any(|e| e.path == private));
+            let transmitted = serde_json::to_string(&f.transmissions()).unwrap();
+            for sentinel in [
+                "PRIVATE_PATH_SENTINEL",
+                "PRIVATE_TITLE_SENTINEL",
+                "PRIVATE_BYTES_SENTINEL",
+                "PRIVATE_TOPIC_SENTINEL",
+                "UNRELATED_TOPIC_SENTINEL",
+            ] {
+                assert!(
+                    !transmitted.contains(sentinel),
+                    "model-visible leak: {sentinel}"
+                );
+            }
+        },
+    );
+}
+
+#[test]
+fn ambiguity_stays_an_issue_and_model_success_has_no_approval_surface() {
+    isolated(
+        "ambiguity_stays_an_issue_and_model_success_has_no_approval_surface",
+        || {
+            let f = Fixture::new(4, "ambiguous");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            assert_eq!(done.graph.items.iter().filter(|i| matches!(&i.candidate, Candidate::Topic { topic } if topic.name == "Joe")).count(), 2);
+            assert!(
+                done.graph
+                    .issues
+                    .iter()
+                    .any(|i| i.issue_kind == SetupIssueKind::Identity)
+            );
+            assert!(
+                !done
+                    .graph
+                    .items
+                    .iter()
+                    .any(|i| matches!(i.candidate, Candidate::Connection { .. }))
+            );
+            assert!(
+                done.graph
+                    .items
+                    .iter()
+                    .all(|i| i.disposition != DraftDisposition::Saved)
+            );
+            assert!(
+                f.service
+                    .lock()
+                    .unwrap()
+                    .topics_list(RootRequest {
+                        root_id: f.root.root_id.clone()
+                    })
+                    .unwrap()
+                    .topics
+                    .is_empty()
+            );
+        },
+    );
+}
+
+#[test]
+fn unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources() {
+    isolated(
+        "unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources",
+        || {
+            let f = Fixture::new(6, "hold_second");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while f.transmissions().len() < 2 {
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            let running = f.coordinator.get(f.request(&job)).unwrap();
+            let paused = f
+                .coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: running.revision,
+                    action: SetupJobAction::Pause,
+                })
+                .unwrap();
+            let ids: Vec<_> = paused
+                .graph
+                .items
+                .iter()
+                .map(|i| i.item_id.clone())
+                .collect();
+            let completed_paths = paused.coverage.processed.clone();
+            fs::write(f.temp.path().join("mode"), "graph").unwrap();
+            f.coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: paused.revision,
+                    action: SetupJobAction::Resume,
+                })
+                .unwrap();
+            let done = f.done(&job);
+            assert!(done.coverage.complete);
+            assert_eq!(
+                done.graph
+                    .items
+                    .iter()
+                    .map(|i| i.item_id.clone())
+                    .collect::<Vec<_>>(),
+                ids
+            );
+            let sent = f.transmissions();
+            assert_eq!(
+                sent.len(),
+                4,
+                "one cancelled attempt plus three completed batches"
+            );
+            for path in completed_paths {
+                let copies = sent
+                    .iter()
+                    .flat_map(|run| run["context"]["sources"].as_array().unwrap())
+                    .filter(|source| source["summary"]["path"] == path)
+                    .count();
+                assert_eq!(copies, 1, "completed bytes retransmitted after resume");
+            }
+        },
+    );
+}
+
+#[test]
+fn root_switch_clears_old_context_and_rejects_old_job_launches() {
+    isolated(
+        "root_switch_clears_old_context_and_rejects_old_job_launches",
+        || {
+            let f = Fixture::new(6, "hold_second");
+            let job = f.authorize(2);
+            let snapshots = f.coordinator.subscribe();
+            f.coordinator.start(f.request(&job)).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while f.transmissions().len() < 2 {
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            let next = f.temp.path().join("different-notes");
+            fs::create_dir(&next).unwrap();
+            let old_capability;
+            {
+                let _gate = f.lifecycle.lock().unwrap();
+                f.coordinator.cancel_active().unwrap();
+                let paused = f.coordinator.get(f.request(&job)).unwrap();
+                assert_eq!(paused.coverage.processed.len(), 2);
+                old_capability = paused
+                    .batches
+                    .iter()
+                    .find(|b| b.status != SetupBatchStatus::Completed && b.run_id.is_some())
+                    .map(|b| (b.scope_id.clone().unwrap(), b.run_id.clone().unwrap()));
+                f.service
+                    .lock()
+                    .unwrap()
+                    .root_set(RootSetRequest {
+                        path: next.to_str().unwrap().into(),
+                        create: false,
+                    })
+                    .unwrap();
+            }
+            assert!(
+                snapshots.borrow().is_none(),
+                "root switch must clear old model progress context"
+            );
+            assert!(f.coordinator.start(f.request(&job)).is_err());
+            if let Some((scope_id, run_id)) = old_capability {
+                assert!(
+                    f.service
+                        .lock()
+                        .unwrap()
+                        .scope_read(ScopeReadRequest {
+                            root_id: f.root.root_id.clone(),
+                            scope_id,
+                            run_id
+                        })
+                        .is_err()
+                );
+            }
+            assert_eq!(f.transmissions().len(), 2);
+        },
+    );
+}
+
+#[test]
+fn restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids() {
+    isolated(
+        "restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids",
+        || {
+            let f = Fixture::new(6, "hold_second");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while f.transmissions().len() < 2 {
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            let running = f.coordinator.get(f.request(&job)).unwrap();
+            let paused = f
+                .coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: running.revision,
+                    action: SetupJobAction::Pause,
+                })
+                .unwrap();
+            let item = paused
+                .graph
+                .items
+                .iter()
+                .find(|i| matches!(i.candidate, Candidate::Topic { .. }))
+                .unwrap();
+            let mut candidate = item.candidate.clone();
+            if let Candidate::Topic { topic } = &mut candidate {
+                topic.aliases.push("Human draft alias".into());
+            }
+            let edited = f
+                .service
+                .lock()
+                .unwrap()
+                .setup_draft_edit(SetupDraftEditRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: paused.revision,
+                    item_id: item.item_id.clone(),
+                    candidate,
+                })
+                .unwrap();
+            let app_data = f.temp.path().join("app-data");
+            for path in [
+                "index.sqlite3",
+                "index.sqlite3-wal",
+                "index.sqlite3-shm",
+                "index.sqlite3-journal",
+            ] {
+                match fs::remove_file(app_data.join(path)) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => panic!("synthetic SQLite removal failed: {error}"),
+                }
+            }
+            let service = Arc::new(Mutex::new(WorkspaceService::open(&app_data).unwrap()));
+            let durable = service
+                .lock()
+                .unwrap()
+                .setup_job_get(f.request(&job))
+                .unwrap();
+            assert_eq!(durable.graph, edited.graph);
+            assert_eq!(durable.coverage.processed, edited.coverage.processed);
+            assert_eq!(
+                durable
+                    .batches
+                    .iter()
+                    .filter(|b| b.status == SetupBatchStatus::Completed)
+                    .map(|b| b.batch_id.clone())
+                    .collect::<Vec<_>>(),
+                edited
+                    .batches
+                    .iter()
+                    .filter(|b| b.status == SetupBatchStatus::Completed)
+                    .map(|b| b.batch_id.clone())
+                    .collect::<Vec<_>>()
+            );
+            let runtime = Arc::new(Runtime::new(RuntimeConfig {
+                codex_path: f.temp.path().join("scripted-codex"),
+                proxy_path: PathBuf::from("/usr/bin/false"),
+                app_data,
+            }));
+            let resumed = SetupCoordinator::new(service, runtime, Arc::new(Mutex::new(())));
+            fs::write(f.temp.path().join("mode"), "graph").unwrap();
+            resumed
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: durable.revision,
+                    action: SetupJobAction::Resume,
+                })
+                .unwrap();
+            let deadline = Instant::now() + Duration::from_secs(40);
+            let complete = loop {
+                let snapshot = resumed.get(f.request(&job)).unwrap();
+                if snapshot.status == SetupJobStatus::Finished {
+                    break snapshot;
+                }
+                assert!(
+                    Instant::now() < deadline,
+                    "restart resume did not finish: {:?}",
+                    snapshot.status
+                );
+                std::thread::sleep(Duration::from_millis(10));
+            };
+            assert_eq!(complete.coverage.processed.len(), 6);
+            assert!(complete.graph.items.iter().any(|i| matches!(&i.candidate, Candidate::Topic { topic } if topic.aliases.iter().any(|a| a == "Human draft alias"))));
         },
     );
 }

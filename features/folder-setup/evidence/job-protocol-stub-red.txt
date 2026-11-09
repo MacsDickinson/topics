@@ -1,0 +1,216 @@
+Canonical bfe9f65 service stubs; adapter mechanics permitted by coordinator.
+Command: cargo test -p topics-setup --test protocol --offline -- --test-threads=1 (own target, debug0, incremental0)
+No GREEN or coverage claim: source inventory/manifest service is not_implemented.
+
+    Finished `test` profile [unoptimized] target(s) in 0.20s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 9 tests
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... 
+running 1 test
+
+thread 'ambiguity_stays_an_issue_and_model_success_has_no_approval_surface' (6597790) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... FAILED
+
+failures:
+
+failures:
+    ambiguity_stays_an_issue_and_model_success_has_no_approval_surface
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.04s
+
+FAILED
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... 
+running 1 test
+
+thread 'failed_turn_preserves_other_batches_and_retry_does_not_duplicate' (6597797) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... FAILED
+
+failures:
+
+failures:
+    failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.02s
+
+FAILED
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... 
+running 1 test
+
+thread 'hundred_documents_use_exact_multiple_scopes_and_one_draft_graph' (6597800) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... FAILED
+
+failures:
+
+failures:
+    hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.04s
+
+FAILED
+test inventory_is_local_and_consent_starts_one_bounded_job ... 
+running 1 test
+
+thread 'inventory_is_local_and_consent_starts_one_bounded_job' (6597807) panicked at crates/topics-setup/tests/protocol.rs:203:18:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test inventory_is_local_and_consent_starts_one_bounded_job ... FAILED
+
+failures:
+
+failures:
+    inventory_is_local_and_consent_starts_one_bounded_job
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.02s
+
+FAILED
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6597813) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... FAILED
+
+failures:
+
+failures:
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.02s
+
+FAILED
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... 
+running 1 test
+
+thread 'private_sources_and_unrelated_topic_inventory_never_reach_the_child' (6597817) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... FAILED
+
+failures:
+
+failures:
+    private_sources_and_unrelated_topic_inventory_never_reach_the_child
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.24s
+
+FAILED
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... 
+running 1 test
+
+thread 'restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids' (6597830) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... FAILED
+
+failures:
+
+failures:
+    restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.02s
+
+FAILED
+test root_switch_clears_old_context_and_rejects_old_job_launches ... 
+running 1 test
+
+thread 'root_switch_clears_old_context_and_rejects_old_job_launches' (6597835) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test root_switch_clears_old_context_and_rejects_old_job_launches ... FAILED
+
+failures:
+
+failures:
+    root_switch_clears_old_context_and_rejects_old_job_launches
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.02s
+
+FAILED
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... 
+running 1 test
+
+thread 'unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources' (6597840) panicked at crates/topics-setup/tests/protocol.rs:142:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... FAILED
+
+failures:
+
+failures:
+    unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.02s
+
+FAILED
+
+failures:
+
+---- ambiguity_stays_an_issue_and_model_success_has_no_approval_surface stdout ----
+
+thread 'ambiguity_stays_an_issue_and_model_success_has_no_approval_surface' (6597786) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: ambiguity_stays_an_issue_and_model_success_has_no_approval_surface
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- failed_turn_preserves_other_batches_and_retry_does_not_duplicate stdout ----
+
+thread 'failed_turn_preserves_other_batches_and_retry_does_not_duplicate' (6597795) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+
+---- hundred_documents_use_exact_multiple_scopes_and_one_draft_graph stdout ----
+
+thread 'hundred_documents_use_exact_multiple_scopes_and_one_draft_graph' (6597798) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+
+---- inventory_is_local_and_consent_starts_one_bounded_job stdout ----
+
+thread 'inventory_is_local_and_consent_starts_one_bounded_job' (6597805) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: inventory_is_local_and_consent_starts_one_bounded_job
+
+---- pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs stdout ----
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6597811) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+---- private_sources_and_unrelated_topic_inventory_never_reach_the_child stdout ----
+
+thread 'private_sources_and_unrelated_topic_inventory_never_reach_the_child' (6597815) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: private_sources_and_unrelated_topic_inventory_never_reach_the_child
+
+---- restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids stdout ----
+
+thread 'restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids' (6597828) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids
+
+---- root_switch_clears_old_context_and_rejects_old_job_launches stdout ----
+
+thread 'root_switch_clears_old_context_and_rejects_old_job_launches' (6597832) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: root_switch_clears_old_context_and_rejects_old_job_launches
+
+---- unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources stdout ----
+
+thread 'unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources' (6597838) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources
+
+
+failures:
+    ambiguity_stays_an_issue_and_model_success_has_no_approval_surface
+    failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+    hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+    inventory_is_local_and_consent_starts_one_bounded_job
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+    private_sources_and_unrelated_topic_inventory_never_reach_the_child
+    restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids
+    root_switch_clears_old_context_and_rejects_old_job_launches
+    unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources
+
+test result: FAILED. 0 passed; 9 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`
