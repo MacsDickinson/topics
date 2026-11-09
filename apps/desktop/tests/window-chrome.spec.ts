@@ -32,3 +32,19 @@ test("connected navigation and setup remain below the header at minimum width", 
   await expect(page.getByRole("searchbox", { name: "Search notes" })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(560);
 });
+
+test("header remains above scrolling content and desktop sidebar fits beneath it", async ({ page }) => {
+  await page.setViewportSize({ width: 1180, height: 800 });
+  await workspaceFixture(page, { empty: true });
+  const geometry = await page.evaluate(() => {
+    const sidebar = document.querySelector('.sidebar')!.getBoundingClientRect();
+    return { bottom: sidebar.bottom, viewport: innerHeight };
+  });
+  expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewport);
+  await page.evaluate(() => { (document.querySelector('.workspace-main') as HTMLElement).style.minHeight = '1800px'; window.scrollTo(0, 400); });
+  await expect.poll(() => page.locator('.window-chrome').evaluate(el => el.getBoundingClientRect().top)).toBe(0);
+  expect(await page.locator('.sidebar').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(28);
+  await page.setViewportSize({ width: 560, height: 420 });
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await expect.poll(() => page.locator('.window-chrome').evaluate(el => el.getBoundingClientRect().top)).toBe(0);
+});
