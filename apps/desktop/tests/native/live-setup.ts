@@ -116,7 +116,12 @@ describe("Genuine Codex synthetic setup through native services", () => {
           (await $(".context-review").getText()).includes("From your notes"),
         { timeout: 10000 },
       );
-      await $(".context-review").$("button=That’s wrong").click();
+      const articles = await $$(".context-review article");
+      const claimArticle = (await Promise.all(articles.map(async (article) => ({
+        article, text: await article.getText(),
+      })))).find(({ text }) => text.includes(claim.value) && text.includes("From your notes"));
+      expect(claimArticle).toBeTruthy();
+      await claimArticle!.article.$("button=That’s wrong").click();
       await $(".context-review textarea").setValue(
         "Synthetic correction: the value is updated after review.",
       );
@@ -134,6 +139,15 @@ describe("Genuine Codex synthetic setup through native services", () => {
         { timeout: 30000 },
       );
       expect((await $$(".context-review article")).length).toBeGreaterThan(0);
+      const readProjection = async () => browser.execute(async (rootId, topicName) => {
+        const core = (window as any).__TAURI__.core;
+        const topics = (await core.invoke("workspace_topics_list", { request: { root_id: rootId } })).topics;
+        const topic = topics.find((entry: any) => entry.name === topicName);
+        return core.invoke("setup_topic_review", { request: { root_id: rootId, topic_id: topic.id } });
+      }, state.root.root_id, topicName);
+      const beforeContext = await readProjection();
+      const confirmedBefore = beforeContext.reviews.filter((entry: any) => entry.state === "confirmed_by_you").map((entry: any) => entry.record_id).sort();
+      expect(confirmedBefore.length).toEqual(1);
       await $(".context-review").$("button=Add context").click();
       await $(".context-review textarea").setValue(
         "Synthetic context: role changed after review.",
@@ -146,26 +160,13 @@ describe("Genuine Codex synthetic setup through native services", () => {
           ),
         { timeout: 30000 },
       );
-      const projection = await browser.execute(async (rootId, topicName) => {
-        const core = (window as any).__TAURI__.core;
-        const topics = (
-          await core.invoke("workspace_topics_list", {
-            request: { root_id: rootId },
-          })
-        ).topics;
-        const topic = topics.find((entry: any) => entry.name === topicName);
-        return core.invoke("setup_topic_review", {
-          request: { root_id: rootId, topic_id: topic.id },
-        });
-      }, state.root.root_id, topicName);
+      const projection = await readProjection();
       expect(projection.context.map((entry: any) => entry.text)).toContain(
         "Synthetic context: role changed after review.",
       );
-      expect(
-        projection.reviews.filter(
-          (entry: any) => entry.state === "confirmed_by_you",
-        ).length,
-      ).toEqual(1);
+      expect(projection.reviews.filter((entry: any) => entry.state === "confirmed_by_you").map((entry: any) => entry.record_id).sort()).toEqual(confirmedBefore);
+      writeFileSync(process.env.TOPICS_TEST_EXPECTED!, JSON.stringify({ topicName, confirmedBefore }));
+      await browser.saveScreenshot("evidence/native-live-setup-reviewed.png");
     },
   );
 });
