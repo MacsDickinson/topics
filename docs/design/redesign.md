@@ -101,8 +101,10 @@ that have not landed.
 
 ## Implementation checkpoint
 
-Implemented the structural screen plan and integrated authorized setup checkpoint
-`cad6757` in this isolated branch. All listed primitives are adopted by multiple
+Implemented the structural screen plan and reconciled authorized setup checkpoints
+`cad6757`, `e654210`, `91bce2b` and `5452e9d` in order in this isolated branch.
+Watch/Tauri event filtering and cleanup, path-segment selection and readable
+receipt labels remain authoritative feature behavior. All listed primitives are adopted by multiple
 screens; `style.css` is organized into one control/shell/form/reading/search/review
 layer rather than the previous accumulated override blocks. See the
 [verification and screen coverage report](../../apps/desktop/evidence/redesign/README.md)

@@ -1,6 +1,7 @@
 # BoardUI screen redesign verification
 
-Implementation checkpoint: `c6965c044dd580bd39e43da712e8740d5397dffd`, based on
+UI implementation: `c6965c044dd580bd39e43da712e8740d5397dffd`, with authorized
+setup integration through `9c20a467a7c539fdfcd06f13537b073e0999df25`, based on
 local main `a38b33471125225d57c8e1a257f092aed63a1f40`. Work was confined to
 `/Users/macs/orca/workspaces/topics/topics-boardui-screen-redesign`.
 
@@ -18,12 +19,26 @@ controls remain. No remote font or production dependency was added.
 | `49dc58f` | Synthetic baseline evidence and isolated capture configuration. |
 | `720f846c5d6978365aba05f39704468c6a5d6ee7` | Authorized cherry-pick of setup presentation checkpoint `cad67576a33179cc1101b070da9b5b54dff10218`. |
 | `c6965c044dd580bd39e43da712e8740d5397dffd` | Full structural screen implementation, documentation and interaction/contrast coverage. |
+| `a302c95a662b58c77dc5cde3842ce0c3d419fe1c` | Initial complete UI/evidence checkpoint, frozen before the queued setup deltas were reconciled. |
+| `315367b86fd083f068f661d9484de5a4d5b67ab5` | Reconciled `e6542105cd6ecd4eb4c5f37f8dd9e07bb6898cbc` formatting/tooling follow-up; retained already formatted redesigned JSX/CSS and applied tooling/test formatting. |
+| `f0348172686c9c6352cb0b2db0c3bb35e8c66e59` | Reconciled `91bce2b3996324b355617960ff756becb32862c8`: watch/Tauri events, filtering/cleanup, path-segment tree, receipt labels and canonical stream adapter/native evidence. |
+| `9c20a467a7c539fdfcd06f13537b073e0999df25` | Reconciled `5452e9df730dad873b6b0a09c044d7ec1eb01dd0`: retained equivalent primitive adoption and added exact 20-file/64-candidate/4-attempt limits and disclosure. |
 
-The imported setup checkpoint includes its existing canonical/native adapters;
-this worker did not independently change native or generated binding contracts.
-The coordinator requested a final canonical setup delta before full acceptance.
-That delta is still pending at this checkpoint; this report does **not** claim
-verification of later setup/API changes or final native acceptance.
+The setup deltas were reconciled in the authorized order after the preserved UI
+checkpoint. Their native adapters/tests are imported feature-team work; this
+worker did not independently alter their contracts. Structural AST comparisons
+against `91bce2b` verify exact parity for inventory/watch effects, event filtering
+and cleanup, acceptJob/start/control/save/action/invalidate/preview/savePreview/
+toggle and path-tree selection logic; see [`setup-parity.json`](setup-parity.json).
+JSX changes preserve the redesigned shell, fields, sections and controls.
+
+This is a **scoped independent-review checkpoint**, as requested by the
+coordinator. A separate final canonical delta remains pending: exact-manifest
+reconsent preserving completed subsets/original ids, connection confirmation,
+supplemental `setup_context_add`/`SetupTopicReview.context` and
+`DraftItem.assertion_kind`. None of those types or handlers were invented here.
+This report does **not** claim verification of those later states, whole-product
+acceptance or final native acceptance.
 
 ## Screen coverage
 
@@ -46,7 +61,7 @@ appears at the document top.
 | Manual capture | Focused identity/privacy form and explicit Create proposal; review remains required. | `manual.png` |
 | Analysis | Actual select → preview/authorize → Inbox sequence, grouped scope fields, included/excluded rows, consent and start boundary. | `analysis.png` |
 | Folder inventory | Shared page/section/field/button primitives, hierarchical notes/roles, date filters and exclusions. | `folder-inventory.png` |
-| Exact manifest | Named scope, exclusions, unchecked per-job authorization and disabled start until consent. | `folder-manifest.png` |
+| Exact manifest | Named scope, exclusions, 20-file/64-candidate/4-attempt disclosure, unchecked per-job authorization and disabled start until consent. | `folder-manifest.png` |
 | Starting map | Coverage, keyboard-accessible graph/list, topic detail group, relationships and input-needed sections. | `starting-map.png` |
 | Save receipt | Enumerated exact candidate/dependency/deferred context followed by explicit Save or Cancel. | `save-map.png` |
 | Contextual review | Compact review rows, status, source disclosure, focused correction form, original/replacement values, user statement and future-rule scope before approval. | `context-correction.png` |
@@ -83,7 +98,7 @@ node_modules/node/bin/node node_modules/typescript/bin/tsc --noEmit
 node_modules/node/bin/node node_modules/vite/bin/vite.js build
 ```
 
-- **81 browser tests passed**, including all existing feature/browser suites,
+- **83 browser tests passed**, including all existing feature/browser suites,
   retained rendered contrast checks, the new interaction cases and captures.
   See [`full-browser.txt`](full-browser.txt).
 - **TypeScript and production Vite build passed**; see [`build.txt`](build.txt).
@@ -92,6 +107,9 @@ node_modules/node/bin/node node_modules/vite/bin/vite.js build
   topic selection, manual/settings cancel focus restoration, post-proposal
   focus, exact manifest consent, graph keyboard activation, correction preview
   without implicit approval, 320px long paths/content and browser text selection.
+- The integrated feature tests additionally check nested path-segment selection
+  and stale/wrong-root/wrong-job event filtering; job updates use watch/events,
+  not the superseded polling loop.
 - Existing async, stale-root/response, hostile markup, approval/dependency,
   source sensitivity and draft/consent-preservation behavior remains covered.
 - Computed light/dark field boundary ratios: **3.89 / 3.48**; placeholders:
@@ -109,8 +127,10 @@ its semantic heading. No approval or async safety assertion was removed.
 
 ## Limits and remaining work
 
-- Final canonical setup delta and coordinator integration remain outstanding at
-  this checkpoint. Preserve their request/receipt/consent authority when merging.
+- Final additive canonical setup states and coordinator integration remain
+  outstanding at this checkpoint, as listed above. Preserve their request,
+  receipt and consent authority when merging; do not merge equivalent feature
+  commits twice.
 - Native Tauri/WebView smoke, packaged build and genuine runtime acceptance are
   owned by the setup/integration team and were not run here. No user app restart,
   push, PR or main merge occurred.
