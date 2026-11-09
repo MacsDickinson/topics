@@ -54,6 +54,6 @@ CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 \
 npm run test:native:setup:live
 ```
 
-It uses fictional notes, exact consent, real model output, explicit baseline/correction approval and exact corrected-revision lineage through restart. Failures preserve only allowlisted local diagnostic categories and restricted synthetic state. Genuine setup acceptance is currently failing; this command is a diagnostic acceptance test, not evidence that the milestone has passed. See [current status](../../docs/folder-setup-progress.md).
+It uses fictional notes, exact consent, real model output, explicit baseline/correction approval and exact corrected-revision lineage through restart. Failures preserve only allowlisted local diagnostic categories and restricted synthetic state. The bounded genuine setup journey passes; this does not establish broad extraction quality or completion of the blocked required Claude review. See [current status](../../docs/folder-setup-progress.md).
 
 Browser transport fixtures are confined to tests and do not establish native/runtime readiness. RED, GREEN, selected screenshots and remaining limits are recorded in `evidence/workspace-progress.md` and adjacent logs. Root workspace/lockfile integration and cross-provider review remain coordinator-owned.

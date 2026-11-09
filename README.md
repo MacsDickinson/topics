@@ -8,7 +8,7 @@ Topics is a local-first macOS app for ongoing people, projects and threads in Ma
 - Correct facts through topic chat, then approve the replacement and its scoped correction rule.
 - Browse sources, set privacy labels, capture topics manually, and undo operations through History.
 
-The current milestone adds folder setup and topic-centred review: inspect the local folder structure, approve an exact analysis manifest, build a starting topic map in bounded batches, and save a baseline without individually confirming every imported assertion. Imported understanding is labelled “From your notes”; explicit confirmations remain separate. See the [folder setup plan and scenarios](features/folder-setup/PLAN.md). A signed development build is available below; genuine setup acceptance is failing and required cross-provider review is pending. The persistent task backlog and bullet-journal daily review follow this milestone.
+The current milestone adds folder setup and topic-centred review: inspect the local folder structure, approve an exact analysis manifest, build a starting topic map in bounded batches, and save a baseline without individually confirming every imported assertion. Imported understanding is labelled “From your notes”; explicit confirmations remain separate. See the [folder setup plan and scenarios](features/folder-setup/PLAN.md). A signed development build is available below; the bounded genuine setup journey passes, while required cross-provider review and final validation remain pending. The persistent task backlog and bullet-journal daily review follow this milestone.
 
 UI contributors: follow the [design system](docs/design-system.md) for tokens, components, patterns and review requirements.
 

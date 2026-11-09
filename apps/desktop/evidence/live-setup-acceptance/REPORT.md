@@ -1,6 +1,8 @@
-# Genuine pinned Codex native folder-setup attempt — not accepted
+# Genuine pinned Codex native folder-setup attempts
 
-2026-11-09. Result: **failed; native live acceptance is not ready**. This is genuine installed Codex through the actual Tauri window and backend, not the scripted provider. The existing 100-note/five-call scripted suite was not modified or rerun here; it is a separate proof. No save, correction, supplemental context, restart or SQLite rebuild was reached in either genuine model run.
+**Current result: bounded genuine native journey PASSED.** The final section records the reviewed-source run through baseline approval, exact correction lineage, context and fresh-process SQLite rebuild. Earlier failures below are retained as historical evidence. Required Claude review and final assembled/hosted validation remain separate gates; this is not whole-product delivery approval.
+
+2026-11-09, initial attempts: **failed**. These used genuine installed Codex through the actual Tauri window and backend, not the scripted provider. The existing 100-note/five-call scripted suite was not modified or rerun for those attempts; it is a separate proof. No save, correction, supplemental context, restart or SQLite rebuild was reached in the first two genuine model runs.
 
 The source baseline was `f9705c915916880ec01790f01d7b73d759e12d58`, followed only by desktop follow-up `0f8cf7b` (local cherry-pick `7860c441de15ea37c5ee0c1c94e8343868455d22`). The application was freshly built from that checkout in the exclusively handed-off `/tmp/topics-setup-desktop-target`. Exact executable: `/Users/macs/.codex/packages/standalone/releases/0.166.0-aarch64-apple-darwin/bin/codex`, reporting `codex-cli 0.166.0`. Runtime code requests `gpt-6.1-sol` with provider fallback disabled; the MCP bridge uses protocol `2025-06-18`. The model's internal execution details and wire payloads were not captured. The test uses the existing runtime's two-tool gate, not a fake provider.
 
