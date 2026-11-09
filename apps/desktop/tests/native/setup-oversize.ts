@@ -24,32 +24,45 @@ describe("Synthetic native setup size and date regression", () => {
     });
     await $('button[aria-label="Topics"]').click();
     await $("button=Set up folder").click();
-    await $('button[aria-label="From date: Select date"]').waitForExist();
-    await browser.execute(async () => {
-      const trigger = document.querySelector('button[aria-label="From date: Select date"]') as HTMLElement;
-      trigger.scrollIntoView({block: "center", behavior: "instant"});
-      let previous = "", stable = 0;
-      await new Promise<void>((resolve, reject) => {
-        let frames = 0;
-        const check = () => {
-          const r = trigger.getBoundingClientRect();
-          const current = [r.x, r.y, r.width, r.height, window.scrollX, window.scrollY].map(x => Math.round(x * 10)).join(",");
-          stable = current === previous ? stable + 1 : 0;
-          previous = current;
-          if (stable >= 8) return resolve();
-          if (++frames > 180) return reject(new Error("Date trigger did not settle"));
+    const openPicker = async (label: string) => {
+      await $(`button[aria-label="${label}"]`).waitForExist();
+      await browser.execute(async (label) => {
+        const trigger = document.querySelector(`button[aria-label="${label}"]`) as HTMLElement;
+        trigger.scrollIntoView({block: "center", behavior: "instant"});
+        let previous = "", stable = 0;
+        await new Promise<void>((resolve, reject) => {
+          let frames = 0;
+          const check = () => {
+            const r = trigger.getBoundingClientRect();
+            const current = [r.x, r.y, r.width, r.height, window.scrollX, window.scrollY].map(x => Math.round(x * 10)).join(",");
+            stable = current === previous ? stable + 1 : 0;
+            previous = current;
+            if (stable >= 8) return resolve();
+            if (++frames > 180) return reject(new Error("Date trigger did not settle"));
+            requestAnimationFrame(check);
+          };
           requestAnimationFrame(check);
-        };
-        requestAnimationFrame(check);
-      });
-    });
-    await $('button[aria-label="From date: Select date"]').click();
-    await $(".board-date-chip").waitForDisplayed();
+        });
+      }, label);
+      await $(`button[aria-label="${label}"]`).click();
+      await $(".board-date-chip").waitForDisplayed();
+    };
+    await openPicker("From date: Select date");
     await browser.keys(["Escape"]);
     await browser.waitUntil(async () => !(await $(".board-date-chip").isExisting()));
-    expect(await browser.execute(async () => document.activeElement?.getAttribute("aria-label"))).toEqual("From date: Select date");
-    await $('button[aria-label="From date: Select date"]').click();
-    await $(".board-date-chip").waitForDisplayed();
+    await browser.waitUntil(async () => (await browser.execute(async () => document.activeElement?.getAttribute("aria-label"))) === "From date: Select date");
+    await openPicker("From date: Select date");
+    await $(".board-date-chip").setValue("2026-01-01");
+    await $("button=Cancel").click();
+    await browser.waitUntil(async () => (await browser.execute(async () => document.activeElement?.getAttribute("aria-label"))) === "From date: Select date");
+    await openPicker("From date: Select date");
+    await $(".board-date-chip").setValue("2026-01-01");
+    await $("button=Apply").click();
+    await browser.waitUntil(async () => (await browser.execute(async () => document.activeElement?.getAttribute("aria-label"))) === "From date: 2026-01-01");
+    await openPicker("From date: 2026-01-01");
+    await $("button=Clear").click();
+    await browser.waitUntil(async () => (await browser.execute(async () => document.activeElement?.getAttribute("aria-label"))) === "From date: Select date");
+    await openPicker("From date: Select date");
     await $(".board-date-chip").setValue("2026-01-01");
     await $("button=Apply").click();
     expect(await $(".notice").getText()).toContain("large.md");

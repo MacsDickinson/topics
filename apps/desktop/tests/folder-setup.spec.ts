@@ -676,6 +676,7 @@ test("empty date draft cannot apply an old value", async ({ page }) => {
   await page.getByRole("button", { name: "From date: Select date" }).click();
   await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-01-01");
   await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByRole("button", { name: "From date: 2026-01-01" })).toBeFocused();
   await page.getByRole("button", { name: "From date: 2026-01-01" }).click();
   await page.getByLabel("From date date (YYYY-MM-DD)").fill("");
   await expect(page.getByRole("button", { name: "Apply" })).toBeDisabled();
