@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ipc, apiError } from "./ipc";
 import { Evidence } from "./Evidence";
+import { Badge, Button } from "./ui";
 import type { SetupTopicReview } from "./generated/SetupTopicReview";
 import type { SetupReceipt } from "./generated/SetupReceipt";
 import type { SetupCorrectionPreview } from "./generated/SetupCorrectionPreview";
@@ -151,11 +152,11 @@ export function ContextReview({
               <article key={c.revision_id}>
                 <p>
                   {c.predicate}: {c.value}{" "}
-                  <span className="badge">
+                  <Badge>
                     {state
                       ? labels[state]
                       : "Accepted, not personally verified"}
-                  </span>
+                  </Badge>
                 </p>
                 <details>
                   <summary>Sources ({c.sources.length})</summary>
@@ -293,9 +294,9 @@ export function ContextReview({
                   ))}
                 </ul>
               )}
-              <button className="primary" disabled={busy} onClick={decide}>
+              <Button variant="primary" disabled={busy} onClick={decide}>
                 {correction ? "Approve correction" : "Confirm statements"}
-              </button>
+              </Button>
               <button
                 onClick={() => {
                   setReceipt(null);

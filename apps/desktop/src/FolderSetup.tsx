@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { ipc, apiError } from "./ipc";
+import { Badge, Button, PageHeader } from "./ui";
 import type { SetupInventory } from "./generated/SetupInventory";
 import type { SetupManifest } from "./generated/SetupManifest";
 import type { SetupJob } from "./generated/SetupJob";
@@ -17,8 +18,8 @@ const limits = {
   max_files_per_batch: 20,
   max_bytes_per_batch: 2097152,
   max_batches: 100,
-  max_candidates_per_turn: 200,
-  max_turns_per_batch: 1,
+  max_candidates_per_turn: 64,
+  max_turns_per_batch: 4,
 };
 const roles: FolderRole[] = ["reference", "project", "meeting", "log", "other"];
 function Evidence({ sources }: { sources: SourceRef[] }) {
@@ -451,13 +452,10 @@ export function FolderSetup({
 
   return (
     <section className="folder-setup">
-      <header className="page-header">
-        <h1>{job ? "Starting map" : "Understand this folder"}</h1>
-        <p>
-          Inventory stays on this device. Analysis starts only after you
-          authorize the displayed selection.
-        </p>
-      </header>
+      <PageHeader
+        title={job ? "Starting map" : "Understand this folder"}
+        description="Inventory stays on this device. Analysis starts only after you authorize the displayed selection."
+      />
       {error && (
         <p role="alert" className="error">
           {error}
@@ -547,7 +545,10 @@ export function FolderSetup({
               <p>
                 {manifest.runtime} · {manifest.batches.length} batches · up to{" "}
                 {manifest.limits.max_files_per_batch} notes and{" "}
-                {manifest.limits.max_bytes_per_batch} bytes per batch.
+                {manifest.limits.max_bytes_per_batch} bytes per batch. Up to{" "}
+                {manifest.limits.max_candidates_per_turn} candidates per turn
+                and {manifest.limits.max_turns_per_batch} total attempts per
+                batch. Each attempt has one bounded turn.
               </p>
               <ul>
                 {manifest.batches.flatMap((b) =>
@@ -575,13 +576,13 @@ export function FolderSetup({
                 Authorize this exact manifest for this job
               </label>
               <p>This does not grant ongoing cloud permission.</p>
-              <button
-                className="primary"
+              <Button
+                variant="primary"
                 disabled={!consent || busy || !runtime}
                 onClick={start}
               >
                 Build starting map
-              </button>
+              </Button>
             </section>
           )}
         </>
@@ -780,11 +781,11 @@ export function FolderSetup({
                     <div key={item.item_id}>
                       <p>
                         {claim.predicate}: {claim.value}{" "}
-                        <span className="badge">
+                        <Badge>
                           {item.disposition === "saved"
                             ? "From your notes"
                             : "Draft"}
-                        </span>
+                        </Badge>
                       </p>
                       <Evidence
                         sources={claim.sources.flatMap((e) =>
@@ -854,11 +855,11 @@ export function FolderSetup({
                   ) : (
                     "Unresolved endpoint"
                   )}{" "}
-                  <span className="badge">
+                  <Badge>
                     {inferred
                       ? "Inferred association · Needs your input"
                       : "Relationship"}
-                  </span>
+                  </Badge>
                 </p>
                 <details id={`edge-${item.item_id}`}>
                   <summary>Sources ({c.sources.length})</summary>
@@ -989,9 +990,9 @@ export function FolderSetup({
                   </li>
                 ))}
               </ul>
-              <button className="primary" disabled={busy} onClick={save}>
+              <Button variant="primary" disabled={busy} onClick={save}>
                 Save starting map
-              </button>
+              </Button>
               <button onClick={() => setReceipt(null)}>Cancel</button>
             </section>
           )}
