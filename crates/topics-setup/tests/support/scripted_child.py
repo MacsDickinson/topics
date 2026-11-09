@@ -119,12 +119,13 @@ for line in sys.stdin:
                 connection['connection']['sources'][0]['passage_hash'] = '0' * 64
             if mode == 'bad_callback':
                 call(99, 'scope_sources', {'scope_id': '00000000-0000-4000-8000-000000000000'})
-            if mode == 'graph_claim':
+            if mode in ['graph_claim', 'rehearsal_claim']:
                 candidates.append({'kind': 'claim', 'claim': {
                     'id': '10000000-0000-4000-8000-000000000004',
                     'revision_id': '10000000-0000-4000-8000-000000000005',
                     'subject_id': topics[0]['topic']['id'],
-                    'predicate': 'responsibility', 'value': 'leads Ledger',
+                    'predicate': 'pronouns' if mode == 'rehearsal_claim' else 'responsibility',
+                    'value': 'he/him' if mode == 'rehearsal_claim' else 'leads Ledger',
                     'uncertainty': None,
                     'sources': [{'kind': 'passage', 'source': source} for source in citations],
                     'supersedes': [], 'recorded_at': '2026-11-09T00:00:00Z',

@@ -3,11 +3,12 @@ import { writeFileSync } from "node:fs";
 import { baseline, corrected, verifyStatementRule, snapshot, readRule, findClaimArticle } from "../../scripts/live-setup-lineage.mjs";
 import { waitForTerminal } from "../../scripts/live-setup-observation.mjs";
 
-describe("Genuine Codex synthetic setup through native services", () => {
+describe(process.env.TOPICS_TEST_REHEARSAL === "1" ? "Scripted synthetic setup rehearsal through native services" : "Genuine Codex synthetic setup through native services", () => {
   it(
     "authorizes synthetic notes, saves once and corrects a sourced claim",
     async () => {
       const path = process.env.TOPICS_TEST_WORKSPACE_ROOT!;
+      const artifact = process.env.TOPICS_TEST_ARTIFACT_PREFIX || "evidence/native-live-setup";
       await $("#root-path").waitForDisplayed();
       await $("#root-path").setValue(path);
       await $("button=Use notes folder").click();
@@ -98,10 +99,10 @@ describe("Genuine Codex synthetic setup through native services", () => {
       const readStatement = async (statementId: string) => browser.execute(async (rootId, statementId) => {
         return (window as any).__TAURI__.core.invoke("workspace_statement_get", { request: { root_id: rootId, statement_id: statementId } });
       }, state.root.root_id, statementId);
-      await browser.saveScreenshot("evidence/native-live-setup-draft.png");
+      await browser.saveScreenshot(`${artifact}-draft.png`);
       await $("button=Review starting map").click();
       await $("h2=Save starting map").waitForDisplayed();
-      await browser.saveScreenshot("evidence/native-live-setup-receipt.png");
+      await browser.saveScreenshot(`${artifact}-receipt.png`);
       await $("button=Save starting map").click();
       await browser.waitUntil(async () => !(await $("h2=Save starting map").isExisting()), { timeout: 30000 });
       writeFileSync(process.env.TOPICS_TEST_EXPECTED!, JSON.stringify({topicName}));
@@ -165,7 +166,7 @@ describe("Genuine Codex synthetic setup through native services", () => {
       verifyStatementRule(lineage, statement, rule, selected, replacement);
       const expected = snapshot(projection, lineage, statement, rule);
       writeFileSync(process.env.TOPICS_TEST_EXPECTED!, JSON.stringify({ topicName, selected, replacement, statementText, expected }));
-      await browser.saveScreenshot("evidence/native-live-setup-reviewed.png");
+      await browser.saveScreenshot(`${artifact}-reviewed.png`);
     },
   );
 });

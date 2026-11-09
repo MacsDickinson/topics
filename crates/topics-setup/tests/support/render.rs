@@ -31,6 +31,7 @@ pub fn render(directory: &Path, mode: &str) -> io::Result<Value> {
     if ![
         "graph",
         "graph_claim",
+        "rehearsal_claim",
         "empty",
         "ambiguous",
         "split_calls",

@@ -15,7 +15,9 @@ const live = process.env.TOPICS_TEST_LIVE === "1";
 const setup = process.env.TOPICS_TEST_SETUP === "1";
 const liveSetup = process.env.TOPICS_TEST_LIVE_SETUP === "1";
 const session = liveSetup
-  ? process.env.TOPICS_TEST_SETUP_RESTART === "1" ? "live-setup-restart" : "live-setup"
+  ? process.env.TOPICS_TEST_REHEARSAL === "1"
+    ? process.env.TOPICS_TEST_SETUP_RESTART === "1" ? "rehearsal-restart" : "rehearsal"
+    : process.env.TOPICS_TEST_SETUP_RESTART === "1" ? "live-setup-restart" : "live-setup"
   : setup
   ? process.env.TOPICS_TEST_SETUP_FAILURE === "1"
     ? "setup-failure"

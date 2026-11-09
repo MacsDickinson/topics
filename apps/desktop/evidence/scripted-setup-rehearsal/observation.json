@@ -1,0 +1,168 @@
+{
+  "job_id": "f274f331-0744-4981-bce1-40f76f21b65e",
+  "status": "finished",
+  "batches": [
+    {
+      "batch_id": "83410a54-b744-49e2-8ff7-6055fad5aeaa",
+      "scope_id": "1ecc6069-8de6-4a8d-85d5-51d2c85db9f2",
+      "run_id": "57e4a961-6c4b-4840-8cc3-76d6798b65c9",
+      "status": "completed",
+      "attempt": 1,
+      "diagnostic": null,
+      "diagnostic_status": "unknown"
+    }
+  ],
+  "coverage": {
+    "complete": true,
+    "selected": 1,
+    "processed": 1,
+    "failed": 0,
+    "outstanding": 0,
+    "model_calls": 1,
+    "transmission_authorizations": 1
+  },
+  "graph": {
+    "canonical_ids": {},
+    "issues": [],
+    "items": [
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+        ],
+        "candidate": {
+          "kind": "topic",
+          "topic": {
+            "aliases": [
+              "employee A42"
+            ],
+            "id": "10000000-0000-4000-8000-000000000001",
+            "name": "Synthetic Alex A42",
+            "sensitivity": "unknown",
+            "topic_kind": "person"
+          }
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [],
+        "item_id": "10000000-0000-4000-8000-000000000001",
+        "proposal_ids": [
+          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+        ]
+      },
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+        ],
+        "candidate": {
+          "kind": "topic",
+          "topic": {
+            "aliases": [],
+            "id": "10000000-0000-4000-8000-000000000002",
+            "name": "Synthetic Ledger",
+            "sensitivity": "unknown",
+            "topic_kind": "project"
+          }
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [],
+        "item_id": "10000000-0000-4000-8000-000000000002",
+        "proposal_ids": [
+          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+        ]
+      },
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+        ],
+        "candidate": {
+          "connection": {
+            "from": {
+              "id": "10000000-0000-4000-8000-000000000001",
+              "kind": "topic"
+            },
+            "id": "10000000-0000-4000-8000-000000000003",
+            "relation": "leads",
+            "sources": [
+              {
+                "document_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+                "excerpt": "# Synthetic Alex A42\n\nAlex A42 is a person. Alex A42 uses he/him pronouns. Alex A42 leads the Ledger project.\n",
+                "locator": {
+                  "end_byte": 110,
+                  "heading": null,
+                  "start_byte": 0
+                },
+                "passage_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+                "path": "profiles/alex.md",
+                "source_id": "f32080fc-a219-5a27-a454-1933be4451f1"
+              }
+            ],
+            "to": {
+              "id": "10000000-0000-4000-8000-000000000002",
+              "kind": "topic"
+            },
+            "uncertainty": null,
+            "valid_from": null,
+            "valid_to": null
+          },
+          "kind": "connection"
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [
+          "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367"
+        ],
+        "item_id": "10000000-0000-4000-8000-000000000003",
+        "proposal_ids": [
+          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+        ]
+      },
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "83410a54-b744-49e2-8ff7-6055fad5aeaa"
+        ],
+        "candidate": {
+          "claim": {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "predicate": "pronouns",
+            "recorded_at": "2026-11-09T00:00:00Z",
+            "revision_id": "10000000-0000-4000-8000-000000000005",
+            "sources": [
+              {
+                "kind": "passage",
+                "source": {
+                  "document_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+                  "excerpt": "# Synthetic Alex A42\n\nAlex A42 is a person. Alex A42 uses he/him pronouns. Alex A42 leads the Ledger project.\n",
+                  "locator": {
+                    "end_byte": 110,
+                    "heading": null,
+                    "start_byte": 0
+                  },
+                  "passage_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+                  "path": "profiles/alex.md",
+                  "source_id": "f32080fc-a219-5a27-a454-1933be4451f1"
+                }
+              }
+            ],
+            "subject_id": "10000000-0000-4000-8000-000000000001",
+            "supersedes": [],
+            "uncertainty": null,
+            "valid_from": null,
+            "valid_to": null,
+            "value": "he/him"
+          },
+          "kind": "claim"
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [
+          "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367"
+        ],
+        "item_id": "10000000-0000-4000-8000-000000000005",
+        "proposal_ids": [
+          "e97d1ee0-8f19-45ae-a7d7-e57211f3ad81"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+# Scripted native setup rehearsal — passed, not genuine acceptance
+
+On 2026-11-09 the exact shared `tests/native/live-setup.ts` and `live-setup-restart.ts` specs passed through the actual Tauri window, backend, Runtime, two-tool MCP gate and journal using a **local scripted fixture provider**. No installed Codex or real model was invoked. Genuine native acceptance remains failed as recorded in the separate [genuine report](../live-setup-acceptance/REPORT.md); this rehearsal does not establish model extraction behavior or final delivery readiness.
+
+Command, from repository root:
+
+```sh
+TOPICS_SCRIPTED_REHEARSAL=1 CARGO_TARGET_DIR=/tmp/topics-setup-desktop-target PATH="$PWD/apps/desktop/node_modules/.bin:$PATH" node apps/desktop/scripts/native-setup-rehearsal.mjs
+```
+
+The fixture used the same 110-byte selected fictional source (SHA-256 `4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367`) and the same synthetic local-only source (SHA-256 `813fc16fa24dea6fc5b7048d44462706d49357966e443da4621d56e898c74e65`). The added `rehearsal_claim` mode emits a deterministic person, project, pronoun claim and relationship, uses a full UTC timestamp, and binds its citations to the actual scoped source. It does not change the existing `graph` or `graph_claim` candidate output. All GUI HOME, WebKit, Codex HOME, notes and app data were synthetic and isolated; original source hashes were verified in the runner's finally block.
+
+The observed job processed one selected source in one batch/call with one exact manifest authorization and excluded the local-only file. The native test explicitly approved the baseline and verified the selected original claim's From your notes state and absence of human confirmation. It found the correct claim using WebDriver's asynchronous collection, approved the correction, checked exact replacement head ID, supersession, user-statement provenance and persisted rule, and verified that adding context did not change the confirmed set. A separate WDIO invocation after SQLite index deletion reopened the same topic by ID and compared the exact claim heads, history, evidence, statement, rule, context and review metadata. [Observation](observation.json), [draft](scripted-draft.png), [receipt](scripted-receipt.png), and [reviewed screen](scripted-reviewed.png) contain only synthetic content.
+
+The first run passed both phases but its shared spec reporter title still said “Genuine Codex”; the run was explicitly launched as scripted and used the fixture provider. The title was corrected and the complete scripted rehearsal was repeated: setup **1 passed** in 3.8 seconds, fresh-process restart **1 passed** in 265 ms, with native build **52.03 seconds**. The build completed despite the existing `rust-objcopy` missing-`libLLVM.dylib` warnings. Seven bounded lineage and safe-observation Node tests, runner syntax and `git diff --check` also passed. The existing genuine runner and its assertions were not weakened; the only shared spec changes select a distinct artifact prefix and reporter title for the scripted mode. Independent review is still required before any later genuine attempt.
