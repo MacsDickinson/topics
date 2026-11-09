@@ -24,10 +24,10 @@ describe("Synthetic native setup size and date regression", () => {
     });
     await $('button[aria-label="Topics"]').click();
     await $("button=Set up folder").click();
-    await browser.execute(async () => document.querySelector('button[aria-label="From date: Select date"]')?.scrollIntoView({block: "center"}));
-    await browser.pause(300);
-    await browser.execute(async () => (document.querySelector('button[aria-label="From date: Select date"]') as HTMLButtonElement).focus({preventScroll: true}));
-    await browser.keys(["Enter"]);
+    await $('button[aria-label="From date: Select date"]').waitForExist();
+    // Embedded driver click scrolls after activation, dismissing the nonmodal popover.
+    // DOM activation isolates the native date/filter behavior; it is not a pointer test.
+    await browser.execute(async () => (document.querySelector('button[aria-label="From date: Select date"]') as HTMLButtonElement).click());
     await browser.pause(500);
     await $(".board-date-chip").setValue("2026-01-01");
     await $("button=Apply").click();
@@ -39,9 +39,10 @@ describe("Synthetic native setup size and date regression", () => {
     expect(await $("button=Review manifest").isEnabled()).toEqual(true);
     await $("button=Review manifest").click();
     await $("h2=Review the exact manifest").waitForDisplayed();
-    const manifestText = await $(".consent").getText();
-    expect(manifestText).toContain("small.md");
-    expect(manifestText).not.toContain("large.md");
+    const manifestSources = await browser.execute(async () => Array.from(document.querySelectorAll(".consent > ul > li"), (entry) => entry.textContent));
+    expect(manifestSources.length).toEqual(1);
+    expect(manifestSources[0]).toContain("small.md");
+    expect(manifestSources[0]).not.toContain("large.md");
     const state = await browser.execute(async (rootId) => {
       const core = (window as any).__TAURI__.core;
       return {inventory: await core.invoke("setup_inventory", {request: {root_id: rootId, roles: []}}), jobs: await core.invoke("setup_jobs_list", {request: {root_id: rootId}})};
