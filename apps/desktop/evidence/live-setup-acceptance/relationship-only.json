@@ -1,0 +1,194 @@
+{
+  "batches": [
+    {
+      "attempt": 1,
+      "batch_id": "d46e6f3b-9502-4406-91b6-dc2a1fbc5b6f",
+      "completed_source_ids": [
+        "4a7892e1-1388-5070-9e12-253a3b3bd83f"
+      ],
+      "error": null,
+      "proposal_ids": [
+        "98cde69a-a008-48fa-a06b-f319bad980f4"
+      ],
+      "run_id": "5efa07d6-9b32-48b0-bce1-788d58bac42b",
+      "scope_id": "05f92ab7-cdab-42d5-aa88-e24208fbd1fa",
+      "status": "completed"
+    }
+  ],
+  "coverage": {
+    "complete": true,
+    "excluded": [
+      {
+        "path": "private/private.md",
+        "reason": "Local-only source; human inventory only"
+      },
+      {
+        "path": "topics",
+        "reason": "Hidden/config folder or app-owned records"
+      }
+    ],
+    "failed": [],
+    "model_calls": 1,
+    "outstanding": [],
+    "processed": [
+      "profiles/alex.md"
+    ],
+    "selected": 1,
+    "transmission_authorizations": 1
+  },
+  "created_at": "2026-11-09T02:37:27.331957000Z",
+  "graph": {
+    "canonical_ids": {},
+    "issues": [],
+    "items": [
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "d46e6f3b-9502-4406-91b6-dc2a1fbc5b6f"
+        ],
+        "candidate": {
+          "kind": "topic",
+          "topic": {
+            "aliases": [],
+            "id": "6b40f9e2-4969-4f67-b203-bbf420513dd7",
+            "name": "Alex A42",
+            "sensitivity": "unknown",
+            "topic_kind": "person"
+          }
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [],
+        "item_id": "6b40f9e2-4969-4f67-b203-bbf420513dd7",
+        "proposal_ids": [
+          "98cde69a-a008-48fa-a06b-f319bad980f4"
+        ]
+      },
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "d46e6f3b-9502-4406-91b6-dc2a1fbc5b6f"
+        ],
+        "candidate": {
+          "kind": "topic",
+          "topic": {
+            "aliases": [],
+            "id": "ec5bec61-2038-4074-bbf8-77a19b85008b",
+            "name": "Ledger",
+            "sensitivity": "unknown",
+            "topic_kind": "project"
+          }
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [],
+        "item_id": "ec5bec61-2038-4074-bbf8-77a19b85008b",
+        "proposal_ids": [
+          "98cde69a-a008-48fa-a06b-f319bad980f4"
+        ]
+      },
+      {
+        "assertion_kind": "reported_explicit",
+        "batch_ids": [
+          "d46e6f3b-9502-4406-91b6-dc2a1fbc5b6f"
+        ],
+        "candidate": {
+          "connection": {
+            "from": {
+              "id": "6b40f9e2-4969-4f67-b203-bbf420513dd7",
+              "kind": "topic"
+            },
+            "id": "b201a8cc-7d17-4b10-a7c5-83a1e63f14fb",
+            "relation": "leads",
+            "sources": [
+              {
+                "document_hash": "688af90ff3a9bfb48dd8d9bf157ce13879685a5a8116259bd69464e0e9971ada",
+                "excerpt": "# Synthetic Alex A42\n\nAlex A42 is a person. Alex A42 leads the Ledger project.\n",
+                "locator": {
+                  "end_byte": 79,
+                  "heading": null,
+                  "start_byte": 0
+                },
+                "passage_hash": "688af90ff3a9bfb48dd8d9bf157ce13879685a5a8116259bd69464e0e9971ada",
+                "path": "profiles/alex.md",
+                "source_id": "4a7892e1-1388-5070-9e12-253a3b3bd83f"
+              }
+            ],
+            "to": {
+              "id": "ec5bec61-2038-4074-bbf8-77a19b85008b",
+              "kind": "topic"
+            },
+            "uncertainty": null,
+            "valid_from": null,
+            "valid_to": null
+          },
+          "kind": "connection"
+        },
+        "disposition": "pending",
+        "independent_evidence_groups": [
+          "688af90ff3a9bfb48dd8d9bf157ce13879685a5a8116259bd69464e0e9971ada"
+        ],
+        "item_id": "b201a8cc-7d17-4b10-a7c5-83a1e63f14fb",
+        "proposal_ids": [
+          "98cde69a-a008-48fa-a06b-f319bad980f4"
+        ]
+      }
+    ]
+  },
+  "job_id": "efd10ef4-bafa-4f3e-ba37-deaa7d6057f3",
+  "manifest": {
+    "batches": [
+      {
+        "batch_id": "d46e6f3b-9502-4406-91b6-dc2a1fbc5b6f",
+        "sources": [
+          {
+            "bytes": 79,
+            "role": "reference",
+            "source": {
+              "date": null,
+              "hash": "688af90ff3a9bfb48dd8d9bf157ce13879685a5a8116259bd69464e0e9971ada",
+              "path": "profiles/alex.md",
+              "sensitivity": "unknown",
+              "source_id": "4a7892e1-1388-5070-9e12-253a3b3bd83f"
+            }
+          }
+        ]
+      }
+    ],
+    "created_at": "2026-11-09T02:37:27.236320000Z",
+    "excluded": [
+      {
+        "path": "private/private.md",
+        "reason": "Local-only source; human inventory only"
+      },
+      {
+        "path": "topics",
+        "reason": "Hidden/config folder or app-owned records"
+      }
+    ],
+    "fingerprint": "5e96d2650f7f9fd2d1220d4078855cb78d84fb07a5cdf3e75d9fb6d343d7f093",
+    "limits": {
+      "max_batches": 100,
+      "max_bytes_per_batch": 65536,
+      "max_candidates_per_turn": 64,
+      "max_files_per_batch": 20,
+      "max_turns_per_batch": 4
+    },
+    "manifest_id": "c2097754-9690-42cb-87a8-79b23fe141c2",
+    "roles": [],
+    "root_id": "c5b39a43-384a-47d4-ab70-470e0bdad32c",
+    "runtime": "Codex 0.166.0",
+    "schema": 1,
+    "spec": {
+      "date_from": null,
+      "date_to": null,
+      "files": [
+        "profiles/alex.md"
+      ],
+      "folders": []
+    }
+  },
+  "prior_consents": [],
+  "revision": 2,
+  "root_id": "c5b39a43-384a-47d4-ab70-470e0bdad32c",
+  "schema": 1,
+  "status": "finished"
+}

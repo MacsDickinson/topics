@@ -13,7 +13,10 @@ const sessionEnvironment = {
 assertNativeEnvironment(sessionEnvironment, process.env.TOPICS_TEST_SANDBOX);
 const live = process.env.TOPICS_TEST_LIVE === "1";
 const setup = process.env.TOPICS_TEST_SETUP === "1";
-const session = setup
+const liveSetup = process.env.TOPICS_TEST_LIVE_SETUP === "1";
+const session = liveSetup
+  ? process.env.TOPICS_TEST_SETUP_RESTART === "1" ? "live-setup-restart" : "live-setup"
+  : setup
   ? process.env.TOPICS_TEST_SETUP_FAILURE === "1"
     ? "setup-failure"
     : process.env.TOPICS_TEST_SETUP_RECONSENT === "1"
@@ -63,7 +66,9 @@ export const config = {
   outputDir,
   runner: "local",
   specs: [
-    setup
+    liveSetup
+      ? process.env.TOPICS_TEST_SETUP_RESTART === "1" ? "./tests/native/live-setup-restart.ts" : "./tests/native/live-setup.ts"
+      : setup
       ? process.env.TOPICS_TEST_SETUP_FAILURE === "1"
         ? "./tests/native/setup-failure.ts"
         : process.env.TOPICS_TEST_SETUP_RECONSENT === "1"
@@ -114,5 +119,5 @@ export const config = {
   logLevel: "warn",
   waitforTimeout: 10000,
   connectionRetryCount: 0,
-  mochaOpts: { timeout: setup || live ? 240000 : 30000 },
+  mochaOpts: { timeout: setup || live || liveSetup ? 240000 : 30000 },
 };

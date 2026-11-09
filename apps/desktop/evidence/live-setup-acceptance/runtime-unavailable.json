@@ -1,0 +1,105 @@
+[
+  {
+    "batches": [
+      {
+        "attempt": 1,
+        "batch_id": "a6d9fa41-05e9-49f6-9215-d804f0fb317d",
+        "completed_source_ids": [],
+        "error": {
+          "code": "runtime_unavailable",
+          "details": null,
+          "message": "Batch did not finish; retry these inputs or defer them"
+        },
+        "proposal_ids": [],
+        "run_id": "09df7573-2a4c-48e1-8694-4443c7070c2e",
+        "scope_id": "ab5a1c0c-82d8-4431-87ab-1bce3377bae3",
+        "status": "failed"
+      }
+    ],
+    "coverage": {
+      "complete": false,
+      "excluded": [
+        {
+          "path": "private/private.md",
+          "reason": "Local-only source; human inventory only"
+        },
+        {
+          "path": "topics",
+          "reason": "Hidden/config folder or app-owned records"
+        }
+      ],
+      "failed": [
+        "profiles/alex.md"
+      ],
+      "model_calls": 1,
+      "outstanding": [],
+      "processed": [],
+      "selected": 1,
+      "transmission_authorizations": 1
+    },
+    "created_at": "2026-11-09T02:39:13.413554000Z",
+    "graph": {
+      "canonical_ids": {},
+      "issues": [],
+      "items": []
+    },
+    "job_id": "d2cd468d-d4e6-4bf2-9180-db711d8f9be2",
+    "manifest": {
+      "batches": [
+        {
+          "batch_id": "a6d9fa41-05e9-49f6-9215-d804f0fb317d",
+          "sources": [
+            {
+              "bytes": 110,
+              "role": "reference",
+              "source": {
+                "date": null,
+                "hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+                "path": "profiles/alex.md",
+                "sensitivity": "unknown",
+                "source_id": "f5d43587-a5ea-5ede-8104-77f148d92e6a"
+              }
+            }
+          ]
+        }
+      ],
+      "created_at": "2026-11-09T02:39:13.321468000Z",
+      "excluded": [
+        {
+          "path": "private/private.md",
+          "reason": "Local-only source; human inventory only"
+        },
+        {
+          "path": "topics",
+          "reason": "Hidden/config folder or app-owned records"
+        }
+      ],
+      "fingerprint": "0693c5cfc9875f2494779891352e1d92d40afa3a12cf21edc36ac3f0717b0969",
+      "limits": {
+        "max_batches": 100,
+        "max_bytes_per_batch": 65536,
+        "max_candidates_per_turn": 64,
+        "max_files_per_batch": 20,
+        "max_turns_per_batch": 4
+      },
+      "manifest_id": "fbcf3c51-b96c-4e9c-9bd2-ecb2c89eff18",
+      "roles": [],
+      "root_id": "d3d39ff7-03ca-4198-9e17-57b8ba11794b",
+      "runtime": "Codex 0.166.0",
+      "schema": 1,
+      "spec": {
+        "date_from": null,
+        "date_to": null,
+        "files": [
+          "profiles/alex.md"
+        ],
+        "folders": []
+      }
+    },
+    "prior_consents": [],
+    "revision": 2,
+    "root_id": "d3d39ff7-03ca-4198-9e17-57b8ba11794b",
+    "schema": 1,
+    "status": "finished_with_gaps"
+  }
+]
