@@ -1,6 +1,6 @@
 # Folder controls, fresh sessions and integrated macOS window
 
-Date: 2026-11-09. Status: **proposed for user sign-off**. No implementation is authorized by this document alone.
+Date: 2026-11-09. Status: **integrated window design authorized** by the user: “spin up an $orca-team to do the design change you have in that plan.” The window-chrome scenarios are the approved build scope. Disconnect/reconnect and fresh-session features remain proposed; this instruction does not silently authorize their implementation.
 
 ## Requested outcome
 
