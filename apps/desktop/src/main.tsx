@@ -1,3 +1,5 @@
+import { ContextReview } from './ContextReview';
+import { FolderSetup } from './FolderSetup';
 import { createRoot } from 'react-dom/client';
 import { useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
@@ -31,7 +33,7 @@ import type {
 import './style.css';
 if (import.meta.env.VITE_NATIVE_TEST === '1')
   await import('@wdio/tauri-plugin');
-type Screen = 'search' | 'topics' | 'inbox' | 'history' | 'analyse' | 'sources';
+type Screen = 'search' | 'topics' | 'inbox' | 'history' | 'analyse' | 'sources' | 'setup';
 type ActiveRun = { root: string; id: string; seq: number };
 function validEvent(value: unknown): value is WorkspaceRunEvent {
   if (!value || typeof value !== 'object') return false;
@@ -73,6 +75,7 @@ function App() {
     scopeSeq = useRef(0),
     chatScopeSeq = useRef(0);
   const [screen, setScreen] = useState<Screen>('search');
+  const [autoSetup, setAutoSetup] = useState(false);
   const [settings, setSettings] = useState(false),
     [path, setPath] = useState(''),
     [create, setCreate] = useState(false);
@@ -169,9 +172,9 @@ function App() {
     window.scrollTo(0, 0);
     const generation = epoch.current,
       sequence = ++detailSeq.current;
-    setTopic(null);
-    setTopicLoading(true);
     if (topicChanged) {
+      setTopic(null);
+      setTopicLoading(true);
       setMessage('');
       invalidateChatScope();
     }
@@ -405,7 +408,8 @@ function App() {
       setRoot(result.root);
       setPath(result.root.path);
       setSettings(false);
-      setScreen('topics');
+      setAutoSetup(true);
+      setScreen('setup');
       setCreate(false);
       if (result.index.warnings?.length)
         setNotice(result.index.warnings.join('\n'));
@@ -697,6 +701,7 @@ function App() {
           </button>
         </nav>
         <div className="sidebar-actions">
+          <button disabled={!root} onClick={() => { setAutoSetup(false); navigate('setup'); }}>Set up folder</button>
           <button disabled={!root} onClick={() => navigate('analyse')}>
             Analyse notes
           </button>
@@ -946,6 +951,7 @@ function App() {
                         busy={busy}
                         sensitivity={(s) => void sensitivity(s)}
                       />
+                      <ContextReview key={`${root!.root_id}-${topic.topic.id}`} rootId={root!.root_id} topicId={topic.topic.id} onSaved={() => { void refresh(root!); void openTopic(topic.topic.id); }} />
                       <section className="chat">
                         <h2>Ask or correct</h2>
                         <p className="muted">
@@ -1018,6 +1024,7 @@ function App() {
                 </section>
               </div>
             )}
+            {screen === 'setup' && root && <FolderSetup key={root.root_id} rootId={root.root_id} runtime={runtime?.available ? `Codex ${runtime.version || ''}` : null} onReturning={() => { if (autoSetup) setScreen('topics'); }} onSaved={() => void refresh(root)} />}
             {screen === 'analyse' && (
               <section className="analysis-view">
                 <header className="page-header">

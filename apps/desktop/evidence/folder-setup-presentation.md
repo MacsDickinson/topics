@@ -1,0 +1,21 @@
+# Folder setup desktop evidence
+
+Browser tests use the synthetic IPC fixture, not the native service or a model. They establish presentation behavior only; they do not establish persistence, privacy enforcement, job coverage, restart, guarded publication, or 100-document acceptance. Those remain dependent on real-service/native evidence and the service-owned mapping in `features/folder-setup/scenario-evidence.md`.
+
+| Approved scenario | Desktop evidence |
+| --- | --- |
+| Connecting a new folder starts local setup without transmission | `connecting a new folder opens local inventory before analysis` checks no legacy model start; real local-only behavior remains service-owned. |
+| Empty and returning folders have useful entry points | existing `create a fresh root` checks empty entry; returning/resume native evidence remains outstanding. |
+| One consent covers an exact unchanged job manifest | `setup offers tree selection` and `setupJob` check visible exclusions, explicit consent and one create call; capability and 100-document proof remains outstanding. |
+| Changed inputs require renewed consent | selection edit invalidates the preview; actual changed bytes and reconsent remain outstanding. |
+| Batches build one sourced graph; ambiguous identities and historic disagreement | service evidence required; browser graph fixture only shows server-supplied items and an inferred issue. |
+| A topic map is usable as a graph and as a list | `topic map offers graph and list navigation` checks toggling, topic selection, and disclosed source; native keyboard/edge evidence remains outstanding. |
+| Save the eligible starting map; saving a topic group; visible dependencies | `draft map exposes one exact starting-map receipt` checks receipt presentation; actual partial save and dependency expansion require service/native evidence. |
+| Confirming a section does not confirm unseen topic facts | `confirmation previews only the enumerated visible revisions` checks exact IDs; service/native decision remains outstanding. |
+| Correct a fact; one correction covers a matching set | Existing correction browser flow and synthetic screenshot cover legacy review only; contextual correction and rule scope need native proof. |
+| Several occurrences create one question; new evidence shows a topic diff | Presentation renders server-grouped issues; aggregation and diff need service/native proof. |
+| Cancellation/restart; failed inputs; stale receipt; index rebuild; undo; folder scale | Service and native evidence remain outstanding. Browser coverage panel and errors alone do not satisfy these scenarios. |
+
+`folder-setup-presentation-green.txt` records the browser run; light, dark, narrow, graph and corrected-topic images use synthetic fixture content. The original workspace tests were adjusted only for the approved empty setup screen and collapsed evidence; root-race assertions remain in place. The graph and correction screenshots do not substitute for real-service acceptance.
+
+A parallel 32-test run had 31 passes and one timeout in the existing `review F4 refresh of the same topic preserves chat draft and consent` test while a button detached. The same test passed immediately in isolation; the final recorded run uses one worker and an isolated, injectable port. This timing failure remains a review item rather than proof that the underlying race is resolved.

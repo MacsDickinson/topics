@@ -1,0 +1,137 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test tests/workspace.spec.ts
+
+[WebServer] (node:90566) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 24 tests using 1 worker
+
+(node:90577) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   1 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (5.3s)
+(node:90594) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (381ms)
+  ✘   3 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (5.8s)
+(node:90643) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   4 tests/workspace.spec.ts:198:1 › approval errors preserve edited candidates and rejected proposals never become topics (492ms)
+  ✓   5 tests/workspace.spec.ts:223:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (430ms)
+  ✓   6 tests/workspace.spec.ts:251:1 › changing root cancels run and clears old topic, proposal and delayed reads (416ms)
+  ✓   7 tests/workspace.spec.ts:277:1 › missing runtime leaves topic browsing and manual proposal capture available (246ms)
+  ✓   8 tests/workspace.spec.ts:293:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (324ms)
+  ✓   9 tests/workspace.spec.ts:328:1 › manual fallback stages a proposal and still needs explicit human approval (307ms)
+  ✓  10 tests/workspace.spec.ts:350:1 › omitted dependencies fail visibly and the exact edited subset stays reviewable (444ms)
+  ✘  11 tests/workspace.spec.ts:382:1 › late topic detail read after a root switch cannot reveal old-root evidence (5.6s)
+(node:90756) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  12 tests/workspace.spec.ts:424:1 › stale scope, runtime errors and malformed events stay actionable without accepting data (569ms)
+  ✓  13 tests/workspace.spec.ts:477:1 › an older list refresh cannot overwrite newer workspace data (469ms)
+  ✓  14 tests/workspace.spec.ts:519:1 › keyboard search works from topics and narrow screens keep controls reachable (371ms)
+  ✓  15 tests/workspace.spec.ts:544:1 › failed cancellation remains retryable and ignores late output until stop is confirmed (505ms)
+  ✓  16 tests/workspace.spec.ts:576:1 › accepted empty analysis outcome says no new changes without an approval card (401ms)
+  ✓  17 tests/workspace.spec.ts:610:1 › review F1 keyboard paths retain spaces and newlines until explicit preview (403ms)
+  ✓  18 tests/workspace.spec.ts:635:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval (795ms)
+  ✓  19 tests/workspace.spec.ts:686:1 › review F2 root boot errors are immediately actionable without runtime-only advice (204ms)
+  ✓  20 tests/workspace.spec.ts:714:1 › review F3 dates only filter an explicit nonblank files or folder selection (289ms)
+  ✓  21 tests/workspace.spec.ts:736:1 › review F4 refresh of the same topic preserves chat draft and consent (758ms)
+  ✓  22 tests/workspace.spec.ts:765:1 › review F4 source inventory loading is distinct from an empty folder (252ms)
+  ✓  23 tests/workspace.spec.ts:787:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines (654ms)
+  ✓  24 tests/workspace.spec.ts:809:1 › review F4 include labels distinguish candidates of the same kind (396ms)
+
+
+  1) tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace ──────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Add Markdown notes to this folder, then analyse a selection.')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('Add Markdown notes to this folder, then analyse a selection.') with timeout 5000ms
+      - waiting for getByText('Add Markdown notes to this folder, then analyse a selection.')
+
+
+      58 |       'Add Markdown notes to this folder, then analyse a selection.',
+      59 |     ),
+    > 60 |   ).toBeVisible();
+         |     ^
+      61 |   expect(
+      62 |     await page.evaluate(
+      63 |       () =>
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/workspace.spec.ts:60:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-create-a-fresh-r-4e9dc-n-an-honest-empty-workspace/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-create-a-fresh-r-4e9dc-n-an-honest-empty-workspace/error-context.md
+
+  2) tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  getByText('Your correction')
+    Expected: visible
+    Received: hidden
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeVisible" getByText('Your correction') with timeout 5000ms
+      - waiting for getByText('Your correction')
+        14 × locator resolved to <p>Your correction</p>
+           - unexpected value "hidden"
+
+
+      174 |   await expect(
+      175 |     page.getByText('Your correction', { exact: false }),
+    > 176 |   ).toBeVisible();
+          |     ^
+      177 |   await expect(
+      178 |     page.getByText('The launch is Tuesday; Monday was a mistake.', {
+      179 |       exact: true,
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/workspace.spec.ts:176:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-discovery-cited--56911-t-diff-and-history-conflict/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-discovery-cited--56911-t-diff-and-history-conflict/error-context.md
+
+  3) tests/workspace.spec.ts:382:1 › late topic detail read after a root switch cannot reveal old-root evidence 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'No accepted topics yet' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'No accepted topics yet' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'No accepted topics yet' })
+
+
+      419 |   await expect(
+      420 |     page.getByRole('heading', { name: 'No accepted topics yet' }),
+    > 421 |   ).toBeVisible();
+          |     ^
+      422 | });
+      423 |
+      424 | test('stale scope, runtime errors and malformed events stay actionable without accepting data', async ({
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/workspace.spec.ts:421:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/workspace-late-topic-detai-9b78c-ot-reveal-old-root-evidence/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/workspace-late-topic-detai-9b78c-ot-reveal-old-root-evidence/error-context.md
+
+  3 failed
+    tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace ───────
+    tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict 
+    tests/workspace.spec.ts:382:1 › late topic detail read after a root switch cannot reveal old-root evidence 
+  21 passed (28.0s)

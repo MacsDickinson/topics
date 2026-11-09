@@ -186,6 +186,12 @@ service_command!(
 );
 service_command!(workspace_topic_get, TopicGetRequest, TopicView, topic_get);
 service_command!(
+    workspace_user_statement,
+    UserStatementRequest,
+    UserStatement,
+    user_statement
+);
+service_command!(
     workspace_statement_get,
     StatementGetRequest,
     UserStatement,

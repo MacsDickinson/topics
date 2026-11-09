@@ -1,0 +1,45 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts tests/workspace.spec.ts
+
+[WebServer] (node:97342) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 32 tests using 1 worker
+
+(node:97394) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (526ms)
+  ✓   2 tests/folder-setup.spec.ts:24:1 › setup offers tree selection and an exact manifest before building (489ms)
+  ✓   3 tests/folder-setup.spec.ts:42:1 › topic map offers graph and list navigation (495ms)
+  ✓   4 tests/folder-setup.spec.ts:71:1 › draft map exposes one exact starting-map receipt without record checkboxes (385ms)
+  ✓   5 tests/folder-setup.spec.ts:81:1 › a saved topic offers contextual decisions and collapsed evidence (513ms)
+  ✓   6 tests/folder-setup.spec.ts:95:1 › folder chooser cancellation preserves the path and selection waits for explicit use (244ms)
+  ✓   7 tests/folder-setup.spec.ts:107:1 › context is saved as the exact user statement without correction or confirmation (539ms)
+  ✓   8 tests/folder-setup.spec.ts:120:1 › confirmation previews only the enumerated visible revisions (517ms)
+  ✓   9 tests/workspace.spec.ts:49:1 › create a fresh root and explain an honest empty workspace (259ms)
+  ✓  10 tests/workspace.spec.ts:71:1 › bounded date preview names exclusions, requires consent and invalidates on selection edit (347ms)
+  ✓  11 tests/workspace.spec.ts:103:1 › discovery, cited edit and human approval, accepted understanding, chat diff and history conflict (1.0s)
+  ✓  12 tests/workspace.spec.ts:199:1 › approval errors preserve edited candidates and rejected proposals never become topics (461ms)
+  ✓  13 tests/workspace.spec.ts:224:1 › duplicate sequences, wrong roots and cancelled late streams cannot update workspace (403ms)
+  ✓  14 tests/workspace.spec.ts:252:1 › changing root cancels run and clears old topic, proposal and delayed reads (411ms)
+  ✓  15 tests/workspace.spec.ts:278:1 › missing runtime leaves topic browsing and manual proposal capture available (209ms)
+  ✓  16 tests/workspace.spec.ts:294:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (265ms)
+  ✓  17 tests/workspace.spec.ts:329:1 › manual fallback stages a proposal and still needs explicit human approval (301ms)
+  ✓  18 tests/workspace.spec.ts:351:1 › omitted dependencies fail visibly and the exact edited subset stays reviewable (466ms)
+  ✓  19 tests/workspace.spec.ts:383:1 › late topic detail read after a root switch cannot reveal old-root evidence (594ms)
+  ✓  20 tests/workspace.spec.ts:426:1 › stale scope, runtime errors and malformed events stay actionable without accepting data (494ms)
+  ✓  21 tests/workspace.spec.ts:479:1 › an older list refresh cannot overwrite newer workspace data (430ms)
+  ✓  22 tests/workspace.spec.ts:521:1 › keyboard search works from topics and narrow screens keep controls reachable (374ms)
+  ✓  23 tests/workspace.spec.ts:546:1 › failed cancellation remains retryable and ignores late output until stop is confirmed (377ms)
+  ✓  24 tests/workspace.spec.ts:578:1 › accepted empty analysis outcome says no new changes without an approval card (380ms)
+  ✓  25 tests/workspace.spec.ts:612:1 › review F1 keyboard paths retain spaces and newlines until explicit preview (362ms)
+  ✓  26 tests/workspace.spec.ts:637:1 › review F1 keyboard aliases and correction paths keep literal drafts until approval (765ms)
+  ✓  27 tests/workspace.spec.ts:688:1 › review F2 root boot errors are immediately actionable without runtime-only advice (175ms)
+  ✓  28 tests/workspace.spec.ts:716:1 › review F3 dates only filter an explicit nonblank files or folder selection (243ms)
+  ✓  29 tests/workspace.spec.ts:738:1 › review F4 refresh of the same topic preserves chat draft and consent (698ms)
+  ✓  30 tests/workspace.spec.ts:767:1 › review F4 source inventory loading is distinct from an empty folder (240ms)
+  ✓  31 tests/workspace.spec.ts:789:1 › review F1 keyboard correction paths independently preserve spaces and multiple lines (648ms)
+  ✓  32 tests/workspace.spec.ts:811:1 › review F4 include labels distinguish candidates of the same kind (395ms)
+
+  32 passed (15.2s)

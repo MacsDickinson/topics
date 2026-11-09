@@ -1,0 +1,123 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test tests/folder-setup.spec.ts
+
+[WebServer] (node:89146) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:89148) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (322ms)
+  ✓  2 tests/folder-setup.spec.ts:23:1 › setup offers tree selection and an exact manifest before building (331ms)
+  ✘  3 tests/folder-setup.spec.ts:35:1 › topic map offers graph and list navigation (277ms)
+(node:89164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 tests/folder-setup.spec.ts:61:1 › draft map exposes one exact starting-map receipt without record checkboxes (307ms)
+(node:89179) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  5 tests/folder-setup.spec.ts:71:1 › a saved topic offers contextual decisions and collapsed evidence (5.6s)
+(node:89230) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  6 tests/folder-setup.spec.ts:85:1 › folder chooser cancellation preserves the path and selection waits for explicit use (310ms)
+
+
+  1) tests/folder-setup.spec.ts:35:1 › topic map offers graph and list navigation ──────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Meetings/private.md: Local-only')
+    Expected: visible
+    Error: strict mode violation: getByText('Meetings/private.md: Local-only') resolved to 2 elements:
+        1) <li>Meetings/private.md: Local-only</li> aka getByText('Meetings/private.md: Local-').first()
+        2) <li>Meetings/private.md: Local-only</li> aka getByText('Meetings/private.md: Local-').nth(1)
+
+    Call log:
+      - Expect "toBeVisible" getByText('Meetings/private.md: Local-only') with timeout 5000ms
+      - waiting for getByText('Meetings/private.md: Local-only')
+
+
+      15 |   await expect(page.getByRole('heading', { name: 'Choose notes to analyse' })).toBeVisible();
+      16 |   await page.getByRole('button', { name: 'Review manifest' }).click();
+    > 17 |   await expect(page.getByText('Meetings/private.md: Local-only')).toBeVisible();
+         |                                                                   ^
+      18 |   await page.getByLabel('Authorize this exact manifest for this job').check();
+      19 |   await page.getByRole('button', { name: 'Build starting map' }).click();
+      20 |   await expect(page.getByRole('heading', { name: 'Starting map' })).toBeVisible();
+        at setupJob (/Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:17:67)
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:37:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-topic-map-offers-graph-and-list-navigation/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-topic-map-offers-graph-and-list-navigation/error-context.md
+
+  2) tests/folder-setup.spec.ts:61:1 › draft map exposes one exact starting-map receipt without record checkboxes 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Meetings/private.md: Local-only')
+    Expected: visible
+    Error: strict mode violation: getByText('Meetings/private.md: Local-only') resolved to 2 elements:
+        1) <li>Meetings/private.md: Local-only</li> aka getByText('Meetings/private.md: Local-').first()
+        2) <li>Meetings/private.md: Local-only</li> aka getByText('Meetings/private.md: Local-').nth(1)
+
+    Call log:
+      - Expect "toBeVisible" getByText('Meetings/private.md: Local-only') with timeout 5000ms
+      - waiting for getByText('Meetings/private.md: Local-only')
+
+
+      15 |   await expect(page.getByRole('heading', { name: 'Choose notes to analyse' })).toBeVisible();
+      16 |   await page.getByRole('button', { name: 'Review manifest' }).click();
+    > 17 |   await expect(page.getByText('Meetings/private.md: Local-only')).toBeVisible();
+         |                                                                   ^
+      18 |   await page.getByLabel('Authorize this exact manifest for this job').check();
+      19 |   await page.getByRole('button', { name: 'Build starting map' }).click();
+      20 |   await expect(page.getByRole('heading', { name: 'Starting map' })).toBeVisible();
+        at setupJob (/Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:17:67)
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:63:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-draft-map-exp-a825c-t-without-record-checkboxes/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-draft-map-exp-a825c-t-without-record-checkboxes/error-context.md
+
+  3) tests/folder-setup.spec.ts:71:1 › a saved topic offers contextual decisions and collapsed evidence 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByText('Ledger launch is Friday', { exact: true })
+    Expected: 0
+    Received: 2
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" getByText('Ledger launch is Friday', { exact: true }) with timeout 5000ms
+      - waiting for getByText('Ledger launch is Friday', { exact: true })
+        14 × locator resolved to 2 elements
+           - unexpected value "2"
+
+
+      79 |     await expect(page.getByRole('button', { name, exact: true }).first()).toBeVisible();
+      80 |   }
+    > 81 |   await expect(page.getByText('Ledger launch is Friday', { exact: true })).toHaveCount(0);
+         |                                                                            ^
+      82 | });
+      83 |
+      84 |
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:81:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-a-saved-topic-d593e-ions-and-collapsed-evidence/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-a-saved-topic-d593e-ions-and-collapsed-evidence/error-context.md
+
+  3 failed
+    tests/folder-setup.spec.ts:35:1 › topic map offers graph and list navigation ───────────────────
+    tests/folder-setup.spec.ts:61:1 › draft map exposes one exact starting-map receipt without record checkboxes 
+    tests/folder-setup.spec.ts:71:1 › a saved topic offers contextual decisions and collapsed evidence 
+  3 passed (9.0s)
