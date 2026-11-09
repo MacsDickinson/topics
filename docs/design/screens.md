@@ -40,3 +40,5 @@ Topic         → ask/correct → scope/consent → proposal → human decision
 **History:** show operation description and time, then available undo action and any dependency or failure explanation. An undo outcome should be announced and reflected in the list; do not imply all operations are reversible.
 
 **Setup and manual capture:** clearly identify the notes folder and local-first implications; show validation errors beside fields and retain input. Manual topics enter the existing proposal/review flow. Future setup, graph and task concepts are extension guidance only: use the same shell, semantic states and evidence/decision patterns, and define missing patterns in the same change; they are not implemented by this specification.
+
+**Connecting a root:** the native Choose folder control fills the labelled path field, with manual entry retained as a fallback. Cancelling the native chooser changes neither field nor root; Use notes folder remains the explicit connection action.

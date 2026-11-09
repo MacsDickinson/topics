@@ -60,3 +60,15 @@ test('a saved topic offers contextual decisions and collapsed evidence', async (
   }
   await expect(page.getByText('Ledger launch is Friday', { exact: true })).toHaveCount(0);
 });
+
+
+test('folder chooser cancellation preserves the path and selection waits for explicit use', async ({ page }) => {
+  await workspaceFixture(page, { empty: true });
+  await page.getByLabel('Notes folder path').fill('/synthetic/manual');
+  await page.getByRole('button', { name: 'Choose folder…' }).click();
+  await expect(page.getByLabel('Notes folder path')).toHaveValue('/synthetic/manual');
+  await page.evaluate(() => { (window as any).chosenRoot = '/synthetic/chosen'; });
+  await page.getByRole('button', { name: 'Choose folder…' }).click();
+  await expect(page.getByLabel('Notes folder path')).toHaveValue('/synthetic/chosen');
+  expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'workspace_root_set'))).toHaveLength(0);
+});

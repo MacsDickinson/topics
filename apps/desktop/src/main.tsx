@@ -350,6 +350,22 @@ function App() {
       }
     }
   }
+  async function chooseRoot() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const chosen = await ipc<string | null>('workspace_choose_root');
+      if (chosen !== null) {
+        setPath(chosen);
+        setCreate(false);
+      }
+    } catch (e) {
+      report(e);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function changeRoot() {
     if (!path.trim() || busy) return;
     setBusy(true);
@@ -742,6 +758,9 @@ function App() {
                 void changeRoot();
               }}
             >
+              <button type="button" disabled={busy} onClick={() => void chooseRoot()}>
+                Choose folder…
+              </button>
               <label htmlFor="root-path">
                 Notes folder path
                 <input

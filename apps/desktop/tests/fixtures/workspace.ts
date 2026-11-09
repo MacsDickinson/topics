@@ -125,6 +125,8 @@ export async function workspaceFixture(
             };
           const request = args?.request;
           switch (command) {
+            case 'workspace_choose_root':
+              return w.chosenRoot ?? null;
             case 'workspace_root_get':
               return { root: w.root };
             case 'workspace_root_set':

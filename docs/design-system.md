@@ -51,3 +51,7 @@ Definition of done / review checklist:
 - [ ] Loading, empty, error, selected, disabled, busy and relevant review/consent states considered; behavior and data boundaries unchanged unless explicitly designed.
 - [ ] Keyboard, focus, labels, announcements, contrast, reduced motion, long text, narrow window and zoom checked in both supported themes.
 - [ ] Relevant tests and manual checks recorded with limitations; screenshots use synthetic data and isolated app data. No personal notes or remote font dependency.
+
+## Folder chooser
+
+For connecting a notes root, offer a native folder chooser alongside the existing labelled path field. Selecting a folder fills the field; only the explicit “Use notes folder” action connects it. Cancelling leaves the entered path and current workspace intact. The chooser is a user-triggered native action and does not grant model access.

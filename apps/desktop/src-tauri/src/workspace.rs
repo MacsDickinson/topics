@@ -7,15 +7,18 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::Emitter;
+use tauri_plugin_dialog::DialogExt;
 use topics_core::setup::*;
 use topics_core::workspace::*;
 use topics_runtime::{CommitPermit, HostTools, RunRequest, Runtime, RuntimeConfig};
+use topics_setup::SetupCoordinator;
 use topics_store::WorkspaceService;
 
 #[derive(Clone)]
 pub struct WorkspaceState {
     app_data: Result<PathBuf, String>,
-    service: Arc<Mutex<Option<WorkspaceService>>>,
+    service: Arc<Mutex<Option<Arc<Mutex<WorkspaceService>>>>>,
+    setup: Arc<Mutex<Option<SetupCoordinator>>>,
     runtime: Result<Arc<Runtime>, String>,
     lifecycle: Arc<Mutex<()>>,
     active: Arc<Mutex<Vec<(String, String)>>>,
@@ -37,6 +40,7 @@ impl WorkspaceState {
         Self {
             app_data,
             service: Arc::new(Mutex::new(None)),
+            setup: Arc::new(Mutex::new(None)),
             runtime,
             lifecycle: Arc::new(Mutex::new(())),
             active: Arc::new(Mutex::new(Vec::new())),
@@ -54,18 +58,44 @@ impl WorkspaceState {
             .as_ref()
             .map_err(|message| ApiError::new("invalid_input", message))
     }
+    fn service(&self) -> WorkspaceResult<Arc<Mutex<WorkspaceService>>> {
+        let app_data = self.ready()?;
+        let mut slot = self.service.lock().map_err(|_| {
+            ApiError::new("internal", "Workspace service unavailable. Restart Topics.")
+        })?;
+        if slot.is_none() {
+            *slot = Some(Arc::new(Mutex::new(WorkspaceService::open(app_data)?)));
+        }
+        Ok(slot.as_ref().expect("workspace initialized").clone())
+    }
     fn with<T>(
         &self,
         call: impl FnOnce(&mut WorkspaceService) -> WorkspaceResult<T>,
     ) -> WorkspaceResult<T> {
-        let app_data = self.ready()?;
-        let mut service = self.service.lock().map_err(|_| {
+        let service = self.service()?;
+        let mut service = service.lock().map_err(|_| {
             ApiError::new("internal", "Workspace service unavailable. Restart Topics.")
         })?;
-        if service.is_none() {
-            *service = Some(WorkspaceService::open(app_data)?);
+        call(&mut service)
+    }
+    fn coordinator(&self) -> WorkspaceResult<SetupCoordinator> {
+        let mut slot = self
+            .setup
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup service unavailable."))?;
+        if slot.is_none() {
+            let runtime = self
+                .runtime
+                .as_ref()
+                .map_err(|message| ApiError::new("runtime_unavailable", message))?
+                .clone();
+            *slot = Some(SetupCoordinator::new(
+                self.service()?,
+                runtime,
+                self.lifecycle.clone(),
+            ));
         }
-        call(service.as_mut().expect("workspace initialized"))
+        Ok(slot.as_ref().expect("setup initialized").clone())
     }
     fn cancel_all(&self) -> WorkspaceResult<()> {
         let active = self
@@ -247,6 +277,52 @@ service_command!(
 );
 
 #[tauri::command]
+pub async fn setup_job_start(
+    request: Option<Value>,
+    state: tauri::State<'_, WorkspaceState>,
+) -> WorkspaceResult<SetupJob> {
+    let request: SetupJobRequest = decode_request(request)?;
+    blocking(state.inner().clone(), move |state| {
+        state.coordinator()?.start(request)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn setup_job_control(
+    request: Option<Value>,
+    state: tauri::State<'_, WorkspaceState>,
+) -> WorkspaceResult<SetupJob> {
+    let request: SetupJobControlRequest = decode_request(request)?;
+    blocking(state.inner().clone(), move |state| {
+        state.coordinator()?.control(request)
+    })
+    .await
+}
+service_command!(
+    setup_job_create,
+    SetupJobCreateRequest,
+    SetupJob,
+    setup_job_create
+);
+
+#[tauri::command]
+pub async fn workspace_choose_root(app: tauri::AppHandle) -> WorkspaceResult<Option<String>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .blocking_pick_folder()
+            .map(|folder| {
+                folder
+                    .into_path()
+                    .map_err(|_| ApiError::new("invalid_input", "Choose a local notes folder."))
+                    .map(|path| path.to_string_lossy().into_owned())
+            })
+            .transpose()
+    })
+    .await
+    .map_err(|_| ApiError::new("internal", "Folder chooser stopped unexpectedly."))?
+}
+#[tauri::command]
 pub async fn workspace_root_set(
     request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
@@ -258,6 +334,14 @@ pub async fn workspace_root_set(
             .lock()
             .map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
         state.cancel_all()?;
+        let coordinator = state
+            .setup
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup service unavailable."))?
+            .clone();
+        if let Some(coordinator) = coordinator {
+            coordinator.cancel_active()?;
+        }
         state.with(|service| service.root_set(request))
     })
     .await

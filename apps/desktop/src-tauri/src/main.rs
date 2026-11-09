@@ -81,6 +81,7 @@ fn main() {
         .plugin(tauri_plugin_wdio::init())
         .plugin(tauri_plugin_wdio_webdriver::init());
     builder
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Keep resolver failures in managed state so the window remains usable.
             // A search presents the original error; never fall back to personal data.
@@ -96,6 +97,7 @@ fn main() {
             search_notes,
             workspace_root_get,
             workspace_root_set,
+            workspace_choose_root,
             workspace_scope_preview,
             workspace_sensitivity_set,
             workspace_analysis_start,
@@ -115,6 +117,9 @@ fn main() {
             setup_inventory,
             setup_manifest_preview,
             setup_job_get,
+            setup_job_create,
+            setup_job_start,
+            setup_job_control,
             setup_jobs_list,
             setup_draft_edit,
             setup_draft_disposition,
