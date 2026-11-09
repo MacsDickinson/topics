@@ -53,6 +53,11 @@ select {
   border-radius: 4px;
   padding: 9px 10px;
 }
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-placeholder);
+  opacity: 1;
+}
 textarea {
   resize: vertical;
   min-height: 60px;
@@ -724,6 +729,9 @@ mark {
 }
 .source-list .muted {
   font-size: 11px;
+}
+.source-inspector h2 {
+  overflow-wrap: anywhere;
 }
 .source-inspector {
   padding: 22px;

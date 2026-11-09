@@ -12,7 +12,7 @@ Topics is a local-first reading and review workspace. Give notes and evidence ro
 
 | Family | Implemented roles (prefix shown once) |
 | --- | --- |
-| `--color-text-` | `primary`, `secondary`, `muted`, `accent`, `on-action`, `info`, `warning`, `success`, `danger` |
+| `--color-text-` | `primary`, `secondary`, `muted`, `placeholder`, `accent`, `on-action`, `info`, `warning`, `success`, `danger` |
 | `--color-background-` | `app`, `sidebar`, `panel`, `subtle`, `hover`, `selected`, `action`, `action-hover`, `info`, `warning`, `success`, `danger`, `highlight` |
 | `--color-border-` | `subtle`, `default`, `strong`, `focus`, `info`, `warning`, `danger` |
 
@@ -22,7 +22,7 @@ The local system font stack requires no network. Composite `--type-page`, `--typ
 
 ## Implemented CSS primitives
 
-These are CSS classes and native elements, not a React component library. Global buttons, inputs, textareas and selects share control styling and focus-visible outlines; `.primary` and `.quiet` modify buttons. `.badge` has `.pending`, `.accepted` and `.conflict` variants; `.error`, `.notice`, `.empty`, `.candidate`, `.run-panel` and `.source-evidence` provide shared surfaces. Navigation uses `aria-current`, while topic and source selection use `aria-pressed`. Hover, disabled and focus-visible styles exist; distinct pressed and busy button variants are not established. For example, `<span class="badge pending">Pending</span>` is a non-interactive status label. Keep meanings in text as well as color.
+These are CSS classes and native elements, not a React component library. Global buttons, inputs, textareas and selects share control styling and focus-visible outlines; `.primary` and `.quiet` modify buttons. `.badge` has `.pending`, `.accepted` and `.conflict` variants; `.error`, `.notice`, `.empty`, `.candidate`, `.run-panel` and `.source-evidence` provide shared surfaces. Navigation uses `aria-current`, while topic and source selection use `aria-pressed`. Hover, disabled and focus-visible styles exist; distinct pressed and busy button variants are not established. For example, `<span class="badge pending">Pending</span>` is a non-interactive status label. Keep meanings in text as well as color. Native input and textarea placeholders use `--color-text-placeholder` at full opacity in both themes; for example, `<input placeholder="Meetings/one.md">` keeps its associated label and uses the shared field border and placeholder roles. `--color-border-strong` defines field boundaries against panel and subtle surfaces, and primary hover uses `--color-background-action-hover` with `--color-text-on-action`.
 
 ## Component and state guidance
 
