@@ -9,6 +9,11 @@ import type { SetupReceipt } from "./generated/SetupReceipt";
 import type { SetupCorrectionPreview } from "./generated/SetupCorrectionPreview";
 import type { SetupDecisionResult } from "./generated/SetupDecisionResult";
 
+type Approval =
+  | { kind: "correction"; preview: SetupCorrectionPreview }
+  | { kind: "statements"; receipt: SetupReceipt }
+  | { kind: "connection"; receipt: SetupReceipt };
+
 const labels = {
   from_notes: "From your notes",
   confirmed_by_you: "Confirmed by you",
@@ -29,22 +34,32 @@ export function ContextReview({
 }) {
   const [review, setReview] = useState<SetupTopicReview | null>(null),
     [error, setError] = useState("");
-  const [receipt, setReceipt] = useState<SetupReceipt | null>(null),
-    [correction, setCorrection] = useState<SetupCorrectionPreview | null>(null);
+  const [approval, setApproval] = useState<Approval | null>(null);
+  const receipt =
+    approval?.kind === "correction"
+      ? approval.preview.receipt
+      : approval?.receipt;
+  const correction = approval?.kind === "correction" ? approval.preview : null;
   const [target, setTarget] = useState<string | null>(null),
     [statement, setStatement] = useState(""),
     [replacement, setReplacement] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0),
     [adding, setAdding] = useState(false),
     [context, setContext] = useState("");
-  const generation = useRef(0);
+  const generation = useRef(0),
+    requestSequence = useRef(0),
+    mutation = useRef<number | null>(null);
   useEffect(() => {
     const current = ++generation.current;
     let live = true;
     setReview(null);
-    setReceipt(null);
-    setCorrection(null);
+    ++requestSequence.current;
+    mutation.current = null;
+    setApproval(null);
+    setBusy(false);
+    setSaving(false);
     setError("");
     void ipc<SetupTopicReview>("setup_topic_review", {
       root_id: rootId,
@@ -58,46 +73,75 @@ export function ContextReview({
       });
     return () => {
       live = false;
+      ++requestSequence.current;
       if (generation.current === current) generation.current++;
     };
   }, [rootId, topicId, version]);
-  async function act<T>(fn: () => Promise<T>, done: (value: T) => void) {
-    const current = generation.current;
+  // Preview intent is cancelable; an already submitted human mutation is not.
+  function invalidateApproval() {
+    if (mutation.current !== null) return;
+    ++requestSequence.current;
+    setApproval(null);
+    setBusy(false);
+  }
+  async function act<T>(
+    fn: () => Promise<T>,
+    done: (value: T) => void,
+    mode: "preview" | "mutation" = "mutation",
+  ) {
+    if (mutation.current !== null) return;
+    const current = generation.current,
+      sequence = ++requestSequence.current;
+    const active = () =>
+      current === generation.current && sequence === requestSequence.current;
+    if (mode === "mutation") mutation.current = sequence;
     setBusy(true);
+    setSaving(mode === "mutation");
     setError("");
     try {
       const value = await fn();
-      if (current === generation.current) done(value);
+      if (active()) done(value);
     } catch (e) {
-      if (current === generation.current) {
-        const problem = apiError(e);
-        setError(problem.message);
-        if (problem.code === "conflict" || problem.code === "stale_evidence") {
-          setReceipt(null);
-          setCorrection(null);
-        }
+      if (active()) {
+        setError(apiError(e).message);
+        setApproval(null);
       }
     } finally {
-      if (current === generation.current) setBusy(false);
+      if (mutation.current === sequence) mutation.current = null;
+      if (active()) {
+        setBusy(false);
+        setSaving(false);
+      }
     }
+  }
+  function previewApproval<T>(
+    fn: () => Promise<T>,
+    toApproval: (value: T) => Approval,
+  ) {
+    if (mutation.current !== null) return;
+    invalidateApproval();
+    void act(fn, (value) => setApproval(toApproval(value)), "preview");
   }
   const claim = review?.topic.current_claims.find(
     (c) => c.revision_id === target,
   );
   function confirm() {
+    if (mutation.current !== null) return;
+    setTarget(null);
+    setAdding(false);
     if (review)
-      void act(
+      previewApproval(
         () =>
           ipc<SetupReceipt>("setup_confirm_preview", {
             root_id: rootId,
             revision_ids: review.topic.current_claims.map((c) => c.revision_id),
           }),
-        setReceipt,
+        (receipt) => ({ kind: "statements", receipt }),
       );
   }
   function preview() {
     if (!claim) return;
-    void act(
+    previewApproval(
       () =>
         ipc<SetupCorrectionPreview>("setup_correction_preview", {
           root_id: rootId,
@@ -113,14 +157,11 @@ export function ContextReview({
             context: null,
           },
         }),
-      (value) => {
-        setCorrection(value);
-        setReceipt(value.receipt);
-      },
+      (preview) => ({ kind: "correction", preview }),
     );
   }
   function decide() {
-    if (receipt)
+    if (receipt && !busy)
       void act(
         () =>
           ipc<SetupDecisionResult>("setup_decide", {
@@ -130,12 +171,14 @@ export function ContextReview({
           }),
         (result) => {
           if (result.status !== "completed") {
+            setApproval(null);
             setError(
               result.error?.message ||
                 `Decision ${result.status}; refresh the receipt.`,
             );
             return;
           }
+          setApproval(null);
           setVersion((n) => n + 1);
           setTarget(null);
           setStatement("");
@@ -156,6 +199,11 @@ export function ContextReview({
         </p>
       )}
       {!review && !error && <p role="status">Loading review state…</p>}
+      {busy && (
+        <p role="status">
+          {saving ? "Saving your change…" : "Preparing review…"}
+        </p>
+      )}
       {review && (
         <>
           {review.context.length > 0 && (
@@ -187,8 +235,10 @@ export function ContextReview({
                   </details>
                   <Button
                     disabled={busy}
-                    onClick={() =>
-                      void act(
+                    onClick={() => {
+                      setTarget(null);
+                      setAdding(false);
+                      previewApproval(
                         () =>
                           ipc<SetupReceipt>(
                             "setup_connection_confirm_preview",
@@ -197,9 +247,9 @@ export function ContextReview({
                               connection_ids: [connection.id],
                             },
                           ),
-                        setReceipt,
-                      )
-                    }
+                        (receipt) => ({ kind: "connection", receipt }),
+                      );
+                    }}
                   >
                     Confirm this connection
                   </Button>
@@ -243,9 +293,9 @@ export function ContextReview({
                   <Button
                     disabled={busy}
                     onClick={() => {
+                      invalidateApproval();
+                      setAdding(false);
                       setTarget(c.revision_id);
-                      setReceipt(null);
-                      setCorrection(null);
                     }}
                   >
                     That’s wrong
@@ -253,13 +303,23 @@ export function ContextReview({
                   <Button
                     disabled={busy}
                     onClick={() => {
+                      invalidateApproval();
                       setAdding(true);
                       setTarget(null);
                     }}
                   >
                     Add context
                   </Button>
-                  <Button onClick={() => setTarget(null)}>Not now</Button>
+                  <Button
+                    disabled={saving}
+                    onClick={() => {
+                      invalidateApproval();
+                      setTarget(null);
+                      setAdding(false);
+                    }}
+                  >
+                    Not now
+                  </Button>
                 </div>
               </article>
             );
@@ -279,6 +339,7 @@ export function ContextReview({
               <Field id="review-context" label="Your context">
                 <textarea
                   autoFocus
+                  disabled={saving}
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                 />
@@ -303,7 +364,15 @@ export function ContextReview({
               >
                 Save context
               </Button>
-              <Button onClick={() => setAdding(false)}>Cancel</Button>
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  invalidateApproval();
+                  setAdding(false);
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           )}
           {claim && (
@@ -313,14 +382,22 @@ export function ContextReview({
               <Field id="review-statement" label="Your statement">
                 <textarea
                   autoFocus
+                  disabled={saving}
                   value={statement}
-                  onChange={(e) => setStatement(e.target.value)}
+                  onChange={(e) => {
+                    invalidateApproval();
+                    setStatement(e.target.value);
+                  }}
                 />
               </Field>
               <Field id="review-replacement" label="Replacement">
                 <input
+                  disabled={saving}
                   value={replacement}
-                  onChange={(e) => setReplacement(e.target.value)}
+                  onChange={(e) => {
+                    invalidateApproval();
+                    setReplacement(e.target.value);
+                  }}
                 />
               </Field>
               <Button
@@ -329,6 +406,15 @@ export function ContextReview({
               >
                 Preview correction
               </Button>
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  invalidateApproval();
+                  setTarget(null);
+                }}
+              >
+                Cancel correction
+              </Button>
             </div>
           )}
           {receipt && (
@@ -336,7 +422,7 @@ export function ContextReview({
               <h3>
                 {correction
                   ? "Review correction"
-                  : receipt.connections.length > 0
+                  : approval?.kind === "connection"
                     ? "Confirm displayed connections"
                     : "Confirm displayed statements"}
               </h3>
@@ -409,16 +495,11 @@ export function ContextReview({
               <Button variant="primary" disabled={busy} onClick={decide}>
                 {correction
                   ? "Approve correction"
-                  : receipt.connections.length > 0
+                  : approval?.kind === "connection"
                     ? "Confirm connection"
                     : "Confirm statements"}
               </Button>
-              <Button
-                onClick={() => {
-                  setReceipt(null);
-                  setCorrection(null);
-                }}
-              >
+              <Button disabled={saving} onClick={invalidateApproval}>
                 Cancel
               </Button>
             </section>

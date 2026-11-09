@@ -56,7 +56,7 @@ export const proposal = {
 // Browser transport fixture only. Never imported by application code or native tests.
 export async function workspaceFixture(
   page: Page,
-  options: { populated?: boolean; empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean; nested?: boolean; returning?: boolean; oversized?: boolean } = {},
+  options: { populated?: boolean; multipleTopics?: boolean; empty?: boolean; unavailable?: boolean; inventoryEmpty?: boolean; nested?: boolean; returning?: boolean; oversized?: boolean } = {},
 ) {
   await page.addInitScript(
     ({ ids, topic, claim, proposal, hash, options }) => {
@@ -69,7 +69,7 @@ export async function workspaceFixture(
       w.root = options.empty
         ? null
         : { root_id: ids.root, path: '/synthetic/notes' };
-      w.topics = options.populated ? [structuredClone(topic)] : [];
+      w.topics = options.populated ? [structuredClone(topic), ...(options.multipleTopics ? [{ ...structuredClone(topic), id: "other-topic", name: "Harbor" }] : [])] : [];
       w.proposals = [];
       w.claims = options.populated ? [structuredClone(claim)] : [];
       w.operations = [];
@@ -158,7 +158,7 @@ export async function workspaceFixture(
               return { statement: { id: 'statement-one', topic_id: request.topic_id, text: request.statement, recorded_at: '2026-11-03T00:00:00Z' }, before, after, rule, receipt: { schema: 1, receipt_id: 'correction-receipt', root_id: request.root_id, kind: 'correction', job_id: null, job_revision: null, requested_ids: request.revision_ids, included_ids: request.revision_ids, dependency_ids: [], deferred_ids: [], candidates: after.map((c: any) => ({ kind: 'correction', claim: c, rule })), revisions: after, connections: [], expected_hashes: {}, fingerprint: hash, max_records_per_operation: 100, operation_count: 1, created_at: '2026-11-03T00:00:00Z' } };
             }
             case 'setup_topic_review':
-              return { topic: { topic, current_claims: w.claims, connections: w.reviewConnection ? [w.reviewConnection] : [], unresolved: [], history: [], warnings: [] }, context: w.savedContext ? [{ id: 'context-one', topic_id: ids.topic, text: w.savedContext, recorded_at: '2026-11-03T00:00:00Z' }] : [], reviews: w.claims.map((c: any) => ({ id: 'review', record_id: c.revision_id, state: 'from_notes', receipt_id: 'receipt-one', statement_id: null, recorded_at: '2026-11-03T00:00:00Z' })) };
+              return { topic: { topic: options.multipleTopics ? w.topics.find((t: any) => t.id === request.topic_id) || topic : topic, current_claims: options.multipleTopics ? w.claims.filter((c: any) => c.subject_id === request.topic_id) : w.claims, connections: w.reviewConnection ? [w.reviewConnection] : [], unresolved: [], history: [], warnings: [] }, context: w.savedContext ? [{ id: 'context-one', topic_id: ids.topic, text: w.savedContext, recorded_at: '2026-11-03T00:00:00Z' }] : [], reviews: w.claims.map((c: any) => ({ id: 'review', record_id: c.revision_id, state: 'from_notes', receipt_id: 'receipt-one', statement_id: null, recorded_at: '2026-11-03T00:00:00Z' })) };
             case 'workspace_choose_root':
               return w.chosenRoot ?? null;
             case 'workspace_root_get':
@@ -224,7 +224,7 @@ export async function workspaceFixture(
               return {
                 topic:
                   w.topics.find((t: any) => t.id === request.topic_id) || topic,
-                current_claims: w.claims,
+                current_claims: options.multipleTopics ? w.claims.filter((c: any) => c.subject_id === request.topic_id) : w.claims,
                 connections: [],
                 unresolved: [],
                 history: w.claimHistory || [],

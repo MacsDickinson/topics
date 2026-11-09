@@ -88,6 +88,22 @@ Folder setup uses a hierarchical list of native selection controls with a role s
 
 ### Changed scope and supplemental review
 
+Contextual approval is one discriminated state: a correction preview (including
+its receipt), a statement-confirmation receipt, or a connection-confirmation
+receipt. Heading, displayed records, CTA and outgoing receipt id/fingerprint must
+all derive from that same state. Switching review kind clears the previous
+approval and closes its composer; it never reuses the previous correction beside
+a new connection/statement receipt. Editing correction fields or cancelling
+invalidates both displayed and in-flight previews. A fresh preview is required
+before approval becomes available again.
+
+Async previews are bound to the current root/topic generation and review-intent
+sequence. Responses from cancelled, edited or replaced intents cannot restore an
+approval, clear newer errors or unlock a newer request. Once an explicitly
+approved mutation is submitted, its controls and fields remain locked until it
+settles; Cancel does not imply that an already submitted decision was revoked.
+An unsuccessful decision clears its approval and requires a fresh preview.
+
 When a job needs fresh consent, keep the coverage context visible and use the
 shared consent surface for **Review changed scope**. Show updated paths with
 unchanged/changed/new labels, removed paths and exclusions before the unchecked
