@@ -37,10 +37,21 @@ or persisted facts. Failed turns discard their own buffer; successful work is
 staged through `setup_batch_stage_guarded` with graph/mapping/checkpoint atomic
 visibility under the real CommitPermit. There is no later attach operation.
 Empty successful turns use the narrowly authorized default-false runtime opt-in
-hook; other hosts retain their existing behavior. Model calls receive exact
+hook; other hosts retain their existing behavior. The setup host also requires a
+successful scoped source read before it can checkpoint any analysed-file coverage,
+including an empty extraction. A successful terminal with no scoped read records
+failure and zero processed files; it cannot pretend that a selected folder was
+analysed. This tracks capability-bound delivery, not semantic verification.
+Model calls receive exact
 selected bytes, evidence-associated core accepted context and capability-bound
 core draft context. Whole inventory/graph, excluded names and human stage results
 are not serialized to the model.
+
+`coverage.complete` describes the exact eligible **selected manifest**: all its
+sources processed, with none selected failed or outstanding. Exclusions remain
+explicit and are never claimed analysed; selected completion never means whole
+folder coverage. The coordinator confirmed this interpretation after reserved
+app-record disclosure exposed a core predicate regression; its repair is upstream.
 
 `max_turns_per_batch` is the total reviewed **attempt** budget, including failed
 and cancelled attempts. Every attempt launches exactly one runtime turn with its

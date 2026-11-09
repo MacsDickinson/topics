@@ -40,7 +40,9 @@ Modes used by the native harness:
   for this fixture should say “Alex A42 leads Ledger.”
 - `empty`, `ambiguous`, `split_calls`, `fail_first` and `hold_second` exercise
   focused protocol behavior; `pronouns` and `historic` support isolated correction
-  and dated-disagreement regressions. They are synthetic test modes only.
+  and dated-disagreement regressions. `no_read` verifies that terminal success
+  without requesting scoped sources cannot claim analysed-file coverage. They
+  are synthetic test modes only.
 
 The fixed graph IDs end in `000001` (Alex), `000002` (Ledger), `000003`
 (connection), `000004` (logical responsibility claim) and `000005` (its revision),
