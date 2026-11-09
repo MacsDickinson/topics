@@ -1,0 +1,37 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 1.09s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error ... 
+running 1 test
+
+thread 'exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error' (6682762) panicked at crates/topics-setup/tests/protocol.rs:922:18:
+exhausted budget must not silently leave a Ready job with unlaunchable work: SetupJob { schema: 1, job_id: "5d33876e-cd91-4f64-95e7-83f5fbfbac79", root_id: "067cdfd8-11e7-46cd-920f-ff01cd3279b6", manifest: SetupManifest { schema: 1, manifest_id: "f0587927-6b78-4207-b416-59eee6485b36", root_id: "067cdfd8-11e7-46cd-920f-ff01cd3279b6", fingerprint: "572b95403d89f802a154b90e3dae94e1c11857fb14bad08edf4370dd2d58df0b", spec: ScopeSpec { files: ["profiles/000.md", "profiles/001.md", "meetings/002.md", "meetings/003.md"], folders: [], date_from: None, date_to: None }, roles: [FolderRoleOverride { path: "profiles", role: Reference }, FolderRoleOverride { path: "meetings", role: Meeting }], batches: [SetupManifestBatch { batch_id: "1c179333-1bf7-4b3b-a16d-ab470a2a1ad3", sources: [SetupManifestSource { source: SourceSummary { source_id: "df460877-df1e-51cc-8137-30321f77d3c2", path: "profiles/000.md", hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", date: None, sensitivity: Unknown }, bytes: 45, role: Reference }, SetupManifestSource { source: SourceSummary { source_id: "b187c513-909d-56fd-aee7-5eae4e56b516", path: "profiles/001.md", hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", date: None, sensitivity: Unknown }, bytes: 45, role: Reference }] }, SetupManifestBatch { batch_id: "a69a768b-c1c3-4f6e-ab65-8788a1bcd9bf", sources: [SetupManifestSource { source: SourceSummary { source_id: "ef5e546a-5ed0-5c2c-b9c2-fbc531896abc", path: "meetings/002.md", hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", date: None, sensitivity: Unknown }, bytes: 45, role: Meeting }, SetupManifestSource { source: SourceSummary { source_id: "6ba87b23-3fb6-54d4-8999-409a341ef54b", path: "meetings/003.md", hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", date: None, sensitivity: Unknown }, bytes: 45, role: Meeting }] }], excluded: [], limits: SetupLimits { max_files_per_batch: 2, max_bytes_per_batch: 65536, max_batches: 100, max_candidates_per_turn: 64, max_turns_per_batch: 1 }, runtime: "codex-cli 0.166.0", created_at: "2026-11-09T01:33:28.414327000Z" }, status: Ready, revision: 5, batches: [SetupBatch { batch_id: "1c179333-1bf7-4b3b-a16d-ab470a2a1ad3", status: Completed, scope_id: Some("293f3b50-15fb-4e7a-9a6d-af881348746d"), run_id: Some("4f407a6f-e4a4-47fc-ac03-3f932453a6de"), attempt: 1, error: None, proposal_ids: ["acc5eb43-ef22-45b5-b53e-04818b37c6b3"] }, SetupBatch { batch_id: "a69a768b-c1c3-4f6e-ab65-8788a1bcd9bf", status: Waiting, scope_id: Some("8c3a1cef-4f8f-4143-810e-4f8a75e2711f"), run_id: Some("a8b8975d-c0bc-4ad3-ab47-49f93d49e1d1"), attempt: 1, error: None, proposal_ids: [] }], graph: DraftGraph { items: [DraftItem { item_id: "10000000-0000-4000-8000-000000000001", candidate: Topic { topic: Topic { id: "10000000-0000-4000-8000-000000000001", topic_kind: Person, name: "Synthetic Alex A42", aliases: ["employee A42"], sensitivity: Unknown } }, disposition: Pending, batch_ids: ["1c179333-1bf7-4b3b-a16d-ab470a2a1ad3"], proposal_ids: ["acc5eb43-ef22-45b5-b53e-04818b37c6b3"], independent_evidence_groups: [] }, DraftItem { item_id: "10000000-0000-4000-8000-000000000002", candidate: Topic { topic: Topic { id: "10000000-0000-4000-8000-000000000002", topic_kind: Project, name: "Synthetic Ledger", aliases: [], sensitivity: Unknown } }, disposition: Pending, batch_ids: ["1c179333-1bf7-4b3b-a16d-ab470a2a1ad3"], proposal_ids: ["acc5eb43-ef22-45b5-b53e-04818b37c6b3"], independent_evidence_groups: [] }, DraftItem { item_id: "10000000-0000-4000-8000-000000000003", candidate: Connection { connection: Connection { id: "10000000-0000-4000-8000-000000000003", from: Topic { id: "10000000-0000-4000-8000-000000000001" }, relation: "leads", to: Topic { id: "10000000-0000-4000-8000-000000000002" }, uncertainty: None, sources: [SourceRef { source_id: "df460877-df1e-51cc-8137-30321f77d3c2", path: "profiles/000.md", document_hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", locator: Locator { start_byte: 0, end_byte: 45, heading: None }, passage_hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", excerpt: "# Synthetic Alex A42\n\nAlex A42 leads Ledger.\n" }, SourceRef { source_id: "b187c513-909d-56fd-aee7-5eae4e56b516", path: "profiles/001.md", document_hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", locator: Locator { start_byte: 0, end_byte: 45, heading: None }, passage_hash: "32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29", excerpt: "# Synthetic Alex A42\n\nAlex A42 leads Ledger.\n" }], valid_from: None, valid_to: None } }, disposition: Pending, batch_ids: ["1c179333-1bf7-4b3b-a16d-ab470a2a1ad3"], proposal_ids: ["acc5eb43-ef22-45b5-b53e-04818b37c6b3"], independent_evidence_groups: ["32aeaae1d8bce647fabd2daef22bae035d3a88529ea7cc818adc47a945cd8c29"] }], issues: [], canonical_ids: {} }, coverage: SetupCoverage { selected: 4, processed: ["profiles/000.md", "profiles/001.md"], failed: [], outstanding: ["meetings/002.md", "meetings/003.md"], excluded: [], complete: false, model_calls: 2, transmission_authorizations: 1 }, created_at: "2026-11-09T01:33:28.426703000Z" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error ... FAILED
+
+failures:
+
+failures:
+    exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.91s
+
+FAILED
+
+failures:
+
+---- exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error stdout ----
+
+thread 'exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error' (6682760) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.92s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`

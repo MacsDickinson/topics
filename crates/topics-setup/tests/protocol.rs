@@ -348,7 +348,7 @@ fn pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs()
         "pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs",
         || {
             let f = Fixture::new(6, "hold_second");
-            let job = f.authorize(2);
+            let job = f.authorize_attempts(2, 4);
             f.coordinator.start(f.request(&job)).unwrap();
             let deadline = Instant::now() + Duration::from_secs(30);
             while f.transmissions().len() < 2 {
@@ -392,6 +392,7 @@ fn pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs()
             let durable = reopened.setup_job_get(f.request(&job)).unwrap();
             assert_eq!(durable.graph, paused.graph);
             assert_eq!(durable.coverage.processed, paused.coverage.processed);
+            let snapshots = f.coordinator.subscribe();
             let result = f.coordinator.control(SetupJobControlRequest {
                 root_id: f.root.root_id.clone(),
                 job_id: job.job_id.clone(),
@@ -405,6 +406,11 @@ fn pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs()
                 ));
             }
             let blocked = f.wait(&job, |s| s.status == SetupJobStatus::NeedsConsent);
+            assert_eq!(
+                snapshots.borrow().as_ref().unwrap().status,
+                SetupJobStatus::NeedsConsent,
+                "a persisted consent conflict must reach async subscribers even when control returns Err"
+            );
             assert_eq!(
                 f.transmissions().len(),
                 2,
@@ -831,7 +837,7 @@ fn reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn() {
     isolated(
         "reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn",
         || {
-            let f = Fixture::new(2, "empty");
+            let f = Fixture::new(2, "graph");
             let job = f.authorize_attempts(2, 4);
             f.coordinator
                 .start(f.request(&job))
@@ -884,6 +890,50 @@ fn next_turn_receives_only_eligible_completed_draft_context_from_the_same_manife
                     "completed draft context cannot widen the reviewed manifest"
                 );
             }
+        },
+    );
+}
+
+#[test]
+fn exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error() {
+    isolated(
+        "exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error",
+        || {
+            let f = Fixture::new(4, "hold_second");
+            let job = f.authorize(2); // Explicitly reviewed one attempt per batch.
+            f.coordinator.start(f.request(&job)).unwrap();
+            let deadline = Instant::now() + Duration::from_secs(30);
+            while f.transmissions().len() < 2 {
+                assert!(Instant::now() < deadline);
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            let running = f.coordinator.get(f.request(&job)).unwrap();
+            let paused = f
+                .coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: running.revision,
+                    action: SetupJobAction::Pause,
+                })
+                .unwrap();
+            let failure = f
+                .coordinator
+                .control(SetupJobControlRequest {
+                    root_id: f.root.root_id.clone(),
+                    job_id: job.job_id.clone(),
+                    expected_revision: paused.revision,
+                    action: SetupJobAction::Resume,
+                })
+                .expect_err(
+                    "exhausted budget must not silently leave a Ready job with unlaunchable work",
+                );
+            assert_eq!(failure.code, "conflict");
+            assert!(failure.message.contains("budget"));
+            let durable = f.coordinator.get(f.request(&job)).unwrap();
+            assert_eq!(durable.status, SetupJobStatus::Paused);
+            assert_eq!(durable.coverage.processed, paused.coverage.processed);
+            assert_eq!(f.transmissions().len(), 2);
         },
     );
 }
