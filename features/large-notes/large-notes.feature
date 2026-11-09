@@ -22,12 +22,13 @@ Feature: Analyse a long selected Markdown source without widening disclosure
     And forged headings, altered hashes and citations outside the allowed ranges are rejected
 
   Scenario: One chunk cannot become a read capability for its parent
-    Given a long selected source whose later chunk contains a distinctive secret filename and text
+    Given a long selected source whose later chunk contains distinctive text
     And the current capability authorizes only the first chunk and its allowed overlap
     When the model asks for scope or proposes an out-of-range source endpoint or citation
-    Then the response contains no later text, heading, filename, path or identifying hint
-    And the out-of-range proposal is rejected even when its full-document hash is correct
-    And no out-of-window passage may be returned or newly cited
+    Then the response contains no later text or unselected or private sibling metadata
+    And the selected file canonical source ID and path remain available
+    And a proposal outside both the current range and allowlisted context is rejected even with the correct document hash
+    And only explicitly supplied eligible prior consented context passages may additionally support citations
 
   Scenario: Progress waits for all primary chunks
     Given a selected source with three chunks and a second selected small source
@@ -85,8 +86,8 @@ Feature: Analyse a long selected Markdown source without widening disclosure
     And the job reports an actionable bounded-context error with no completed chunk
     And optional draft context may be omitted only as whole dependency-consistent records with a partial notice
 
-  Scenario: Size, turn and candidate exhaustion do not fake coverage
-    Given a source over the approved document or chunk-count limit, or a turn reaches the candidate cap
+  Scenario: Size and attempt exhaustion do not fake coverage
+    Given a source over the approved document or chunk-count limit, or an attempt fails or exhausts its budget
     When setup cannot complete all required work within the reviewed limits
     Then it identifies the affected file and reason and offers an actionable selection or new-preview path
     And it does not truncate, silently increase limits, or mark that file complete
@@ -97,3 +98,10 @@ Feature: Analyse a long selected Markdown source without widening disclosure
     Then journal receipts and dependency checks preserve the later independent change
     And source Markdown bytes are unchanged throughout
     And no model result is accepted or human-confirmed without its explicit decision
+
+  Scenario: Preflight adjusts the reviewed plan before consent
+    Given a synthetic escape-heavy selected long source with a projection exceeding a wire bound
+    When I preview the manifest before consenting
+    Then the service shrinks and rechecks ranges before it freezes the fingerprint
+    And every required byte remains covered without exceeding the reviewed chunk count
+    And if mandatory context cannot fit it explains the bounded failure without transmission
