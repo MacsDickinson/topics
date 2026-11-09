@@ -16,4 +16,14 @@ All development/verification uses synthetic notes and isolated app data, never t
 | Setup recovery / actual BoardUI controls | `task_10f68e2908df` | `ctx_fc00c925f91f` | `topics-setup-boardui-controls` |
 | Large-note discovery / proposed scenarios | `task_8b10f40cb0c2` | `ctx_5a8103d4bb6d` | `topics-large-notes-discovery` |
 
-All three started from `8dd1751`, confirmed attached and live. No build or review result is claimed yet. BoardUI primary sources confirm free source components built on React Aria; the setup worker verifies exact license/source provenance and pins dependencies before integration. No relevant BoardUI connector is exposed, so official web/source references are used.
+All three started from `8dd1751`, confirmed attached and live. BoardUI primary sources confirm free source components built on React Aria. No relevant BoardUI connector is exposed, so official web/source references are used.
+
+## Verification checkpoint
+
+Integrated window changes were independently reviewed by Codex and integrated through `1595c52`. Native evidence covers owned synthetic windows, scrolling, dragging, traffic-light controls and focus-safe skip links; required Claude review remains outstanding.
+
+Setup implementation is frozen and clean at `d6435318b380551317f94595998abac1acc3187e` after `9d3a48e`, `a932985` and `8e95e7e`. It retains actual BoardUI sources and pinned dependencies, fixes date-aware oversized-note blocking, groups exclusions, and restores native date-trigger focus after Escape. The implementer reports 124 browser tests before the final focused changes, 29 focused browser tests afterwards, build success and the synthetic native oversized/date/manifest/privacy/source-hash regression. PID-targeted synthetic pointer/key delivery distinguished a driver-generated scroll from normal pointer behavior; this is not physical hardware acceptance. See `docs/design/setup-controls.md` on the implementation branch for details.
+
+Independent read-only review is running as `task_c3f6079a8fb9`, dispatch `ctx_98671f872482`, fresh Codex Terra medium context. Routing used low-confidence fallback (0.28). The reviewer owns the native GUI and shared m1-desktop target until release. This additional review does not replace the user's required Claude review, blocked by expired CLI OAuth authentication. Setup changes are not integrated or packaged yet.
+
+Large-note chunking discovery and proposed BDD scenarios are integrated as documentation only (`045f1b7`, `15cbcdc`). Implementation awaits the user's explicit approval; current eligible oversized notes still require exclusion.
