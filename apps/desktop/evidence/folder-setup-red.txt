@@ -1,0 +1,111 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test tests/folder-setup.spec.ts
+
+[WebServer] (node:69264) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:69266) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (5.5s)
+(node:69449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/folder-setup.spec.ts:13:1 › setup offers tree selection and an exact manifest before building (5.2s)
+(node:69530) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/folder-setup.spec.ts:21:1 › topic map offers graph and list navigation (5.2s)
+
+
+  1) tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Understand this folder' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Understand this folder' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Understand this folder' })
+
+
+       6 |   await page.getByLabel('Notes folder path').fill('/synthetic/new-notes');
+       7 |   await page.getByRole('button', { name: 'Use notes folder' }).click();
+    >  8 |   await expect(page.getByRole('heading', { name: 'Understand this folder' })).toBeVisible();
+         |                                                                               ^
+       9 |   await expect(page.getByText('Suggested role', { exact: false }).first()).toBeVisible();
+      10 |   expect(await page.evaluate(() => (window as any).calls.filter((c: any) => c.command === 'workspace_analysis_start'))).toHaveLength(0);
+      11 | });
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:8:79
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-connecting-a--aa131-l-inventory-before-analysis/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-connecting-a--aa131-l-inventory-before-analysis/error-context.md
+
+  2) tests/folder-setup.spec.ts:13:1 › setup offers tree selection and an exact manifest before building 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Choose notes to analyse' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Choose notes to analyse' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Choose notes to analyse' })
+
+
+      14 |   await workspaceFixture(page);
+      15 |   await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+    > 16 |   await expect(page.getByRole('heading', { name: 'Choose notes to analyse' })).toBeVisible();
+         |                                                                                ^
+      17 |   await expect(page.getByRole('tree', { name: 'Notes folders' })).toBeVisible();
+      18 |   await expect(page.getByRole('button', { name: 'Review manifest' })).toBeVisible();
+      19 | });
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:16:80
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-setup-offers--8f91c-ct-manifest-before-building/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-setup-offers--8f91c-ct-manifest-before-building/error-context.md
+
+  3) tests/folder-setup.spec.ts:21:1 › topic map offers graph and list navigation ──────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Graph', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: 'Graph', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Graph', exact: true })
+
+
+      21 | test('topic map offers graph and list navigation', async ({ page }) => {
+      22 |   await workspaceFixture(page);
+    > 23 |   await expect(page.getByRole('button', { name: 'Graph', exact: true })).toBeVisible();
+         |                                                                          ^
+      24 |   await expect(page.getByRole('button', { name: 'List', exact: true })).toBeVisible();
+      25 | });
+      26 |
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:23:74
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-topic-map-offers-graph-and-list-navigation/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-topic-map-offers-graph-and-list-navigation/error-context.md
+
+  3 failed
+    tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis ─
+    tests/folder-setup.spec.ts:13:1 › setup offers tree selection and an exact manifest before building 
+    tests/folder-setup.spec.ts:21:1 › topic map offers graph and list navigation ───────────────────
