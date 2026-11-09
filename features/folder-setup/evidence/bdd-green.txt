@@ -1,6 +1,5 @@
-   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
    Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-bdd)
-    Finished `dev` profile [unoptimized] target(s) in 5.88s
+    Finished `dev` profile [unoptimized] target(s) in 2.23s
      Running `/tmp/topics-setup-core-target/debug/setup-bdd`
 Feature: Resume setup and preserve review decisions safely
   Scenario: Cancellation and restart retain completed draft work

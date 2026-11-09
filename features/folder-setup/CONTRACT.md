@@ -148,3 +148,11 @@ remain mandatory independently of those presentation proofs.
 - `max_turns_per_batch` counts total one-turn attempts, including cancelled and
   failed attempts. It remains finite; the desktop default is four. Setup adapters
   may retain a stricter 64-candidate combined buffer than core's 200 raw cap.
+
+Draft context is a bounded retrieval subset, never a claim of complete knowledge:
+at most 200 topic/claim/connection records and 1 MiB of serialized context, after
+privacy filtering, including necessary topic labels. It never reports counts of
+excluded private identities. `independent_evidence_groups` conservatively groups
+verbatim passage hashes (including copies under different document headings);
+its count is not independent confirmation or personal verification. Root folder
+role overrides use the inventory root's empty path; longer folder overrides win.

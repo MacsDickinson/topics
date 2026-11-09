@@ -123,6 +123,8 @@ impl WorkspaceService {
             let mut claims = vec![];
             let mut connections = vec![];
             let mut ids = BTreeSet::new();
+            let mut context_bytes = 512usize;
+            let mut context_records = 0usize;
             for item in &job.graph.items {
                 if item.disposition == DraftDisposition::Dismissed {
                     continue;
@@ -156,12 +158,47 @@ impl WorkspaceService {
                 {
                     continue;
                 }
+                let topic_ids: BTreeSet<_> = match &item.candidate {
+                    Candidate::Claim { claim } => BTreeSet::from([claim.subject_id.clone()]),
+                    Candidate::Connection { connection } => [&connection.from, &connection.to]
+                        .iter()
+                        .filter_map(|endpoint| scopes::endpoint_topic(&context_state, endpoint))
+                        .collect(),
+                    _ => continue,
+                };
+                if topic_ids
+                    .iter()
+                    .any(|id| scopes::topic_restricted(&context_state, id))
+                {
+                    continue;
+                }
+                let new_topics: Vec<_> = topic_ids
+                    .iter()
+                    .filter(|id| !ids.contains(*id))
+                    .filter_map(|id| context_state.topics.get(id))
+                    .collect();
+                let bytes = serde_json::to_vec(&item.candidate).map_err(internal)?.len()
+                    + new_topics
+                        .iter()
+                        .map(|topic| {
+                            serde_json::to_vec(topic)
+                                .map(|v| v.len() + 2)
+                                .map_err(internal)
+                        })
+                        .collect::<WResult<Vec<_>>>()?
+                        .into_iter()
+                        .sum::<usize>()
+                    + 2;
+                if context_records + new_topics.len() + 1 > 200
+                    || context_bytes + bytes > 1024 * 1024
+                {
+                    continue;
+                }
+                context_records += new_topics.len() + 1;
+                context_bytes += bytes;
                 match &item.candidate {
                     Candidate::Claim { claim }
-                        if !scopes::topic_restricted(
-                            &validation_state(ctx, &job)?,
-                            &claim.subject_id,
-                        ) =>
+                        if !scopes::topic_restricted(&context_state, &claim.subject_id) =>
                     {
                         ids.insert(claim.subject_id.clone());
                         let mut scoped = claim.clone();

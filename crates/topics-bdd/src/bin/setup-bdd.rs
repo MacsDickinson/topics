@@ -378,6 +378,7 @@ fn step_21(w: &mut SetupWorld) {
 }
 #[then("the changed selection and exclusions can be previewed for renewed consent")]
 fn step_22(w: &mut SetupWorld) {
+    let before=w.job().clone();
     w.f.preview(1);
     assert!(
         w.f.manifest
@@ -392,6 +393,12 @@ fn step_22(w: &mut SetupWorld) {
         w.f.manifest.as_ref().unwrap().fingerprint,
         w.job().manifest.fingerprint
     );
+    let manifest=w.f.manifest.as_ref().unwrap();
+    w.f.job=Some(w.f.service.setup_job_reconsent(SetupJobReconsentRequest{root_id:w.f.root_id.clone(),job_id:before.job_id.clone(),expected_revision:w.job().revision,manifest_id:manifest.manifest_id.clone(),expected_fingerprint:manifest.fingerprint.clone()}).unwrap());
+    assert_eq!(w.job().job_id,before.job_id);
+    assert_eq!(w.job().prior_consents[0].manifest,before.manifest);
+    assert_eq!(w.job().coverage.processed,before.coverage.processed);
+
 }
 #[then("unaffected completed draft results remain available")]
 fn step_23(w: &mut SetupWorld) {
@@ -1633,7 +1640,7 @@ fn step_130(w: &mut SetupWorld) {
     assert_eq!(w.job().coverage.model_calls, 5);
     assert_eq!(w.f.seen.len(), 100);
     println!(
-        "synthetic corpus=100 documents; batches/model calls=5; transmission consents=1; save actions=1"
+        "synthetic corpus=100 documents; batches/model attempts=5; transmission consents=1; save actions=1; elapsed_ms={}",w.f.started.elapsed().as_millis()
     );
 }
 #[tokio::main]

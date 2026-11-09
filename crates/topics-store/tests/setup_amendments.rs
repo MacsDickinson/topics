@@ -159,3 +159,37 @@ fn classification_is_explicit_projection_separate_from_verification() {
     );
     assert!(f.saved().is_empty());
 }
+#[test]
+fn completed_draft_context_respects_record_and_frame_budgets() {
+    let mut f = Fixture::new();
+    f.prepare_default(3);
+    let t = topic("Ledger", TopicKind::Project);
+    for batch in 0..2 {
+        let cap = f.start();
+        let source = f.read(&cap)[0].citation.clone();
+        let mut candidates = vec![Candidate::Topic { topic: t.clone() }];
+        for n in 0..199 {
+            candidates.push(Candidate::Claim {
+                claim: claim(&t, &format!("field-{batch}-{n}"), "reported", &source),
+            });
+        }
+        f.publish(cap, candidates);
+    }
+    let cap = f.start();
+    let context = f
+        .service
+        .setup_draft_context(SetupDraftContextRequest { capability: cap })
+        .unwrap();
+    assert_eq!(
+        context.topics.len() + context.claims.len() + context.connections.len(),
+        200
+    );
+    assert!(serde_json::to_vec(&context).unwrap().len() <= 1024 * 1024);
+    assert!(context.claims.iter().all(|c| {
+        c.sources
+            .iter()
+            .all(|e| matches!(e, Evidence::Passage { .. }))
+    }));
+}
+#[test]
+fn selected_manifest_completion_retains_exclusions_without_claiming_full_vault_coverage(){let mut f=Fixture::new();f.prepare_default(100);f.preview(20);f.authorize();f.finish();let job=f.job.as_ref().unwrap();assert_eq!(job.coverage.selected,100);assert_eq!(job.coverage.processed.len(),100);assert_eq!(job.coverage.model_calls,5);assert!(job.coverage.excluded.iter().any(|e|e.path=="topics"));println!("selected={}, processed={}, excluded={}, status={:?}, complete={}",job.coverage.selected,job.coverage.processed.len(),job.coverage.excluded.len(),job.status,job.coverage.complete);assert!(job.coverage.complete,"all exact selected sources completed; exclusions must remain disclosed separately");assert_eq!(job.status,SetupJobStatus::Finished);assert!(!f.seen.iter().any(|s|s.summary.path.starts_with("topics/")));f.unchanged();}
