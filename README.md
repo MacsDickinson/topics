@@ -8,7 +8,7 @@ Topics is a local-first macOS app for ongoing people, projects and threads in Ma
 - Correct facts through topic chat, then approve the replacement and its scoped correction rule.
 - Browse sources, set privacy labels, capture topics manually, and undo operations through History.
 
-The persistent task backlog and bullet-journal daily review are the next milestone. See the [agreed plan](docs/plan.md) and [milestone plan and scenarios](features/topic-workspace/PLAN.md) for scope and overnight build authorization.
+The current milestone adds folder setup and topic-centred review: inspect the local folder structure, approve an exact analysis manifest, build a starting topic map in bounded batches, and save a baseline without individually confirming every imported assertion. Imported understanding is labelled “From your notes”; explicit confirmations remain separate. See the [folder setup plan and scenarios](features/folder-setup/PLAN.md). Final runtime acceptance and independent cross-provider review are still pending; the packaged app below remains the previously delivered prototype until it is rebuilt and verified. The persistent task backlog and bullet-journal daily review follow this milestone.
 
 UI contributors: follow the [design system](docs/design-system.md) for tokens, components, patterns and review requirements.
 
@@ -49,7 +49,7 @@ bash scripts/check.sh --core-only
 bash scripts/check.sh
 ```
 
-The core-only command runs formatting, warning-denied Clippy, Rust tests and both BDD runners. The full macOS command adds browser tests and real native search/workspace suites. Four presentation/protocol scenarios are mapped to their native/runtime owners rather than counted as service BDD passes. Genuine model tests are separate explicit opt-ins; see [desktop verification](apps/desktop/README.md).
+The core-only command runs formatting, warning-denied Clippy, Rust tests and three BDD runners. The full macOS command adds browser tests and real native search/workspace/setup suites. Native setup uses a scripted provider with synthetic notes; genuine model tests are separate explicit opt-ins. Presentation/protocol scenarios are mapped to their native/runtime owners rather than counted as service BDD passes. See [desktop verification](apps/desktop/README.md).
 
 Development and automated verification use synthetic temporary notes and an absolute isolated `TOPICS_APP_DATA_DIR`. Never point tests at personal notes or follow the repository's `notes` symlink. Normal app data defaults to `~/Library/Application Support/com.macsdickinson.topics`; CLI and desktop share configuration. Rust is pinned to 1.98.1 and desktop Node to 24.22.2 without changing global Node.
 

@@ -13,6 +13,7 @@
     "tauri": "tauri",
     "test:native": "node scripts/native-smoke.mjs",
     "test:native:workspace": "node scripts/native-smoke.mjs --workspace",
+    "test:native:setup": "node scripts/native-setup-smoke.mjs",
     "test:native:live": "node scripts/native-live-smoke.mjs"
   },
   "dependencies": {
