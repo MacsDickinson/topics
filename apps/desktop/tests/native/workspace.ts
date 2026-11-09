@@ -36,7 +36,7 @@ describe('Topic workspace native service journey', () => {
     await $('button=Sources').click();
     await $('button[aria-label="memory/projects/ledger-migration.md"]').click();
     await expect($('.note-content')).toHaveText(original.trim());
-    await chooseOption('select[aria-label="Source sensitivity"]', 'local_only');
+    await chooseOption('select#source-sensitivity', 'local_only');
     await expect($('.source-inspector .badge')).toHaveText('Local-only');
     await $('button=New topic').click();
     await $('#topic-name').setValue('Synthetic Ledger');
@@ -44,12 +44,12 @@ describe('Topic workspace native service journey', () => {
     await expect($('input[aria-label="Topic name"]')).toHaveValue(
       'Synthetic Ledger',
     );
-    await expect($('.badge.pending')).toHaveText('Needs review');
+    await expect($('.proposal .badge.tone-warning')).toHaveText('Needs review');
     await $('button=Approve selected changes').click();
-    await expect($('.badge.accepted')).toHaveText('Accepted');
+    await expect($('.proposal .badge.tone-success')).toHaveText('Accepted');
     await $('button[aria-label="Topics"]').click();
     await $('button[aria-label="Synthetic Ledger"]').click();
-    await expect($('.topic-detail h1')).toHaveText('Synthetic Ledger');
+    await expect($('.topic-detail .topic-identity h2')).toHaveText('Synthetic Ledger');
     // Exercise the real human-only statement service without invoking a model.
     const stored = await browser.execute(async () => {
       const core = (window as any).__TAURI__.core;

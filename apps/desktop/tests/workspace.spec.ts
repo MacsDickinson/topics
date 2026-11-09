@@ -311,7 +311,10 @@ test('human source inventory includes local-only notes, reads inert text and per
   await page
     .getByRole('button', { name: 'Meetings/one.md', exact: true })
     .click();
-  await page.getByLabel('Source sensitivity').selectOption('local_only');
+  const sourceSensitivity = page.locator('select#source-sensitivity');
+  await expect(sourceSensitivity).toHaveAccessibleName('Source sensitivity');
+  await expect(sourceSensitivity).toHaveCount(1);
+  await sourceSensitivity.selectOption('local_only');
   await expect
     .poll(() => page.evaluate(() => (window as any).sourceSensitivity))
     .toBe('local_only');

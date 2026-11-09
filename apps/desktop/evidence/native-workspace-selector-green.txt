@@ -1,0 +1,14 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/workspace.spec.ts -g human source inventory
+
+[WebServer] (node:55645) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:55649) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/workspace.spec.ts:294:1 › human source inventory includes local-only notes, reads inert text and persists sensitivity (569ms)
+
+  1 passed (1.5s)

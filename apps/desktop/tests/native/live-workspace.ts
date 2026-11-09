@@ -35,6 +35,8 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     await $('#root-path').waitForDisplayed();
     await $('#root-path').setValue(rootPath);
     await $('button=Use notes folder').click();
+    await expect($('h1=Understand this folder')).toBeDisplayed();
+    await $('button[aria-label="Topics"]').click();
     await expect($('h2=No accepted topics yet')).toBeDisplayed();
     await expect($('button=Analyse notes')).toBeEnabled();
     await $('button=Analyse notes').click();
@@ -54,7 +56,7 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     await expect($('.source-evidence .path')).toHaveText('meeting.md');
     await browser.saveScreenshot(resolve('evidence/native-live-discovery.png'));
     await $('button=Approve selected changes').click();
-    await expect($('.badge.accepted')).toBeDisplayed();
+    await expect($('.proposal .badge.tone-success')).toBeDisplayed();
     await $('button[aria-label="Topics"]').click();
     const { topics } = await invoke<any>('workspace_topics_list', {
       root_id: root.root_id,
@@ -65,10 +67,10 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     await expect($('.topic-detail')).toHaveText(
       expect.stringContaining('he/him'),
     );
-    await chooseOption('.topic-header select', 'cloud_allowed');
+    await chooseOption('select#topic-sensitivity', 'cloud_allowed');
     await browser.waitUntil(
       async () =>
-        (await $('.topic-header select').getValue()) === 'cloud_allowed',
+        (await $('select#topic-sensitivity').getValue()) === 'cloud_allowed',
       { timeout: 10000 },
     );
     await $('#topic-message').setValue(
@@ -106,13 +108,19 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
       before.current_claims.some((c: any) => c.value === 'they/them'),
     ).toBe(false);
     await $('button=Approve selected changes').click();
-    await expect($('.badge.accepted')).toBeDisplayed();
+    await expect($('.proposal .badge.tone-success')).toBeDisplayed();
     await $('button[aria-label="Topics"]').click();
     await $(`button[aria-label="${alex.name}"]`).click();
     await expect($('.topic-detail')).toHaveText(
       expect.stringContaining('they/them'),
     );
-    await expect($('.user-source blockquote')).toHaveText(
+    const correctedClaims = [];
+    for (const claim of await $$('.accepted-claim')) {
+      if ((await claim.getText()).includes('they/them')) correctedClaims.push(claim);
+    }
+    expect(correctedClaims.length).toBe(1);
+    await correctedClaims[0].$('details.claim-provenance summary').click();
+    await expect(correctedClaims[0].$('.user-source blockquote')).toHaveText(
       expect.stringContaining('Alex uses they/them pronouns.'),
     );
     await browser.saveScreenshot(resolve('evidence/native-live-topic.png'));
@@ -124,8 +132,8 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     // analyze the same source again with authorized accepted IDs/history.
     for (const known of topics) {
       await $(`button[aria-label="${known.name}"]`).click();
-      await chooseOption('.topic-header select', 'cloud_allowed');
-      await browser.waitUntil(async () => await $('.topic-header select').getValue() === 'cloud_allowed', { timeout: 10000 });
+      await chooseOption('select#topic-sensitivity', 'cloud_allowed');
+      await browser.waitUntil(async () => await $('select#topic-sensitivity').getValue() === 'cloud_allowed', { timeout: 10000 });
     }
     await $('button=Analyse notes').click(); await $('#scope-files').setValue('meeting.md'); await $('button=Preview selection').click();
     await $('.consent input').click(); await $('button=Start analysis').click(); await finished();
