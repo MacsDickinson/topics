@@ -55,3 +55,8 @@ zero processed/no publication/unchanged notes and rejecting sentinel bytes.
 Cases exercise malformed canonical candidates at the gate, valid-shaped
 candidates denied by actual store source validation, malformed process frame,
 wrong scope callback and wrong executable version.
+
+RED result: **0 passed, 5 failed**, each `left: None` versus its expected
+distinct pair. The initial host-denial fixture had a Python nesting error; it
+was corrected and all five RED cases were rerun against pre-fix product source
+before accepting this evidence (`/tmp/topics-origin-corrected-red.txt`).

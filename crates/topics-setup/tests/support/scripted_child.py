@@ -116,7 +116,7 @@ for line in sys.stdin:
             if mode == 'candidate_schema':
                 topics[0]['topic']['private'] = 'PRIVATE_ERROR_SENTINEL'
             if mode == 'host_denied':
-                connection['sources'][0]['passage_hash'] = '0' * 64
+                connection['connection']['sources'][0]['passage_hash'] = '0' * 64
             if mode == 'bad_callback':
                 call(99, 'scope_sources', {'scope_id': '00000000-0000-4000-8000-000000000000'})
             if mode == 'graph_claim':
