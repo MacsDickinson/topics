@@ -28,6 +28,12 @@ to topics-core; all durable manifests, graphs and checkpoints belong to topics-s
   validation and serialization before the permit invokes the final short
   visibility action. Existing `stage_proposal_guarded` is the reference pattern;
   publication IDs must be UUIDs and the permit accepts 1–64 IDs.
+- Additional runtime integration gap: terminal success currently calls
+  `commit_candidates` only if its candidate buffer is nonempty. A genuinely empty
+  extraction therefore cannot publish a completed checkpoint through a permit.
+  Request coordinator approval of a small opt-in host hook (default false for
+  existing hosts) to require guarded empty-turn completion; do not checkpoint
+  from a later Completed callback. No runtime edit is authorized yet.
 - Model payload limits remain 200 candidates / 2 MiB and the existing bounded
   runtime turn. The desktop's current host additionally caps a combined buffer
   at 64 candidates. The job adapter must specify its conservative per-run bound
