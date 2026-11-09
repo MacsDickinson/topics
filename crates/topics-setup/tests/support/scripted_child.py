@@ -65,6 +65,9 @@ for line in sys.stdin:
         result(identifier, {'data': [], 'nextCursor': None})
     elif method == 'turn/start':
         result(identifier, {'turn': {'id': 'turn'}})
+        if SETTINGS.read_text() == 'no_read':
+            terminal('completed')
+            continue
         prompt = params['input'][0]['text']
         scope_id = re.search(r'Scope ID: ([a-f0-9-]+)', prompt).group(1)
         response = call(100, 'scope_sources', {'scope_id': scope_id})

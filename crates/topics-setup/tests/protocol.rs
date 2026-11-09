@@ -159,12 +159,24 @@ impl Fixture {
         }
     }
     fn done(&self, job: &SetupJob) -> SetupJob {
-        self.wait(job, |s| {
+        let snapshot = self.wait(job, |s| {
             matches!(
                 s.status,
                 SetupJobStatus::Finished | SetupJobStatus::FinishedWithGaps
             )
-        })
+        });
+        if !snapshot.coverage.complete {
+            eprintln!(
+                "Synthetic coverage: {:?}; batch outcomes: {:?}",
+                snapshot.coverage,
+                snapshot
+                    .batches
+                    .iter()
+                    .map(|batch| (&batch.status, &batch.error, &batch.completed_source_ids))
+                    .collect::<Vec<_>>()
+            );
+        }
+        snapshot
     }
     fn transmissions(&self) -> Vec<Value> {
         fs::read_to_string(self.temp.path().join("transmissions.jsonl"))
@@ -1317,6 +1329,28 @@ fn renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original
                     .count();
                 assert_eq!(count, 1, "completed source retransmitted after reconsent");
             }
+        },
+    );
+}
+
+#[test]
+fn successful_turn_without_scoped_read_cannot_claim_source_coverage() {
+    isolated(
+        "successful_turn_without_scoped_read_cannot_claim_source_coverage",
+        || {
+            let f = Fixture::new(2, "no_read");
+            let job = f.authorize(2);
+            f.coordinator.start(f.request(&job)).unwrap();
+            let done = f.done(&job);
+            assert_eq!(
+                done.coverage.processed.len(),
+                0,
+                "terminal success cannot report analysed files the model never requested"
+            );
+            assert_eq!(done.coverage.failed.len(), 2);
+            assert!(!done.coverage.complete);
+            assert!(f.transmissions().is_empty());
+            assert!(done.graph.items.is_empty());
         },
     );
 }

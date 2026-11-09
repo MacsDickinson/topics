@@ -38,6 +38,7 @@ pub fn render(directory: &Path, mode: &str) -> io::Result<Value> {
         "hold_second",
         "pronouns",
         "historic",
+        "no_read",
     ]
     .contains(&mode)
     {
