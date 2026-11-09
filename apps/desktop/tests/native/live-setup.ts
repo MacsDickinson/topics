@@ -1,5 +1,6 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 import { writeFileSync } from "node:fs";
+import { baseline, corrected, verifyStatementRule, snapshot, readRule } from "../../scripts/live-setup-lineage.mjs";
 import { waitForTerminal } from "../../scripts/live-setup-observation.mjs";
 
 describe("Genuine Codex synthetic setup through native services", () => {
@@ -87,6 +88,16 @@ describe("Genuine Codex synthetic setup through native services", () => {
       const topic = state.job.graph.items.find((item: any) => item.candidate.kind === "topic" && item.candidate.topic.id === claim.subject_id);
       expect(topic).toBeTruthy();
       const topicName = topic.candidate.topic.name;
+      const selected = { topicId: claim.subject_id, logicalId: claim.id, revisionId: claim.revision_id, predicate: claim.predicate, value: claim.value };
+      const replacement = "updated after review";
+      const statementText = "Synthetic correction: the value is updated after review.";
+      const readProjection = async () => browser.execute(async (rootId, topicId) => {
+        const core = (window as any).__TAURI__.core;
+        return core.invoke("setup_topic_review", { request: { root_id: rootId, topic_id: topicId } });
+      }, state.root.root_id, selected.topicId);
+      const readStatement = async (statementId: string) => browser.execute(async (rootId, statementId) => {
+        return (window as any).__TAURI__.core.invoke("workspace_statement_get", { request: { root_id: rootId, statement_id: statementId } });
+      }, state.root.root_id, statementId);
       await browser.saveScreenshot("evidence/native-live-setup-draft.png");
       await $("button=Review starting map").click();
       await $("h2=Save starting map").waitForDisplayed();
@@ -103,16 +114,17 @@ describe("Genuine Codex synthetic setup through native services", () => {
           (await $(".context-review").getText()).includes("From your notes"),
         { timeout: 10000 },
       );
+      const original = baseline(await readProjection(), selected);
       const articles = await $$(".context-review article");
       const claimArticle = (await Promise.all(articles.map(async (article) => ({
         article, text: await article.getText(),
-      })))).find(({ text }) => text.includes(claim.value) && text.includes("From your notes"));
+      })))).find(({ text }) => text.includes(claim.predicate) && text.includes(claim.value) && text.includes("From your notes"));
       expect(claimArticle).toBeTruthy();
       await claimArticle!.article.$("button=That’s wrong").click();
       await $(".context-review textarea").setValue(
-        "Synthetic correction: the value is updated after review.",
+        statementText,
       );
-      await $(".context-review input").setValue("updated after review");
+      await $(".context-review input").setValue(replacement);
       await $("button=Preview correction").click();
       await $("h3=Review correction").waitForDisplayed();
       const previewText = await $(".context-review .consent").getText();
@@ -126,15 +138,13 @@ describe("Genuine Codex synthetic setup through native services", () => {
         { timeout: 30000 },
       );
       expect((await $$(".context-review article")).length).toBeGreaterThan(0);
-      const readProjection = async () => browser.execute(async (rootId, topicName) => {
-        const core = (window as any).__TAURI__.core;
-        const topics = (await core.invoke("workspace_topics_list", { request: { root_id: rootId } })).topics;
-        const topic = topics.find((entry: any) => entry.name === topicName);
-        return core.invoke("setup_topic_review", { request: { root_id: rootId, topic_id: topic.id } });
-      }, state.root.root_id, topicName);
       const beforeContext = await readProjection();
+      const lineageBefore = corrected(beforeContext, selected, replacement, statementText);
+      expect(lineageBefore.old).toEqual(original);
+      const statementBefore = await readStatement(lineageBefore.statementId);
+      const ruleBefore = readRule(path, lineageBefore.head.revision_id);
+      verifyStatementRule(lineageBefore, statementBefore, ruleBefore, selected, replacement);
       const confirmedBefore = beforeContext.reviews.filter((entry: any) => entry.state === "confirmed_by_you").map((entry: any) => entry.record_id).sort();
-      expect(confirmedBefore.length).toEqual(1);
       await $(".context-review").$("button=Add context").click();
       await $(".context-review textarea").setValue(
         "Synthetic context: role changed after review.",
@@ -152,7 +162,12 @@ describe("Genuine Codex synthetic setup through native services", () => {
         "Synthetic context: role changed after review.",
       );
       expect(projection.reviews.filter((entry: any) => entry.state === "confirmed_by_you").map((entry: any) => entry.record_id).sort()).toEqual(confirmedBefore);
-      writeFileSync(process.env.TOPICS_TEST_EXPECTED!, JSON.stringify({ topicName, confirmedBefore }));
+      const lineage = corrected(projection, selected, replacement, statementText);
+      const statement = await readStatement(lineage.statementId);
+      const rule = readRule(path, lineage.head.revision_id);
+      verifyStatementRule(lineage, statement, rule, selected, replacement);
+      const expected = snapshot(projection, lineage, statement, rule);
+      writeFileSync(process.env.TOPICS_TEST_EXPECTED!, JSON.stringify({ topicName, selected, replacement, statementText, expected }));
       await browser.saveScreenshot("evidence/native-live-setup-reviewed.png");
     },
   );
