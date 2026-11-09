@@ -1,0 +1,14 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/native-search-predicate.spec.ts
+
+[WebServer] (node:50678) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:50680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/native-search-predicate.spec.ts:4:1 › no-matches heading and unrelated results do not satisfy watcher convergence (114ms)
+
+  1 passed (883ms)
