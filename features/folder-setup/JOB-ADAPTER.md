@@ -70,7 +70,7 @@ all save/confirm/correction decisions; desktop owns UI behavior and action count
 | Approved scenario | Owned protocol test / evidence |
 | --- | --- |
 | setup 1: local folder setup | `inventory_is_local_and_consent_starts_one_bounded_job` |
-| setup 2: empty/returning | empty terminal runtime tests; core/desktop entry behavior remains upstream |
+| setup 2: empty/returning | Core/desktop entry behavior; coordinator starts only an existing consented job |
 | setup 3: one exact-manifest consent | inventory test, 100-document test, `private_sources_and_unrelated_topic_inventory_never_reach_the_child` |
 | setup 4: changed waiting scope | `pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs` |
 | setup 5: one sourced graph / copied evidence | `hundred_documents_use_exact_multiple_scopes_and_one_draft_graph`, `multiple_tool_calls_validate_the_runtime_combined_buffer_once` |
