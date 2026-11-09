@@ -1,34 +1,35 @@
-import { resolve } from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { release } from 'node:os';
-import { assertNativeEnvironment } from './scripts/native-environment.mjs';
+import { resolve } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { release } from "node:os";
+import { assertNativeEnvironment } from "./scripts/native-environment.mjs";
 if (!process.env.TOPICS_TEST_SANDBOX)
   throw new Error(
-    'Run npm run test:native to create isolated synthetic fixtures.',
+    "Run npm run test:native to create isolated synthetic fixtures.",
   );
 const sessionEnvironment = {
   HOME: process.env.TOPICS_TEST_HOME,
   XDG_DATA_HOME: process.env.TOPICS_TEST_XDG_DATA,
 };
 assertNativeEnvironment(sessionEnvironment, process.env.TOPICS_TEST_SANDBOX);
-const live = process.env.TOPICS_TEST_LIVE === '1';
+const live = process.env.TOPICS_TEST_LIVE === "1";
+const setup = process.env.TOPICS_TEST_SETUP === "1";
 const session =
-  process.env.TOPICS_TEST_STARTUP === '1'
+  process.env.TOPICS_TEST_STARTUP === "1"
     ? process.env.TOPICS_APP_DATA_DIR
-      ? 'relative'
-      : 'empty'
+      ? "relative"
+      : "empty"
     : live
-      ? process.env.TOPICS_TEST_LIVE_RESTART === '1'
-        ? 'live-restart'
-        : 'live'
-      : process.env.TOPICS_TEST_WORKSPACE === '1'
-        ? 'workspace'
-        : 'normal';
-const outputDir = resolve('evidence/native-diagnostics', session);
+      ? process.env.TOPICS_TEST_LIVE_RESTART === "1"
+        ? "live-restart"
+        : "live"
+      : process.env.TOPICS_TEST_WORKSPACE === "1"
+        ? "workspace"
+        : "normal";
+const outputDir = resolve("evidence/native-diagnostics", session);
 mkdirSync(outputDir, { recursive: true });
 // Deliberately no full environment dump: credentials may be present in CI.
 writeFileSync(
-  resolve(outputDir, 'session.json'),
+  resolve(outputDir, "session.json"),
   JSON.stringify(
     {
       session,
@@ -37,7 +38,7 @@ writeFileSync(
       node: process.version,
       homePrepared: true,
       webkitIncognito: true,
-      driverProvider: 'embedded',
+      driverProvider: "embedded",
     },
     null,
     2,
@@ -46,31 +47,38 @@ writeFileSync(
 const appBinaryPath = process.env.TOPICS_TEST_APP_LAUNCHER!;
 const appEnvironment = {
   ...sessionEnvironment,
-  TOPICS_TEST_PROCESS_LOG: resolve(outputDir, 'app-process.jsonl'),
+  ...(process.env.TOPICS_TEST_CODEX_HOME
+    ? { CODEX_HOME: process.env.TOPICS_TEST_CODEX_HOME }
+    : {}),
+  TOPICS_TEST_PROCESS_LOG: resolve(outputDir, "app-process.jsonl"),
 };
 export const config = {
   outputDir,
-  runner: 'local',
+  runner: "local",
   specs: [
-    live
-      ? process.env.TOPICS_TEST_LIVE_RESTART === '1'
-        ? './tests/native/live-restart.ts'
-        : './tests/native/live-workspace.ts'
-      : process.env.TOPICS_TEST_STARTUP === '1'
-        ? './tests/native/startup.ts'
-        : process.env.TOPICS_TEST_WORKSPACE === '1'
-          ? './tests/native/workspace.ts'
-          : './tests/native/search.ts',
+    setup
+      ? process.env.TOPICS_TEST_SETUP_RESTART === "1"
+        ? "./tests/native/setup-restart.ts"
+        : "./tests/native/setup.ts"
+      : live
+        ? process.env.TOPICS_TEST_LIVE_RESTART === "1"
+          ? "./tests/native/live-restart.ts"
+          : "./tests/native/live-workspace.ts"
+        : process.env.TOPICS_TEST_STARTUP === "1"
+          ? "./tests/native/startup.ts"
+          : process.env.TOPICS_TEST_WORKSPACE === "1"
+            ? "./tests/native/workspace.ts"
+            : "./tests/native/search.ts",
   ],
   maxInstances: 1,
   capabilities: [
-    { browserName: 'tauri', 'tauri:options': { application: appBinaryPath } },
+    { browserName: "tauri", "tauri:options": { application: appBinaryPath } },
   ],
   services: [
     [
-      '@wdio/tauri-service',
+      "@wdio/tauri-service",
       {
-        driverProvider: 'embedded',
+        driverProvider: "embedded",
         appBinaryPath: appBinaryPath,
         env: appEnvironment,
         captureBackendLogs: true,
@@ -84,16 +92,16 @@ export const config = {
     result: { passed: boolean },
   ) => {
     if (!result.passed) {
-      const { browser } = await import('@wdio/globals');
+      const { browser } = await import("@wdio/globals");
       await browser
         .saveScreenshot(resolve(`evidence/native-${session}-failure.png`))
         .catch(() => undefined);
     }
   },
-  framework: 'mocha',
-  reporters: ['spec'],
-  logLevel: 'warn',
+  framework: "mocha",
+  reporters: ["spec"],
+  logLevel: "warn",
   waitforTimeout: 10000,
   connectionRetryCount: 0,
-  mochaOpts: { timeout: live ? 420000 : 30000 },
+  mochaOpts: { timeout: setup || live ? 240000 : 30000 },
 };
