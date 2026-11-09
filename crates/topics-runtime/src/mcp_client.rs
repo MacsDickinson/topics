@@ -2,6 +2,7 @@
 //! server. This module has no HostTools/store/approval capability.
 use crate::{
     bridge::Bridge,
+    diagnostics::Failure,
     error,
     protocol::{MAX_FRAME, MAX_OUTPUT},
 };
@@ -16,6 +17,7 @@ use topics_core::workspace::WorkspaceResult;
 pub(crate) struct McpClient {
     service: RunningService<RoleClient, ClientConfig>,
 }
+
 impl McpClient {
     pub async fn connect(bridge: &Bridge) -> WorkspaceResult<Self> {
         let mut stream = TcpStream::connect(&bridge.endpoint)
@@ -76,6 +78,11 @@ impl McpClient {
         )
     }
     pub async fn call(&self, tool: &str, arguments: Value) -> WorkspaceResult<Value> {
+        self.call_inner(tool, arguments)
+            .await
+            .map_err(|e| Failure::McpRequest.tag(e))
+    }
+    async fn call_inner(&self, tool: &str, arguments: Value) -> WorkspaceResult<Value> {
         if !matches!(tool, "scope_sources" | "propose_changes") {
             return Err(error("forbidden", "Unknown Topics tool callback"));
         }
@@ -89,15 +96,17 @@ impl McpClient {
                 .call_tool(CallToolRequestParams::new(tool.to_owned()).with_arguments(args)),
         )
         .await
-        .map_err(|_| error("runtime_unavailable", "Topics MCP request timed out"))?
         .map_err(|_| {
-            error(
+            Failure::McpDeadline.error("runtime_unavailable", "Topics MCP request timed out")
+        })?
+        .map_err(|_| {
+            Failure::McpRequest.error(
                 "forbidden",
                 "Topics tool request denied; review and reconfirm the selected sources, then retry",
             )
         })?;
         if result.is_error == Some(true) {
-            return Err(error(
+            return Err(Failure::McpRequest.error(
                 "forbidden",
                 "Topics tool request denied; review and reconfirm the selected sources, then retry",
             ));
@@ -120,5 +129,66 @@ impl McpClient {
             output.push(json!({"type":"inputText","text":text}));
         }
         Ok(json!({"success":true,"contentItems":output}))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rmcp::{ErrorData, RoleServer, ServerHandler, service::RequestContext};
+    struct StalledSdk;
+    impl ServerHandler for StalledSdk {
+        fn get_info(&self) -> ServerConfig {
+            ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
+                .with_protocol_version(ProtocolVersion::V_2025_06_18)
+        }
+        async fn call_tool(
+            &self,
+            _: CallToolRequestParams,
+            _: RequestContext<RoleServer>,
+        ) -> Result<CallToolResponse, ErrorData> {
+            std::future::pending().await
+        }
+    }
+    #[tokio::test]
+    async fn actual_sdk_deadline_is_distinct_from_host_deadline_without_raw_error_forwarding() {
+        let (server, client) = tokio::io::duplex(MAX_FRAME);
+        let (read, write) = tokio::io::split(server);
+        let server = tokio::spawn(async move {
+            let service = StalledSdk
+                .serve(rmcp::transport::async_rw::AsyncRwTransport::<
+                    RoleServer,
+                    _,
+                    _,
+                >::new(read, write))
+                .await
+                .unwrap();
+            let _ = service.waiting().await;
+        });
+        let (read, write) = tokio::io::split(client);
+        let mut config = ClientConfig::new(
+            ClientCapabilities::default(),
+            Implementation::new("synthetic", "1"),
+        );
+        config.protocol_version = ProtocolVersion::V_2025_06_18;
+        let service = config
+            .serve(rmcp::transport::async_rw::AsyncRwTransport::<
+                RoleClient,
+                _,
+                _,
+            >::new(read, write))
+            .await
+            .unwrap();
+        let client = McpClient { service };
+        let failure = tokio::time::timeout(
+            Duration::from_secs(8),
+            client.call("scope_sources", json!({"scope_id":"synthetic"})),
+        )
+        .await
+        .unwrap()
+        .unwrap_err();
+        assert_eq!(failure.details, Some(Failure::McpDeadline.details()));
+        server.abort();
+        let _ = server.await;
     }
 }

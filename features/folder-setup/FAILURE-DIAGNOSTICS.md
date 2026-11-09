@@ -1,5 +1,9 @@
 # Bounded setup failure diagnostics
 
+Historical first-patch contract and evidence. The bounded observability followup
+in [FAILURE-ORIGINS.md](FAILURE-ORIGINS.md) supersedes the two-pair allowlist with
+24 locally generated pairs; the original two pairs and static UI messages remain valid.
+
 ## Frozen human-facing contract
 
 `SetupBatch.error` retains its existing generic code and human action message.

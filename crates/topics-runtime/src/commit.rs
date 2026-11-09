@@ -1,6 +1,6 @@
 //! Cooperative publication fence. Blocking preparation belongs BEFORE publish;
 //! its action must be the core-provided final short atomic visibility action.
-use crate::{HostTools, error};
+use crate::{HostTools, diagnostics::Failure, error};
 use std::{
     sync::{Arc, Mutex, OnceLock},
     time::{Duration, Instant},
@@ -136,7 +136,7 @@ pub(crate) async fn stage(
             ));
         }
         let result = tokio::select! {
-         _=tokio::time::sleep_until(tokio::time::Instant::from_std(permit.inner.deadline))=>{permit.revoke();Err(error("runtime_unavailable","Proposal preparation timed out; later publication denied"))},
+         _=tokio::time::sleep_until(tokio::time::Instant::from_std(permit.inner.deadline))=>{permit.revoke();Err(Failure::PublicationDeadline.error("runtime_unavailable","Proposal preparation timed out; later publication denied"))},
          result=&mut rx=>{permit.revoke();result.unwrap_or_else(|_|Err(error("internal","Proposal preparation disconnected"))).and_then(|_|Err(error("internal","Host did not use guarded proposal publication")))},
          _=changed.changed()=>continue,
         };

@@ -360,6 +360,70 @@ fn safe_failure_details(details: Option<&Value>) -> Option<Value> {
         object.get("phase")?.as_str()?,
         object.get("reason")?.as_str()?,
     ) {
+        ("preflight", "version_check_failed") => {
+            Some(serde_json::json!({"phase":"preflight","reason":"version_check_failed"}))
+        }
+        ("preflight", "layout_denied") => {
+            Some(serde_json::json!({"phase":"preflight","reason":"layout_denied"}))
+        }
+        ("preflight", "native_denied") => {
+            Some(serde_json::json!({"phase":"preflight","reason":"native_denied"}))
+        }
+        ("startup", "setup_failed") => {
+            Some(serde_json::json!({"phase":"startup","reason":"setup_failed"}))
+        }
+        ("discovery", "discovery_failed") => {
+            Some(serde_json::json!({"phase":"discovery","reason":"discovery_failed"}))
+        }
+        ("discovery", "discovery_deadline") => {
+            Some(serde_json::json!({"phase":"discovery","reason":"discovery_deadline"}))
+        }
+        ("transport", "transport_failed") => {
+            Some(serde_json::json!({"phase":"transport","reason":"transport_failed"}))
+        }
+        ("transport", "read_deadline") => {
+            Some(serde_json::json!({"phase":"transport","reason":"read_deadline"}))
+        }
+        ("transport", "protocol_denied") => {
+            Some(serde_json::json!({"phase":"transport","reason":"protocol_denied"}))
+        }
+        ("mcp", "session_failed") => {
+            Some(serde_json::json!({"phase":"mcp","reason":"session_failed"}))
+        }
+        ("mcp", "inventory_denied") => {
+            Some(serde_json::json!({"phase":"mcp","reason":"inventory_denied"}))
+        }
+        ("mcp", "request_failed") => {
+            Some(serde_json::json!({"phase":"mcp","reason":"request_failed"}))
+        }
+        ("mcp", "request_deadline") => {
+            Some(serde_json::json!({"phase":"mcp","reason":"request_deadline"}))
+        }
+        ("callback", "authorization_denied") => {
+            Some(serde_json::json!({"phase":"callback","reason":"authorization_denied"}))
+        }
+        ("candidate", "schema_denied") => {
+            Some(serde_json::json!({"phase":"candidate","reason":"schema_denied"}))
+        }
+        ("host", "validation_denied") => {
+            Some(serde_json::json!({"phase":"host","reason":"validation_denied"}))
+        }
+        ("host", "call_deadline") => {
+            Some(serde_json::json!({"phase":"host","reason":"call_deadline"}))
+        }
+        ("host", "host_failed") => Some(serde_json::json!({"phase":"host","reason":"host_failed"})),
+        ("execution", "validation_denied") => {
+            Some(serde_json::json!({"phase":"execution","reason":"validation_denied"}))
+        }
+        ("execution", "execution_deadline") => {
+            Some(serde_json::json!({"phase":"execution","reason":"execution_deadline"}))
+        }
+        ("publication", "preparation_failed") => {
+            Some(serde_json::json!({"phase":"publication","reason":"preparation_failed"}))
+        }
+        ("publication", "preparation_deadline") => {
+            Some(serde_json::json!({"phase":"publication","reason":"preparation_deadline"}))
+        }
         ("turn", "model_terminal_failed") => {
             Some(serde_json::json!({"phase":"turn","reason":"model_terminal_failed"}))
         }
@@ -371,4 +435,31 @@ fn safe_failure_details(details: Option<&Value>) -> Option<Value> {
 }
 fn coverage_refresh(job: &mut SetupJob) {
     coverage(job)
+}
+
+#[cfg(test)]
+mod diagnostic_tests {
+    use super::*;
+    #[test]
+    fn sanitizer_reconstructs_only_exact_contract_pairs_including_cross_mismatches() {
+        let pairs: Vec<_> = include_str!("../../../../../features/folder-setup/FAILURE-ORIGINS.md")
+            .lines()
+            .filter(|line| line.starts_with("| `"))
+            .map(|line| {
+                let fields: Vec<_> = line.split('`').collect();
+                (fields[1], fields[3])
+            })
+            .collect();
+        assert_eq!(pairs.len(), 24);
+        for (phase, _) in &pairs {
+            for (_, reason) in &pairs {
+                let value = serde_json::json!({"phase":phase,"reason":reason});
+                let expected = pairs.contains(&(*phase, *reason)).then(|| value.clone());
+                assert_eq!(safe_failure_details(Some(&value)), expected);
+                let mut extra = value;
+                extra["private"] = serde_json::json!("PRIVATE_SENTINEL");
+                assert_eq!(safe_failure_details(Some(&extra)), None);
+            }
+        }
+    }
 }

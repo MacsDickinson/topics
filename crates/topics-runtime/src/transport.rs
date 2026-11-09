@@ -1,5 +1,6 @@
 //! Bounded NDJSON process transport; no jsonrpc field on the app-server wire.
 use crate::{
+    diagnostics::Failure,
     error,
     protocol::{MAX_FRAME, MAX_OUTPUT},
 };
@@ -67,7 +68,7 @@ impl Process {
         #[cfg(unix)]
         command.process_group(0);
         let mut child = command.spawn().map_err(|_| {
-            error(
+            Failure::Transport.error(
                 "runtime_unavailable",
                 "Cannot start pinned Codex; configure codex-cli 0.166.0",
             )
@@ -112,17 +113,24 @@ impl Process {
         self.input
             .write_all(&frame)
             .await
-            .map_err(|_| error("runtime_unavailable", "Codex disconnected"))
+            .map_err(|_| Failure::Transport.error("runtime_unavailable", "Codex disconnected"))
     }
     pub async fn next(&mut self) -> WorkspaceResult<Value> {
+        self.next_inner()
+            .await
+            .map_err(|e| Failure::Protocol.tag(e))
+    }
+    async fn next_inner(&mut self) -> WorkspaceResult<Value> {
         let frame = tokio::time::timeout(
             Duration::from_secs(40),
             read_frame(&mut self.output, MAX_FRAME),
         )
         .await
-        .map_err(|_| error("runtime_unavailable", "Codex response timed out"))?
         .map_err(|_| {
-            error(
+            Failure::ReadDeadline.error("runtime_unavailable", "Codex response timed out")
+        })?
+        .map_err(|_| {
+            Failure::Transport.error(
                 "runtime_unavailable",
                 "Codex exited or returned an oversized frame",
             )
@@ -161,6 +169,11 @@ impl Process {
         Ok(value)
     }
     pub async fn request(&mut self, method: &str, params: Value) -> WorkspaceResult<Value> {
+        self.request_inner(method, params)
+            .await
+            .map_err(|e| Failure::Protocol.tag(e))
+    }
+    async fn request_inner(&mut self, method: &str, params: Value) -> WorkspaceResult<Value> {
         let id = self.next;
         self.next += 1;
         self.send(json!({"id":id,"method":method,"params":params}))
@@ -292,6 +305,13 @@ mod tests {
             "import sys,json\nr=json.loads(sys.stdin.readline());sys.stderr.write('x'*1000000);sys.stderr.flush();print(json.dumps({'id':r['id'],'result':{}}))",
         );
         assert!(p.request("x", json!({})).await.is_ok());
+        p.stop().await;
+    }
+    #[tokio::test]
+    async fn actual_read_deadline_is_local_and_process_is_reaped() {
+        let mut p = fake("import time\ntime.sleep(50)");
+        let failure = p.next().await.unwrap_err();
+        assert_eq!(failure.details, Some(Failure::ReadDeadline.details()));
         p.stop().await;
     }
     #[tokio::test]

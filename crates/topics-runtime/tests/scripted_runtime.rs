@@ -201,10 +201,15 @@ fn malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates()
         if let RunEvent::Error { error } = &terminal.event {
             assert_eq!(
                 error.details,
-                (mode == "failed").then(|| json!({
-                    "phase":"turn", "reason":"model_terminal_failed"
-                })),
-                "unknown or other failures must not be guessed from broad error codes: {mode}"
+                Some(match mode {
+                    "failed" => json!({"phase":"turn", "reason":"model_terminal_failed"}),
+                    "invalid_after_buffer" =>
+                        json!({"phase":"callback", "reason":"authorization_denied"}),
+                    "malformed" => json!({"phase":"transport", "reason":"protocol_denied"}),
+                    "exit" => json!({"phase":"transport", "reason":"transport_failed"}),
+                    _ => json!({"phase":"execution", "reason":"validation_denied"}),
+                }),
+                "local enforcement stage, not a provider/root-cause guess: {mode}"
             );
         }
         assert_eq!(*host.stages.lock().unwrap(), 0, "{mode}");
@@ -486,6 +491,12 @@ fn review_cancel_and_timeout_revoke_late_prepared_publication() {
         } else {
             matches!(terminal.event, RunEvent::Error { .. })
         });
+        if let RunEvent::Error { error } = terminal.event {
+            assert_eq!(
+                error.details,
+                Some(json!({"phase":"publication", "reason":"preparation_deadline"}))
+            );
+        }
         assert_eq!(*base.stages.lock().unwrap(), 0);
         release_tx.send(()).unwrap();
         assert!(done_rx.recv_timeout(Duration::from_secs(1)).unwrap());
