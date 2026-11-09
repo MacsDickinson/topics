@@ -120,6 +120,7 @@ fn main() {
             setup_job_get,
             setup_job_create,
             setup_job_start,
+            setup_job_watch,
             setup_job_control,
             setup_jobs_list,
             setup_draft_edit,

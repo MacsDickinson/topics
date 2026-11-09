@@ -245,3 +245,65 @@ test("confirmation previews only the enumerated visible revisions", async ({
     ),
   ).toEqual([ids.revision]);
 });
+
+test("job watch ignores foreign and older snapshots and displays a newer matching update", async ({
+  page,
+}) => {
+  await workspaceFixture(page);
+  await setupJob(page);
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as any).calls.some((c: any) => c.command === "setup_job_watch"),
+      ),
+    )
+    .toBe(true);
+  await page.evaluate(() => {
+    const w = window as any;
+    for (const payload of [
+      {
+        ...structuredClone(w.setupJob),
+        root_id: "other-root",
+        revision: 50,
+        status: "paused",
+      },
+      { ...structuredClone(w.setupJob), revision: 0, status: "paused" },
+    ])
+      for (const fn of Object.values(w.listeners))
+        (fn as Function)({ event: "setup_job_event", id: 2, payload });
+  });
+  await expect(page.getByRole("status")).toContainText("finished");
+  await page.evaluate(() => {
+    const w = window as any;
+    const payload = {
+      ...structuredClone(w.setupJob),
+      revision: 2,
+      status: "finished_with_gaps",
+      coverage: {
+        ...w.setupJob.coverage,
+        complete: false,
+        failed: ["Meetings/one.md"],
+      },
+    };
+    for (const fn of Object.values(w.listeners))
+      (fn as Function)({ event: "setup_job_event", id: 2, payload });
+  });
+  await expect(page.getByRole("status")).toContainText("finished with gaps");
+  await expect(
+    page.getByRole("button", { name: "Retry failed" }),
+  ).toBeVisible();
+});
+
+test("tree builds missing intermediate folders from inventory paths and selects descendants", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { nested: true });
+  await page.getByRole("button", { name: "Set up folder" }).click();
+  await expect(page.getByLabel("Projects", { exact: true })).toBeChecked();
+  await expect(page.getByLabel("Archive", { exact: true })).toBeChecked();
+  await page.getByLabel("Projects", { exact: true }).uncheck();
+  await expect(page.getByLabel("Archive", { exact: true })).not.toBeChecked();
+  await expect(
+    page.getByRole("button", { name: "Review manifest" }),
+  ).toBeDisabled();
+});

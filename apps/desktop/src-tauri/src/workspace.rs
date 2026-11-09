@@ -14,6 +14,8 @@ use topics_runtime::{CommitPermit, HostTools, RunRequest, Runtime, RuntimeConfig
 use topics_setup::SetupCoordinator;
 use topics_store::WorkspaceService;
 
+type SetupWatch = Option<(String, String, tauri::async_runtime::JoinHandle<()>)>;
+
 #[derive(Clone)]
 pub struct WorkspaceState {
     app_data: Result<PathBuf, String>,
@@ -22,6 +24,7 @@ pub struct WorkspaceState {
     runtime: Result<Arc<Runtime>, String>,
     lifecycle: Arc<Mutex<()>>,
     active: Arc<Mutex<Vec<(String, String)>>>,
+    setup_watch: Arc<Mutex<SetupWatch>>,
 }
 impl WorkspaceState {
     pub fn new(app_data: Result<PathBuf, String>) -> Self {
@@ -44,6 +47,7 @@ impl WorkspaceState {
             runtime,
             lifecycle: Arc::new(Mutex::new(())),
             active: Arc::new(Mutex::new(Vec::new())),
+            setup_watch: Arc::new(Mutex::new(None)),
         }
     }
     fn runtime(&self) -> WorkspaceResult<&Runtime> {
@@ -96,6 +100,17 @@ impl WorkspaceState {
             ));
         }
         Ok(slot.as_ref().expect("setup initialized").clone())
+    }
+    fn stop_setup_watch(&self) -> WorkspaceResult<()> {
+        if let Some((_, _, handle)) = self
+            .setup_watch
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup watch unavailable."))?
+            .take()
+        {
+            handle.abort();
+        }
+        Ok(())
     }
     fn cancel_all(&self) -> WorkspaceResult<()> {
         let active = self
@@ -283,6 +298,43 @@ service_command!(
 );
 
 #[tauri::command]
+pub async fn setup_job_watch(
+    request: Option<Value>,
+    state: tauri::State<'_, WorkspaceState>,
+    app: tauri::AppHandle,
+) -> WorkspaceResult<SetupJob> {
+    let request: SetupJobRequest = decode_request(request)?;
+    blocking(state.inner().clone(), move |state| {
+        let _gate = state
+            .lifecycle
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
+        let coordinator = state.coordinator()?;
+        let mut receiver = coordinator.subscribe();
+        let initial = coordinator.get(request.clone())?;
+        state.stop_setup_watch()?;
+        let root_id = request.root_id.clone();
+        let job_id = request.job_id.clone();
+        let handle = tauri::async_runtime::spawn(async move {
+            while receiver.changed().await.is_ok() {
+                let snapshot = receiver.borrow_and_update().clone();
+                if let Some(snapshot) =
+                    snapshot.filter(|job| job.root_id == root_id && job.job_id == job_id)
+                {
+                    let _ = app.emit("setup_job_event", snapshot);
+                }
+            }
+        });
+        *state
+            .setup_watch
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup watch unavailable."))? =
+            Some((request.root_id, request.job_id, handle));
+        Ok(initial)
+    })
+    .await
+}
+#[tauri::command]
 pub async fn setup_job_start(
     request: Option<Value>,
     state: tauri::State<'_, WorkspaceState>,
@@ -340,6 +392,7 @@ pub async fn workspace_root_set(
             .lock()
             .map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
         state.cancel_all()?;
+        state.stop_setup_watch()?;
         let coordinator = state
             .setup
             .lock()
