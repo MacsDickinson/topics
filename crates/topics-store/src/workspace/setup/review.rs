@@ -1,15 +1,15 @@
 use super::*;
 #[derive(Serialize, Deserialize)]
-struct Reviewed {
-    receipt: SetupReceipt,
-    statement: Option<UserStatement>,
-    rule: Option<Rule>,
+pub(super) struct Reviewed {
+    pub receipt: SetupReceipt,
+    pub statement: Option<UserStatement>,
+    pub rule: Option<Rule>,
 }
-fn receipt_path(ctx: &Context, id: &str) -> WResult<PathBuf> {
+pub(super) fn receipt_path(ctx: &Context, id: &str) -> WResult<PathBuf> {
     valid_id(id)?;
     Ok(setup_dir(ctx).join("receipts").join(format!("{id}.json")))
 }
-fn record_path(c: &Candidate) -> Option<String> {
+pub(super) fn record_path(c: &Candidate) -> Option<String> {
     match c {
         Candidate::Topic { topic } => Some(format!("topics/topics/{}.md", topic.id)),
         Candidate::Claim { claim } | Candidate::Correction { claim, .. } => {
@@ -21,7 +21,11 @@ fn record_path(c: &Candidate) -> Option<String> {
         _ => None,
     }
 }
-fn pin(ctx: &Context, hashes: &mut BTreeMap<String, Option<Hash>>, path: &str) -> WResult<()> {
+pub(super) fn pin(
+    ctx: &Context,
+    hashes: &mut BTreeMap<String, Option<Hash>>,
+    path: &str,
+) -> WResult<()> {
     let bytes = if path.starts_with("topics/") {
         bytes_optional(&target_path(&ctx.root, path, false)?)?
     } else {
@@ -91,6 +95,7 @@ fn blank(ctx: &Context, kind: SetupDecisionKind) -> SetupReceipt {
         deferred_ids: vec![],
         candidates: vec![],
         revisions: vec![],
+        connections: vec![],
         expected_hashes: BTreeMap::new(),
         fingerprint: String::new(),
         max_records_per_operation: MAX_RECORDS as u32,
@@ -98,7 +103,7 @@ fn blank(ctx: &Context, kind: SetupDecisionKind) -> SetupReceipt {
         created_at: now(),
     }
 }
-fn current(state: &State, id: &str) -> WResult<Claim> {
+pub(super) fn current(state: &State, id: &str) -> WResult<Claim> {
     let c = state
         .claims
         .get(id)
@@ -116,7 +121,10 @@ fn current(state: &State, id: &str) -> WResult<Claim> {
     }
     Ok(c.clone())
 }
-fn save_preview(ctx: &Context, request: SetupSavePreviewRequest) -> WResult<SetupReceipt> {
+pub(super) fn save_preview(
+    ctx: &Context,
+    request: SetupSavePreviewRequest,
+) -> WResult<SetupReceipt> {
     let mut job = get_job(ctx, &request.job_id)?;
     graph::issues(ctx, &mut job)?;
     let state = load(ctx)?;
@@ -124,12 +132,7 @@ fn save_preview(ctx: &Context, request: SetupSavePreviewRequest) -> WResult<Setu
         job.graph
             .items
             .iter()
-            .filter(|i| {
-                matches!(
-                    i.disposition,
-                    DraftDisposition::Pending | DraftDisposition::Deferred
-                )
-            })
+            .filter(|i| i.disposition == DraftDisposition::Pending)
             .map(|i| i.item_id.clone())
             .collect()
     } else {
@@ -252,10 +255,11 @@ fn save_preview(ctx: &Context, request: SetupSavePreviewRequest) -> WResult<Setu
     for c in &r.candidates {
         pin_candidate(ctx, &state, c, &mut r.expected_hashes)?;
     }
-    r.operation_count = r.candidates.len().div_ceil(30) as u32;
+    let edits = checkpoint(ctx, r.job_id.as_ref().unwrap())?.edits;
+    r.operation_count = decision_chunks(&r.candidates, &edits, false)?.len() as u32;
     finalize(ctx, r, None, None)
 }
-fn collected(state: &State, receipt: &SetupReceipt) -> Option<SetupDecisionResult> {
+pub(super) fn collected(state: &State, receipt: &SetupReceipt) -> Option<SetupDecisionResult> {
     let mut parts: Vec<_> = state
         .receipts
         .values()
@@ -283,7 +287,7 @@ fn collected(state: &State, receipt: &SetupReceipt) -> Option<SetupDecisionResul
 fn review_id(record: &str) -> Id {
     stable_id(&format!("topics-review-v1:{record}"))
 }
-fn metadata_record(
+pub(super) fn metadata_record(
     op: &str,
     id: &str,
     state: ReviewState,
@@ -464,6 +468,7 @@ impl WorkspaceService {
                 )?;
             }
             r.operation_count = 1;
+            validate_candidate_shapes(&r.candidates)?;
             let receipt = finalize(ctx, r, Some(statement.clone()), Some(rule.clone()))?;
             Ok(SetupCorrectionPreview {
                 receipt,
@@ -473,47 +478,6 @@ impl WorkspaceService {
                 rule,
             })
         })
-    }
-    pub fn setup_decide(&self, request: SetupDecisionRequest) -> WResult<SetupDecisionResult> {
-        self.with(&request.root_id,|ctx|{
-  let reviewed:Reviewed=read_json(&receipt_path(ctx,&request.receipt_id)?)?;let r=reviewed.receipt;
-  let mut check=r.clone();check.fingerprint.clear();if r.root_id!=ctx.root_id||r.fingerprint!=request.expected_fingerprint||digest(&check)?!=r.fingerprint{return Err(error("conflict","Receipt changed; refresh the exact save or confirmation preview"))}
-  let state=load(ctx)?;if let Some(done)=collected(&state,&r){if done.status==SetupDecisionStatus::Completed{return Ok(done)}return Err(error("conflict","A bounded decision was partially applied; inspect its operations and refresh the remaining selection"))}
-  if let Some(id)=&r.job_id{let job=get_job(ctx,id)?;revision(&job,r.job_revision.ok_or_else(||error("conflict","Missing reviewed job revision"))?)?;
-   let refreshed=save_preview(ctx,SetupSavePreviewRequest{root_id:ctx.root_id.clone(),job_id:id.clone(),item_ids:r.requested_ids.clone()})?;
-   if refreshed.candidates!=r.candidates||refreshed.included_ids!=r.included_ids{return Err(error("conflict","Eligible knowledge or dependency closure changed; inspect a refreshed receipt"))}
-  }
-  for(path,expected)in &r.expected_hashes{let mut current=BTreeMap::new();pin(ctx,&mut current,path).map_err(|_|error("conflict","Referenced source unavailable; refresh the receipt"))?;if current.get(path)!=Some(expected)||state.conflicts.contains(path){return Err(error("conflict","Source, dependency or revision changed; refresh the exact receipt before approving"))}}
-  for c in &r.revisions{current(&state,&c.revision_id)?;}
-  if r.included_ids.is_empty(){return Ok(SetupDecisionResult{receipt:r.clone(),status:SetupDecisionStatus::Completed,operations:vec![],saved_ids:vec![],deferred_ids:r.deferred_ids.clone(),error:None})}
-  let edits=if let Some(job)=&r.job_id{checkpoint(ctx,job)?.edits}else{vec![]};
-  let mut result=SetupDecisionResult{receipt:r.clone(),status:SetupDecisionStatus::Partial,operations:vec![],saved_ids:vec![],deferred_ids:r.deferred_ids.clone(),error:None};
-  let total=if r.kind==SetupDecisionKind::Confirm{r.revisions.len()}else{r.candidates.len()};
-  for (chunk_index,start)in(0..total).step_by(30).enumerate(){
-   let state=load(ctx)?;let op=new_id();let mut records=vec![];let end=(start+30).min(total);let mut dependencies=vec![];
-   if r.kind==SetupDecisionKind::Confirm{for c in &r.revisions[start..end]{records.push(metadata_record(&op,&c.revision_id,ReviewState::ConfirmedByYou,&r,None)?);dependencies.push(c.revision_id.clone());result.saved_ids.push(c.revision_id.clone());}}
-   else{
-    let mut validate_state=load(ctx)?;
-    if let Some(s)=&reviewed.statement{validate_state.statements.insert(s.id.clone(),s.clone());records.push((format!("topics/statements/{}.md",s.id),Record::new("statement",&s.id,&op,s)?));}
-    let selected=&r.candidates[start..end];
-    for edit in &edits{if selected.iter().any(|c|proposal::candidate_ids(std::slice::from_ref(c)).contains(&match &edit.after{Candidate::Claim{claim}=>claim.revision_id.clone(),_=>String::new()})){validate_state.statements.insert(edit.statement.id.clone(),edit.statement.clone());records.push((format!("topics/statements/{}.md",edit.statement.id),Record::new("statement",&edit.statement.id,&op,&edit.statement)?));}}
-    proposal::validate(ctx,&validate_state,selected,None,true,false)?;
-    for c in selected{let path=record_path(c).ok_or_else(||error("invalid_input","Issues cannot be saved as baseline facts"))?;let id=proposal::candidate_ids(std::slice::from_ref(c))[0].clone();let(kind,data)=match c{Candidate::Topic{topic}=>("topic",json_value(topic)?),Candidate::Claim{claim}|Candidate::Correction{claim,..}=>("claim",json_value(claim)?),Candidate::Connection{connection}=>("connection",json_value(connection)?),_=>unreachable!()};records.push((path,Record::new(kind,&id,&op,data)?));
-     let statement=match c{Candidate::Claim{claim}|Candidate::Correction{claim,..}=>claim.sources.iter().find_map(|e|if let Evidence::UserStatement{statement_id}=e{Some(statement_id.clone())}else{None}),_=>None};
-     if !matches!(c,Candidate::Topic{..}){records.push(metadata_record(&op,&id,if statement.is_some(){ReviewState::ConfirmedByYou}else{ReviewState::FromNotes},&r,statement)?);}
-     if let Candidate::Correction{rule,..}=c{records.push((format!("topics/rules/{}.md",rule.id),Record::new("rule",&rule.id,&op,rule)?));}
-     dependencies.extend(proposal::dependencies(std::slice::from_ref(c)));result.saved_ids.push(id);
-    }
-   }
-   let planned=Operation{id:op.clone(),status:"committed".into(),description:"Apply exact setup review receipt".into(),created_at:now()};result.operations.push(planned);result.status=if end==total{SetupDecisionStatus::Completed}else{SetupDecisionStatus::Partial};
-   let receipt_record_id=stable_id(&format!("{}:{chunk_index}",r.receipt_id));records.push((format!("topics/receipts/{receipt_record_id}.md"),Record::new("receipt",&receipt_record_id,&op,&result)?));
-   if records.len()>MAX_RECORDS{return Err(error("invalid_input","Decision operation exceeds bounded record limit; preview a smaller matching set"))}
-   let mut expected=state.hashes.clone();for(path,_)in &records{expected.entry(path.clone()).or_insert(None);}
-   match commit(ctx,"Apply exact setup review receipt",records,CommitIntent{dependencies,tombstones:vec![],undo_of:None,expected:Some(&expected),proposal:None}){Ok(operation)=>{*result.operations.last_mut().unwrap()=operation;},Err(e)=>{result.operations.pop();result.saved_ids.truncate(start);result.status=if result.operations.is_empty(){SetupDecisionStatus::Conflict}else{SetupDecisionStatus::Partial};result.error=Some(e);return Ok(result)}}
-  }
-  if let Some(id)=&r.job_id{let mut job=get_job(ctx,id)?;for i in &mut job.graph.items{if result.saved_ids.contains(&i.item_id){i.disposition=DraftDisposition::Saved;}}bump(&mut job)?;save_job(ctx,&job)?;}
-  Ok(result)
- })
     }
     pub fn setup_topic_review(&self, request: TopicGetRequest) -> WResult<SetupTopicReview> {
         self.with(&request.root_id, |ctx| {
@@ -533,10 +497,7 @@ impl WorkspaceService {
                     .unwrap_or_else(|| {
                         let statement = c.sources.iter().find_map(|e| {
                             if let Evidence::UserStatement { statement_id } = e
-                                && state
-                                    .statements
-                                    .get(statement_id)
-                                    .is_some_and(|s| s.topic_id == c.subject_id)
+                                && scopes::direct_human_value_supported(&state, c)
                             {
                                 Some(statement_id.clone())
                             } else {
@@ -573,7 +534,7 @@ impl WorkspaceService {
                     },
                 ));
             }
-            Ok(SetupTopicReview { topic, reviews })
+            Ok(SetupTopicReview { topic, reviews, context: vec![] })
         })
     }
 }

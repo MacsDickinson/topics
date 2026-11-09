@@ -1,5 +1,5 @@
 use super::*;
-fn check_sources(ctx: &Context, sources: &[SetupManifestSource]) -> WResult<()> {
+pub(super) fn check_sources(ctx: &Context, sources: &[SetupManifestSource]) -> WResult<()> {
     let state = load(ctx)?;
     for s in sources {
         let bytes = scopes::source_bytes(ctx, &s.source.path).map_err(|_| {
@@ -71,12 +71,23 @@ pub(super) fn capability(
             "Batch scope differs from reviewed manifest",
         ));
     }
-    let ids = scope
+    let mut ids: BTreeSet<_> = scope
         .preview
         .sources
         .iter()
         .map(|s| s.source_id.clone())
         .collect();
+    // Previously transmitted, completed draft context is delegated by the same
+    // immutable job consent, never by a human inventory or a fresh file scan.
+    for (spec, completed) in job.manifest.batches.iter().zip(&job.batches) {
+        if completed.status == SetupBatchStatus::Completed {
+            for source in &spec.sources {
+                if check_sources(ctx, std::slice::from_ref(source)).is_ok() {
+                    ids.insert(source.source.source_id.clone());
+                }
+            }
+        }
+    }
     Ok((job, ids))
 }
 impl WorkspaceService {
@@ -105,13 +116,47 @@ impl WorkspaceService {
                     "Reviewed manifest integrity changed; preview again",
                 ));
             }
+            for batch in &manifest.batches {
+                check_sources(ctx, &batch.sources)?;
+            }
             for job in jobs(ctx)? {
                 if job.manifest.manifest_id == manifest.manifest_id {
                     return Ok(job);
                 }
-            }
-            for batch in &manifest.batches {
-                check_sources(ctx, &batch.sources)?;
+                let state = load(ctx)?;
+                let was_undone = state.operations.iter().any(|operation| {
+                    undone(&state, &operation.operation.id)
+                        && operation
+                            .targets
+                            .iter()
+                            .filter_map(|target| target.record.as_ref())
+                            .any(|record| {
+                                record.record_kind == "receipt"
+                                    && record
+                                        .data
+                                        .get("receipt")
+                                        .and_then(|r| r.get("job_id"))
+                                        .and_then(Value::as_str)
+                                        == Some(job.job_id.as_str())
+                            })
+                });
+                // A new preview of exactly the same selection is an existing
+                // job, not another copy of its unresolved review questions.
+                if !was_undone
+                    && job.manifest.spec == manifest.spec
+                    && job.manifest.roles == manifest.roles
+                    && job.manifest.limits == manifest.limits
+                    && job.manifest.runtime == manifest.runtime
+                    && job
+                        .manifest
+                        .batches
+                        .iter()
+                        .map(|b| &b.sources)
+                        .eq(manifest.batches.iter().map(|b| &b.sources))
+                    && job.manifest.excluded == manifest.excluded
+                {
+                    return Ok(job);
+                }
             }
             if manifest.batches.is_empty() {
                 return Err(error(
@@ -130,6 +175,7 @@ impl WorkspaceService {
                     attempt: 0,
                     error: None,
                     proposal_ids: vec![],
+                    completed_source_ids: vec![],
                 })
                 .collect();
             let coverage = SetupCoverage {
@@ -151,6 +197,7 @@ impl WorkspaceService {
                 job_id: new_id(),
                 root_id: ctx.root_id.clone(),
                 manifest,
+                prior_consents: vec![],
                 status: SetupJobStatus::Ready,
                 revision: 0,
                 batches,
@@ -177,6 +224,19 @@ impl WorkspaceService {
         self.with(&request.root_id, |ctx| {
             let mut job = get_job(ctx, &request.job_id)?;
             revision(&job, request.expected_revision)?;
+            if matches!(
+                request.action,
+                SetupJobAction::Resume | SetupJobAction::RetryFailed
+            ) && job
+                .batches
+                .iter()
+                .any(|b| b.status == SetupBatchStatus::Running)
+            {
+                return Err(error(
+                    "conflict",
+                    "Pause the running batch before resuming or retrying setup",
+                ));
+            }
             match request.action {
                 SetupJobAction::Pause | SetupJobAction::Cancel => {
                     for b in &mut job.batches {

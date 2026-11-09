@@ -1,0 +1,52 @@
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-core)
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Finished `test` profile [unoptimized] target(s) in 5.44s
+     Running tests/setup_amendments.rs (/tmp/topics-setup-core-target/debug/deps/setup_amendments-c24cdb4b93b00a02)
+
+running 5 tests
+test successful_empty_terminal_completion_is_guarded_without_empty_model_proposals ... FAILED
+test classification_is_explicit_projection_separate_from_verification ... FAILED
+test explicit_reconsent_preserves_completed_graph_and_issues_only_unsent_subsets ... FAILED
+test supplemental_context_is_durable_without_claims_rules_or_duplicated_corrections ... FAILED
+test exact_connection_confirmation_preserves_claim_verification_and_sources ... FAILED
+
+failures:
+
+---- successful_empty_terminal_completion_is_guarded_without_empty_model_proposals stdout ----
+
+thread 'successful_empty_terminal_completion_is_guarded_without_empty_model_proposals' (6756835) panicked at crates/topics-store/tests/setup_amendments.rs:6:432:
+successful app-owned empty terminal completion needs a checkpoint: ApiError { code: "invalid_input", message: "Submit 1–200 review candidates", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- classification_is_explicit_projection_separate_from_verification stdout ----
+
+thread 'classification_is_explicit_projection_separate_from_verification' (6756832) panicked at crates/topics-store/tests/setup_amendments.rs:14:128:
+assertion failed: f.job.as_ref().unwrap().graph.items.iter().all(|item|
+        item.assertion_kind == DraftAssertionKind::ReportedExplicit)
+
+---- explicit_reconsent_preserves_completed_graph_and_issues_only_unsent_subsets stdout ----
+
+thread 'explicit_reconsent_preserves_completed_graph_and_issues_only_unsent_subsets' (6756834) panicked at crates/topics-store/tests/setup_amendments.rs:8:772:
+one exact updated consent preserves existing completed work: ApiError { code: "not_implemented", message: "Explicit job reconsent is pending", details: None }
+
+---- supplemental_context_is_durable_without_claims_rules_or_duplicated_corrections stdout ----
+
+thread 'supplemental_context_is_durable_without_claims_rules_or_duplicated_corrections' (6756836) panicked at crates/topics-store/tests/setup_amendments.rs:12:341:
+an explicit human Save records supplemental topic context: ApiError { code: "not_implemented", message: "Supplemental topic context is pending", details: None }
+
+---- exact_connection_confirmation_preserves_claim_verification_and_sources stdout ----
+
+thread 'exact_connection_confirmation_preserves_claim_verification_and_sources' (6756833) panicked at crates/topics-store/tests/setup_amendments.rs:10:466:
+connections have explicit per-record confirmation: ApiError { code: "not_implemented", message: "Connection confirmation is pending", details: None }
+
+
+failures:
+    classification_is_explicit_projection_separate_from_verification
+    exact_connection_confirmation_preserves_claim_verification_and_sources
+    explicit_reconsent_preserves_completed_graph_and_issues_only_unsent_subsets
+    successful_empty_terminal_completion_is_guarded_without_empty_model_proposals
+    supplemental_context_is_durable_without_claims_rules_or_duplicated_corrections
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+
+error: test failed, to rerun pass `-p topics-store --test setup_amendments`

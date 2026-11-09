@@ -43,6 +43,7 @@ pub fn relation(a: &Topic, b: &Topic, s: &SourceRef) -> Connection {
     }
 }
 pub struct Fixture {
+    pub started: std::time::Instant,
     pub temp: tempfile::TempDir,
     pub app: PathBuf,
     pub root: PathBuf,
@@ -83,6 +84,7 @@ impl Fixture {
             .root
             .root_id;
         Self {
+            started: std::time::Instant::now(),
             temp,
             app,
             root,

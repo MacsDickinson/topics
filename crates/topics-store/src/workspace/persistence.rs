@@ -941,6 +941,7 @@ mod tests {
         let partition = temp.path().join("app-data/root");
         fs::create_dir_all(&partition).unwrap();
         let ctx = Context {
+            instance_id: new_id(),
             root,
             root_id: new_id(),
             partition,

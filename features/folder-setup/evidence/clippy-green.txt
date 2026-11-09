@@ -1,0 +1,4 @@
+    Checking topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Checking topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-cli)
+    Checking topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-bdd)
+    Finished `dev` profile [unoptimized] target(s) in 3.94s

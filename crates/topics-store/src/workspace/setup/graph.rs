@@ -1,6 +1,5 @@
 use super::*;
-use jobs::capability;
-fn key(c: &Candidate) -> Id {
+pub(super) fn key(c: &Candidate) -> Id {
     match c {
         Candidate::Topic { topic } => topic.id.clone(),
         Candidate::Claim { claim } | Candidate::Correction { claim, .. } => {
@@ -42,7 +41,7 @@ fn corroborates(
    c.relation==o.relation&&ep(&c.from,&new.id).is_some()&&ep(&c.to,&new.id).is_some()&&ep(&c.from,&new.id)==ep(&o.from,&old.id)&&ep(&c.to,&new.id)==ep(&o.to,&old.id)
   }else{false}),_=>false})
 }
-fn validation_state(ctx: &Context, job: &SetupJob) -> WResult<State> {
+pub(super) fn validation_state(ctx: &Context, job: &SetupJob) -> WResult<State> {
     let mut state = load(ctx)?;
     for item in &job.graph.items {
         if item.disposition != DraftDisposition::Dismissed
@@ -56,7 +55,7 @@ fn validation_state(ctx: &Context, job: &SetupJob) -> WResult<State> {
     }
     Ok(state)
 }
-fn validate_input(
+pub(super) fn validate_input(
     ctx: &Context,
     job: &SetupJob,
     request: &SetupBatchStageRequest,
@@ -73,6 +72,21 @@ fn validate_input(
         run_id: request.capability.run_id.clone(),
     };
     proposal::validate_model_boundary(ctx, &state, &request.candidates, selected, &origin)?;
+    for candidate in &request.candidates {
+        let ids = proposal::candidate_ids(std::slice::from_ref(candidate));
+        for existing in &job.graph.items {
+            if proposal::candidate_ids(std::slice::from_ref(&existing.candidate))
+                .iter()
+                .any(|id| ids.contains(id))
+                && !equivalent(&existing.candidate, candidate)
+            {
+                return Err(error(
+                    "invalid_input",
+                    "A draft identity was reused for different content; propose a fresh revision",
+                ));
+            }
+        }
+    }
     let input = proposal::normalize_model_candidates(
         &state,
         &request.candidates,
@@ -88,6 +102,9 @@ fn validate_input(
 fn merge_sources(target: &mut Candidate, incoming: &Candidate) {
     match (target, incoming) {
         (Candidate::Claim { claim: a }, Candidate::Claim { claim: b }) => {
+            if a.uncertainty.is_none() {
+                a.uncertainty.clone_from(&b.uncertainty);
+            }
             for e in &b.sources {
                 if !a.sources.contains(e) {
                     a.sources.push(e.clone())
@@ -95,6 +112,9 @@ fn merge_sources(target: &mut Candidate, incoming: &Candidate) {
             }
         }
         (Candidate::Connection { connection: a }, Candidate::Connection { connection: b }) => {
+            if a.uncertainty.is_none() {
+                a.uncertainty.clone_from(&b.uncertainty);
+            }
             for s in &b.sources {
                 if !a.sources.contains(s) {
                     a.sources.push(s.clone())
@@ -147,7 +167,7 @@ fn equivalent(a: &Candidate, b: &Candidate) -> bool {
         _ => false,
     }
 }
-fn merge(
+pub(super) fn merge(
     ctx: &Context,
     job: &mut SetupJob,
     mut candidates: Vec<Candidate>,
@@ -172,6 +192,7 @@ fn merge(
                         && let Candidate::Topic { topic: old } = &i.candidate
                         && old.id != topic.id
                         && old.topic_kind == topic.topic_kind
+                        && old.sensitivity != Sensitivity::LocalOnly
                         && normalized_name(&old.name) == normalized_name(&topic.name)
                     {
                         Some(old)
@@ -191,7 +212,9 @@ fn merge(
     job.graph.canonical_ids = mapping;
     let state = load(ctx)?;
     for mut c in candidates {
-        if let Candidate::Topic { topic } = &mut c {
+        if let Candidate::Topic { topic } = &mut c
+            && topic.sensitivity == Sensitivity::CloudAllowed
+        {
             topic.sensitivity = Sensitivity::Unknown;
         }
         // Accepted correction rules suppress exact bad candidates, never create replacements.
@@ -225,6 +248,7 @@ fn merge(
                 batch_ids: vec![batch_id.into()],
                 proposal_ids: vec![proposal_id.into()],
                 independent_evidence_groups: vec![],
+                assertion_kind: DraftAssertionKind::Unclassified,
             });
         }
     }
@@ -233,7 +257,7 @@ fn merge(
         proposal::remap(std::slice::from_mut(&mut item.candidate), &mapping)?;
         item.independent_evidence_groups = proposal::evidence_refs(&item.candidate)
             .iter()
-            .map(|s| s.document_hash.clone())
+            .map(|s| s.passage_hash.clone())
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect();
@@ -285,7 +309,10 @@ pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
         }
     }
     for item in &job.graph.items {
-        if item.disposition == DraftDisposition::Dismissed {
+        if matches!(
+            item.disposition,
+            DraftDisposition::Dismissed | DraftDisposition::Saved
+        ) {
             continue;
         }
         let c = &item.candidate;
@@ -337,11 +364,10 @@ pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
                     ))
                 }
                 if !claim.supersedes.is_empty()
-                    || state.claims.values().any(|o| {
-                        o.subject_id == claim.subject_id
-                            && o.predicate == claim.predicate
-                            && o.value != claim.value
-                    })
+                    || state
+                        .claims
+                        .values()
+                        .any(|o| o.subject_id == claim.subject_id && o.predicate == claim.predicate)
                 {
                     reasons.push((
                         SetupIssueKind::Replacement,
@@ -350,6 +376,18 @@ pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
                 }
             }
             Candidate::Connection { connection } => {
+                if state.connections.values().any(|old| {
+                    old.from == connection.from
+                        && old.to == connection.to
+                        && old.relation == connection.relation
+                        && old.valid_from == connection.valid_from
+                        && old.valid_to == connection.valid_to
+                }) {
+                    reasons.push((
+                        SetupIssueKind::Replacement,
+                        format!("relationship-evidence:{}", connection.id),
+                    ));
+                }
                 if connection.sources.is_empty() {
                     reasons.push((
                         SetupIssueKind::Unsupported,
@@ -403,235 +441,42 @@ pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
         }
     }
     job.graph.issues = groups.into_values().collect();
-    Ok(())
-}
-impl WorkspaceService {
-    pub fn setup_batch_validate(&self, request: SetupBatchStageRequest) -> WResult<()> {
-        self.with(&request.capability.root_id, |ctx| {
-            let (job, selected) = capability(ctx, &request.capability)?;
-            validate_input(ctx, &job, &request, &selected)
-        })
-    }
-    pub fn setup_batch_stage_guarded(
-        &self,
-        request: SetupBatchStageRequest,
-        publisher: impl FnOnce(&Proposal, &mut dyn FnMut() -> WResult<()>) -> WResult<()>,
-    ) -> WResult<SetupJob> {
-        self.with(&request.capability.root_id, |ctx| {
-            let (mut job, selected) = capability(ctx, &request.capability)?;
-            // Consume even malformed terminal turns; the runtime owns cancellation before this action.
-            revoke(ctx, &request.capability.run_id)?;
-            validate_input(ctx, &job, &request, &selected)?;
-            let state = load(ctx)?;
-            let origin = Origin::Analysis {
-                run_id: request.capability.run_id.clone(),
-            };
-            // Review-only identity alternatives are never returned by model validation.
-            let normalized = proposal::normalize_model_candidates(
-                &state,
-                &request.candidates,
-                &origin,
-                proposal::NormalizationMode::Review,
-                None,
-            )?;
-            let p = Proposal {
-                id: new_id(),
-                root_id: ctx.root_id.clone(),
-                scope_id: Some(request.capability.scope_id.clone()),
-                origin,
-                status: ProposalStatus::Pending,
-                fingerprint: proposal::fingerprint(&normalized)?,
-                candidates: normalized,
-                created_at: now(),
-            };
-            merge(
-                ctx,
-                &mut job,
-                p.candidates.clone(),
-                &p.id,
-                &request.capability.batch_id,
-            )?;
-            let batch = job
-                .batches
-                .iter_mut()
-                .find(|b| b.batch_id == request.capability.batch_id)
-                .unwrap();
-            batch.status = SetupBatchStatus::Completed;
-            batch.proposal_ids.push(p.id.clone());
-            batch.error = None;
-            job.status = SetupJobStatus::Ready;
-            bump(&mut job)?;
-            coverage(&mut job);
-            let mut saved = checkpoint(ctx, &job.job_id)?;
-            saved.job = job.clone();
-            saved.owner = ctx.instance_id.clone();
-            let mut prepared = prepare_checkpoint(&job_path(ctx, &job.job_id)?, &saved)?;
-            let mut action = || prepared.publish();
-            publisher(&p, &mut action)?;
-            if !prepared.published {
-                return Err(error(
-                    "internal",
-                    "Publisher did not authorize setup checkpoint visibility",
-                ));
-            }
-            Ok(job)
-        })
-    }
-    pub fn setup_draft_context(
-        &self,
-        request: SetupDraftContextRequest,
-    ) -> WResult<SetupDraftContext> {
-        self.with(&request.capability.root_id, |ctx| {
-            let (job, selected) = capability(ctx, &request.capability)?;
-            let state = load(ctx)?;
-            let mut claims = vec![];
-            let mut connections = vec![];
-            let mut ids = BTreeSet::new();
-            for item in &job.graph.items {
-                if item.disposition == DraftDisposition::Dismissed {
-                    continue;
-                }
-                let refs = proposal::evidence_refs(&item.candidate);
-                if refs.is_empty()
-                    || refs.iter().any(|s| {
-                        !selected.contains(&s.source_id)
-                            || scopes::validate_source(ctx, &state, s).is_err()
-                    })
-                {
-                    continue;
-                }
-                match &item.candidate {
-                    Candidate::Claim { claim }
-                        if !scopes::topic_restricted(
-                            &validation_state(ctx, &job)?,
-                            &claim.subject_id,
-                        ) =>
-                    {
-                        ids.insert(claim.subject_id.clone());
-                        claims.push(claim.clone())
-                    }
-                    Candidate::Connection { connection } => {
-                        ids.extend(proposal::dependencies(std::slice::from_ref(
-                            &item.candidate,
-                        )));
-                        connections.push(connection.clone())
-                    }
-                    _ => {}
-                }
-            }
-            let topics = job
-                .graph
-                .items
-                .iter()
-                .filter_map(|i| {
-                    if let Candidate::Topic { topic } = &i.candidate
-                        && ids.contains(&topic.id)
-                        && topic.sensitivity != Sensitivity::LocalOnly
-                    {
-                        Some(topic.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            Ok(SetupDraftContext {
-                topics,
-                claims,
-                connections,
-            })
-        })
-    }
-    pub fn setup_draft_edit(&self, request: SetupDraftEditRequest) -> WResult<SetupJob> {
-        self.with(&request.root_id, |ctx| {
-            let mut job = get_job(ctx, &request.job_id)?;
-            revision(&job, request.expected_revision)?;
-            validate_candidate_shapes(std::slice::from_ref(&request.candidate))?;
-            let item = job
-                .graph
-                .items
-                .iter_mut()
-                .find(|i| i.item_id == request.item_id && i.disposition != DraftDisposition::Saved)
-                .ok_or_else(|| error("invalid_input", "Editable draft item does not exist"))?;
-            if key(&item.candidate) != key(&request.candidate) {
-                return Err(error(
-                    "invalid_input",
-                    "Draft edit must preserve its record identity",
-                ));
-            }
-            let before = item.candidate.clone();
-            let mut after = request.candidate;
-            // Human edits are exact statements about a specific assertion, not authority for siblings.
-            let statement = if let Candidate::Claim { claim } = &mut after {
-                let s = UserStatement {
-                    id: new_id(),
-                    topic_id: claim.subject_id.clone(),
-                    text: format!(
-                        "Human draft edit: {}",
-                        serde_json::to_string(&claim).map_err(internal)?
-                    ),
-                    recorded_at: now(),
-                };
-                claim.sources.push(Evidence::UserStatement {
-                    statement_id: s.id.clone(),
-                });
-                Some(s)
-            } else {
-                None
-            };
-            item.candidate = after.clone();
-            bump(&mut job)?;
-            issues(ctx, &mut job)?;
-            let mut saved = checkpoint(ctx, &job.job_id)?;
-            if let Some(statement) = statement {
-                saved.edits.push(DraftEdit {
-                    before,
-                    after,
-                    statement,
-                });
-            }
-            saved.job = job.clone();
-            save_json(&job_path(ctx, &job.job_id)?, &saved)?;
-            Ok(job)
-        })
-    }
-    pub fn setup_draft_disposition(
-        &self,
-        request: SetupDraftDispositionRequest,
-    ) -> WResult<SetupJob> {
-        self.with(&request.root_id, |ctx| {
-            if request.disposition == DraftDisposition::Saved {
-                return Err(error(
-                    "forbidden",
-                    "Saving requires an exact reviewed decision receipt",
-                ));
-            }
-            let mut job = get_job(ctx, &request.job_id)?;
-            revision(&job, request.expected_revision)?;
-            if request.item_ids.iter().any(|id| {
-                !job.graph
+    job.graph.issues.sort_by_key(|issue| {
+        let against_confirmed = issue.issue_kind == SetupIssueKind::Replacement
+            && issue.item_ids.iter().any(|id| {
+                job.graph
                     .items
                     .iter()
-                    .any(|i| &i.item_id == id && i.disposition != DraftDisposition::Saved)
-            }) {
-                return Err(error("invalid_input", "Select pending draft items"));
+                    .find(|item| &item.item_id == id)
+                    .is_some_and(|item| match &item.candidate {
+                        Candidate::Claim { claim } => state.claims.values().any(|old| {
+                            old.subject_id == claim.subject_id
+                                && old.predicate == claim.predicate
+                                && old.value != claim.value
+                                && !state
+                                    .claims
+                                    .values()
+                                    .any(|next| next.supersedes.contains(&old.revision_id))
+                                && (state.reviews.values().any(|review| {
+                                    review.record_id == old.revision_id
+                                        && review.state == ReviewState::ConfirmedByYou
+                                }) || scopes::direct_human_value_supported(&state, old))
+                        }),
+                        _ => false,
+                    })
+            });
+        let rank = if against_confirmed {
+            0
+        } else {
+            match issue.issue_kind {
+                SetupIssueKind::Identity => 1,
+                SetupIssueKind::Contradiction => 2,
+                SetupIssueKind::Replacement => 3,
+                SetupIssueKind::Unsupported => 4,
+                SetupIssueKind::Inferred => 5,
             }
-            for i in &mut job.graph.items {
-                if request.item_ids.contains(&i.item_id) {
-                    i.disposition = request.disposition
-                }
-            }
-            for issue in &mut job.graph.issues {
-                if issue
-                    .item_ids
-                    .iter()
-                    .any(|id| request.item_ids.contains(id))
-                {
-                    issue.deferred = request.disposition == DraftDisposition::Deferred;
-                }
-            }
-            bump(&mut job)?;
-            save_job(ctx, &job)?;
-            Ok(job)
-        })
-    }
+        };
+        (rank, issue.key.clone())
+    });
+    Ok(())
 }

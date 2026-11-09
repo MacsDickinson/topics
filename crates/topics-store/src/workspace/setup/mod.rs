@@ -1,4 +1,6 @@
 //! Human folder setup services; all model publications remain capability guarded.
+mod decisions;
+mod draft;
 mod graph;
 mod inventory;
 mod jobs;
@@ -71,7 +73,140 @@ fn get_job(ctx: &Context, id: &str) -> WResult<SetupJob> {
         saved.owner = ctx.instance_id.clone();
         save_json(&job_path(ctx, id)?, &saved)?;
     }
+    // A Markdown commit can complete before the cache is updated, or undo can
+    // remove a previously saved receipt. Derive only acceptance from markers.
+    let state = load(ctx)?;
+    let committed: BTreeSet<_> = state
+        .receipts
+        .values()
+        .filter(|r| r.receipt.job_id.as_deref() == Some(id))
+        .flat_map(|r| r.saved_ids.iter().cloned())
+        .collect();
+    let mut changed = false;
+    for item in &mut saved.job.graph.items {
+        let equivalent = match &item.candidate {
+            Candidate::Topic { topic } => {
+                state.topics.get(&topic.id).is_some_and(|old| old == topic)
+            }
+            Candidate::Claim { claim } => {
+                let accepted = state.claims.values().find(|old| {
+                    proposal::same_claim(old, claim)
+                        && old.uncertainty == claim.uncertainty
+                        && claim
+                            .sources
+                            .iter()
+                            .all(|source| old.sources.contains(source))
+                        && !state
+                            .claims
+                            .values()
+                            .any(|next| next.supersedes.contains(&old.revision_id))
+                });
+                if let Some(old) = accepted {
+                    link(&mut saved.job.graph.canonical_ids, &claim.id, &old.id);
+                    link(
+                        &mut saved.job.graph.canonical_ids,
+                        &claim.revision_id,
+                        &old.revision_id,
+                    );
+                }
+                accepted.is_some()
+            }
+            Candidate::Connection { connection } => {
+                let accepted = state.connections.values().find(|old| {
+                    old.from == connection.from
+                        && old.to == connection.to
+                        && old.relation == connection.relation
+                        && old.valid_from == connection.valid_from
+                        && old.valid_to == connection.valid_to
+                        && old.uncertainty == connection.uncertainty
+                        && connection
+                            .sources
+                            .iter()
+                            .all(|source| old.sources.contains(source))
+                });
+                if let Some(old) = accepted {
+                    link(&mut saved.job.graph.canonical_ids, &connection.id, &old.id);
+                }
+                accepted.is_some()
+            }
+            _ => false,
+        };
+        let disposition = if committed.contains(&item.item_id) || equivalent {
+            DraftDisposition::Saved
+        } else if item.disposition == DraftDisposition::Saved {
+            DraftDisposition::Pending
+        } else {
+            item.disposition
+        };
+        changed |= disposition != item.disposition;
+        item.disposition = disposition;
+    }
+    for item in &mut saved.job.graph.items {
+        let before = item.candidate.clone();
+        proposal::remap(
+            std::slice::from_mut(&mut item.candidate),
+            &saved.job.graph.canonical_ids,
+        )?;
+        changed |= before != item.candidate;
+    }
+    if changed {
+        bump(&mut saved.job)?;
+        save_json(&job_path(ctx, id)?, &saved)?;
+    }
     Ok(saved.job)
+}
+fn link(mapping: &mut BTreeMap<Id, Id>, from: &str, to: &str) {
+    if from == to {
+        return;
+    }
+    for value in mapping.values_mut() {
+        if value == from {
+            *value = to.into();
+        }
+    }
+    mapping.insert(from.into(), to.into());
+}
+fn decision_chunks(
+    candidates: &[Candidate],
+    edits: &[DraftEdit],
+    statement: bool,
+) -> WResult<Vec<std::ops::Range<usize>>> {
+    let mut chunks = vec![];
+    let mut start = 0;
+    let mut records = 1 + usize::from(statement); // receipt plus correction evidence
+    for (index, candidate) in candidates.iter().enumerate() {
+        let ids = proposal::candidate_ids(std::slice::from_ref(candidate));
+        let history = edits
+            .iter()
+            .filter(|edit| {
+                proposal::candidate_ids(std::slice::from_ref(&edit.after))
+                    .iter()
+                    .any(|id| ids.contains(id))
+            })
+            .count();
+        let weight = history
+            + match candidate {
+                Candidate::Topic { .. } => 1,
+                Candidate::Correction { .. } => 3,
+                _ => 2,
+            };
+        if weight + 1 + usize::from(statement) > MAX_RECORDS {
+            return Err(error(
+                "invalid_input",
+                "Draft edit history exceeds one bounded operation; preserve it and review a smaller new revision",
+            ));
+        }
+        if index > start && (index - start == 30 || records + weight > MAX_RECORDS) {
+            chunks.push(start..index);
+            start = index;
+            records = 1 + usize::from(statement);
+        }
+        records += weight;
+    }
+    if start < candidates.len() {
+        chunks.push(start..candidates.len());
+    }
+    Ok(chunks)
 }
 fn save_job(ctx: &Context, job: &SetupJob) -> WResult<()> {
     let edits = if job_path(ctx, &job.job_id)?.exists() {
@@ -158,4 +293,10 @@ fn coverage(job: &mut SetupJob) {
             SetupJobStatus::FinishedWithGaps
         };
     }
+}
+
+impl WorkspaceService {
+    pub fn setup_job_reconsent(&self,_request:SetupJobReconsentRequest)->WResult<SetupJob>{Err(error("not_implemented","Explicit job reconsent is pending"))}
+    pub fn setup_connection_confirm_preview(&self,_request:SetupConnectionConfirmPreviewRequest)->WResult<SetupReceipt>{Err(error("not_implemented","Connection confirmation is pending"))}
+    pub fn setup_context_add(&self,_request:UserStatementRequest)->WResult<UserStatement>{Err(error("not_implemented","Supplemental topic context is pending"))}
 }

@@ -2,7 +2,9 @@ use super::*;
 fn role(path: &str, roles: &[FolderRoleOverride]) -> (FolderRole, String) {
     if let Some(r) = roles
         .iter()
-        .filter(|r| path == r.path || path.starts_with(&(r.path.clone() + "/")))
+        .filter(|r| {
+            r.path.is_empty() || path == r.path || path.starts_with(&(r.path.clone() + "/"))
+        })
         .max_by_key(|r| r.path.len())
     {
         return (r.role, "Your editable folder role".into());
@@ -35,7 +37,9 @@ fn overrides(roles: &[FolderRoleOverride]) -> WResult<()> {
         return Err(error("invalid_input", "Too many role overrides"));
     }
     for r in roles {
-        relative(&r.path)?;
+        if !r.path.is_empty() {
+            relative(&r.path)?;
+        }
     }
     Ok(())
 }
@@ -157,6 +161,12 @@ pub(super) fn inventory(ctx: &Context, roles: &[FolderRoleOverride]) -> WResult<
                 proposal: None,
             },
         )?;
+    }
+    if ctx.root.join("topics").exists() && !excluded.iter().any(|e| e.path == "topics") {
+        excluded.push(Exclusion {
+            path: "topics".into(),
+            reason: "Hidden/config folder or app-owned records".into(),
+        });
     }
     documents.sort_by_key(|d| d.source.path.clone());
     let mut folders: BTreeMap<String, InventoryFolder> = BTreeMap::new();
