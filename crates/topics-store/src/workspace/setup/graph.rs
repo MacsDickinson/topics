@@ -266,6 +266,31 @@ pub(super) fn merge(
     Ok(())
 }
 pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
+    for item in &mut job.graph.items {
+        item.assertion_kind = match &item.candidate {
+            Candidate::UnresolvedIdentity { .. } => DraftAssertionKind::IdentityQuestion,
+            Candidate::Correction { .. } => DraftAssertionKind::Correction,
+            Candidate::Claim { claim }
+                if !claim
+                    .sources
+                    .iter()
+                    .any(|e| matches!(e, Evidence::Passage { .. })) =>
+            {
+                DraftAssertionKind::Unsupported
+            }
+            Candidate::Connection { connection } if connection.sources.is_empty() => {
+                DraftAssertionKind::Unsupported
+            }
+            Candidate::Claim { claim } if claim.uncertainty.is_some() => {
+                DraftAssertionKind::InferredOrUncertain
+            }
+            Candidate::Connection { connection } if connection.uncertainty.is_some() => {
+                DraftAssertionKind::InferredOrUncertain
+            }
+            _ => DraftAssertionKind::ReportedExplicit,
+        };
+    }
+
     let state = load(ctx)?;
     let deferred: BTreeSet<_> = job
         .graph
@@ -317,10 +342,11 @@ pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
         }
         let c = &item.candidate;
         let mut reasons = vec![];
-        if proposal::evidence_refs(c)
-            .iter()
-            .any(|s| scopes::validate_source(ctx, &state, s).is_err())
-        {
+        if proposal::evidence_refs(c).iter().any(|s| {
+            scopes::validate_source(ctx, &state, s).is_err()
+                || scopes::source_sensitivity(&state, &s.path, &s.document_hash)
+                    == Sensitivity::LocalOnly
+        }) {
             reasons.push((
                 SetupIssueKind::Unsupported,
                 format!("stale:{}", item.item_id),

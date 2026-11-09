@@ -213,6 +213,14 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
     for claim in &receipt.revisions {
         current(&state, &claim.revision_id)?;
     }
+    for connection in &receipt.connections {
+        if state.connections.get(&connection.id) != Some(connection) {
+            return Err(error(
+                "conflict",
+                "Connection changed; refresh its exact confirmation receipt",
+            ));
+        }
+    }
     let edits = if let Some(job) = &receipt.job_id {
         checkpoint(ctx, job)?.edits
     } else {
@@ -227,7 +235,7 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
         error: None,
     };
     let total = if receipt.kind == SetupDecisionKind::Confirm {
-        receipt.revisions.len()
+        receipt.revisions.len() + receipt.connections.len()
     } else {
         receipt.candidates.len()
     };
@@ -253,16 +261,23 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
         let mut dependencies = vec![];
         let mut records = if receipt.kind == SetupDecisionKind::Confirm {
             let mut records = vec![];
-            for claim in &receipt.revisions[start..end] {
+            for index in start..end {
+                let id = if index < receipt.revisions.len() {
+                    receipt.revisions[index].revision_id.clone()
+                } else {
+                    receipt.connections[index - receipt.revisions.len()]
+                        .id
+                        .clone()
+                };
                 records.push(metadata_record(
                     &op,
-                    &claim.revision_id,
+                    &id,
                     ReviewState::ConfirmedByYou,
                     receipt,
                     None,
                 )?);
-                dependencies.push(claim.revision_id.clone());
-                result.saved_ids.push(claim.revision_id.clone());
+                dependencies.push(id.clone());
+                result.saved_ids.push(id);
             }
             records
         } else {

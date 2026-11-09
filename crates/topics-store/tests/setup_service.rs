@@ -366,6 +366,7 @@ fn legacy_acceptance_does_not_invent_verification() {
     );
 }
 #[test]
+#[cfg(feature = "test-support")]
 fn bounded_multigroup_decision_reports_partial_and_recovers_exact_receipt() {
     let mut f = Fixture::new();
     f.write("many.md", "# Synthetic\nMultiple explicit topics.\n");

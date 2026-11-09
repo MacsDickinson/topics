@@ -22,6 +22,16 @@ pub(super) fn check_sources(ctx: &Context, sources: &[SetupManifestSource]) -> W
     }
     Ok(())
 }
+pub(super) fn outstanding(
+    spec: &SetupManifestBatch,
+    batch: &SetupBatch,
+) -> Vec<SetupManifestSource> {
+    spec.sources
+        .iter()
+        .filter(|s| !batch.completed_source_ids.contains(&s.source.source_id))
+        .cloned()
+        .collect()
+}
 pub(super) fn capability(
     ctx: &Context,
     cap: &SetupBatchCapability,
@@ -58,10 +68,10 @@ pub(super) fn capability(
         .iter()
         .find(|b| b.batch_id == cap.batch_id)
         .ok_or_else(|| error("forbidden", "Manifest batch unavailable"))?;
-    check_sources(ctx, &expected.sources)?;
+    let remaining = outstanding(expected, batch);
+    check_sources(ctx, &remaining)?;
     if scope.preview.sources
-        != expected
-            .sources
+        != remaining
             .iter()
             .map(|s| s.source.clone())
             .collect::<Vec<_>>()
@@ -80,11 +90,13 @@ pub(super) fn capability(
     // Previously transmitted, completed draft context is delegated by the same
     // immutable job consent, never by a human inventory or a fresh file scan.
     for (spec, completed) in job.manifest.batches.iter().zip(&job.batches) {
-        if completed.status == SetupBatchStatus::Completed {
-            for source in &spec.sources {
-                if check_sources(ctx, std::slice::from_ref(source)).is_ok() {
-                    ids.insert(source.source.source_id.clone());
-                }
+        for source in &spec.sources {
+            if completed
+                .completed_source_ids
+                .contains(&source.source.source_id)
+                && check_sources(ctx, std::slice::from_ref(source)).is_ok()
+            {
+                ids.insert(source.source.source_id.clone());
             }
         }
     }
@@ -256,7 +268,7 @@ impl WorkspaceService {
                 SetupJobAction::Resume | SetupJobAction::RetryFailed => {
                     for (spec, b) in job.manifest.batches.iter().zip(&mut job.batches) {
                         if b.status != SetupBatchStatus::Completed {
-                            if let Err(e) = check_sources(ctx, &spec.sources) {
+                            if let Err(e) = check_sources(ctx, &outstanding(spec, b)) {
                                 b.status = SetupBatchStatus::NeedsConsent;
                                 job.status = SetupJobStatus::NeedsConsent;
                                 b.error = Some(e.clone());
@@ -292,9 +304,9 @@ impl WorkspaceService {
   let i=job.batches.iter().position(|b|b.batch_id==request.batch_id).ok_or_else(||error("invalid_input","Batch not in reviewed manifest"))?;
   if !matches!(job.batches[i].status,SetupBatchStatus::Waiting|SetupBatchStatus::Cancelled){return Err(error("conflict","Batch is completed, failed or needs consent; select an outstanding authorized batch"))}
   if job.batches[i].attempt>=job.manifest.limits.max_turns_per_batch{return Err(error("conflict","Batch attempt budget exhausted; review a new manifest"))}
-  if let Err(e)=check_sources(ctx,&job.manifest.batches[i].sources){job.batches[i].status=SetupBatchStatus::NeedsConsent;job.batches[i].error=Some(e.clone());job.status=SetupJobStatus::NeedsConsent;bump(&mut job)?;coverage_refresh(&mut job);save_job(ctx,&job)?;return Err(e)}
+  if let Err(e)=check_sources(ctx,&outstanding(&job.manifest.batches[i],&job.batches[i])){job.batches[i].status=SetupBatchStatus::NeedsConsent;job.batches[i].error=Some(e.clone());job.status=SetupJobStatus::NeedsConsent;bump(&mut job)?;coverage_refresh(&mut job);save_job(ctx,&job)?;return Err(e)}
   let scope_id=new_id();let run_id=new_id();
-  let scope=Scope{preview:ScopePreview{scope_id:scope_id.clone(),root_id:ctx.root_id.clone(),sources:job.manifest.batches[i].sources.iter().map(|s|s.source.clone()).collect(),excluded:vec![]}};
+  let scope=Scope{preview:ScopePreview{scope_id:scope_id.clone(),root_id:ctx.root_id.clone(),sources:outstanding(&job.manifest.batches[i],&job.batches[i]).into_iter().map(|s|s.source).collect(),excluded:vec![]}};
   save_json(&ctx.partition.join("scopes").join(format!("{scope_id}.json")),&scope)?;
   save_json(&ctx.partition.join("runs").join(format!("{run_id}.json")),&Run{root_id:ctx.root_id.clone(),run_id:run_id.clone(),scope_id:scope_id.clone(),active:true,message_id:None,topic_id:None})?;
   let batch=&mut job.batches[i];batch.attempt+=1;batch.status=SetupBatchStatus::Running;batch.scope_id=Some(scope_id.clone());batch.run_id=Some(run_id.clone());

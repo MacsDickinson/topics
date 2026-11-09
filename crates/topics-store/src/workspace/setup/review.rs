@@ -345,6 +345,47 @@ impl WorkspaceService {
             finalize(ctx, r, None, None)
         })
     }
+    pub fn setup_connection_confirm_preview(
+        &self,
+        request: SetupConnectionConfirmPreviewRequest,
+    ) -> WResult<SetupReceipt> {
+        self.with(&request.root_id, |ctx| {
+            if request.connection_ids.is_empty() || request.connection_ids.len() > 1000 {
+                return Err(error(
+                    "invalid_input",
+                    "Enumerate 1–1000 displayed connections",
+                ));
+            }
+            let state = load(ctx)?;
+            let mut receipt = blank(ctx, SetupDecisionKind::Confirm);
+            receipt.requested_ids = request
+                .connection_ids
+                .into_iter()
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
+            receipt.included_ids = receipt.requested_ids.clone();
+            for id in &receipt.requested_ids {
+                valid_id(id)?;
+                let connection = state
+                    .connections
+                    .get(id)
+                    .cloned()
+                    .ok_or_else(|| error("invalid_input", "Select an existing connection"))?;
+                pin_candidate(
+                    ctx,
+                    &state,
+                    &Candidate::Connection {
+                        connection: connection.clone(),
+                    },
+                    &mut receipt.expected_hashes,
+                )?;
+                receipt.connections.push(connection);
+            }
+            receipt.operation_count = receipt.connections.len().div_ceil(30) as u32;
+            finalize(ctx, receipt, None, None)
+        })
+    }
     pub fn setup_correction_preview(
         &self,
         request: SetupCorrectionPreviewRequest,
@@ -534,7 +575,11 @@ impl WorkspaceService {
                     },
                 ));
             }
-            Ok(SetupTopicReview { topic, reviews, context: vec![] })
+            Ok(SetupTopicReview {
+                topic,
+                reviews,
+                context: super::context::notes(&state, &request.topic_id),
+            })
         })
     }
 }

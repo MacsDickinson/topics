@@ -1,9 +1,11 @@
 //! Human folder setup services; all model publications remain capability guarded.
+mod context;
 mod decisions;
 mod draft;
 mod graph;
 mod inventory;
 mod jobs;
+mod reconsent;
 mod review;
 use super::proposals as proposal;
 use super::scopes::{Run, Scope};
@@ -268,12 +270,19 @@ fn coverage(job: &mut SetupJob) {
     let mut failed = vec![];
     let mut outstanding = vec![];
     for (spec, batch) in job.manifest.batches.iter().zip(&job.batches) {
-        let to = match batch.status {
-            SetupBatchStatus::Completed => &mut processed,
-            SetupBatchStatus::Failed => &mut failed,
-            _ => &mut outstanding,
-        };
-        to.extend(spec.sources.iter().map(|s| s.source.path.clone()));
+        for source in &spec.sources {
+            let to = if batch
+                .completed_source_ids
+                .contains(&source.source.source_id)
+            {
+                &mut processed
+            } else if batch.status == SetupBatchStatus::Failed {
+                &mut failed
+            } else {
+                &mut outstanding
+            };
+            to.push(source.source.path.clone());
+        }
     }
     job.coverage.processed = processed;
     job.coverage.failed = failed;
@@ -293,10 +302,4 @@ fn coverage(job: &mut SetupJob) {
             SetupJobStatus::FinishedWithGaps
         };
     }
-}
-
-impl WorkspaceService {
-    pub fn setup_job_reconsent(&self,_request:SetupJobReconsentRequest)->WResult<SetupJob>{Err(error("not_implemented","Explicit job reconsent is pending"))}
-    pub fn setup_connection_confirm_preview(&self,_request:SetupConnectionConfirmPreviewRequest)->WResult<SetupReceipt>{Err(error("not_implemented","Connection confirmation is pending"))}
-    pub fn setup_context_add(&self,_request:UserStatementRequest)->WResult<UserStatement>{Err(error("not_implemented","Supplemental topic context is pending"))}
 }

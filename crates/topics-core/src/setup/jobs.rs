@@ -88,5 +88,18 @@ value!(SetupDraftContextRequest {
 });
 value!(SetupDraftContext { topics: Vec<Topic>, claims: Vec<Claim>, connections: Vec<Connection> });
 value!(SetupConsent { manifest: SetupManifest, batches: Vec<SetupBatch> });
-value!(SetupJobReconsentRequest { root_id: Id, job_id: Id, expected_revision: u64, manifest_id: Id, expected_fingerprint: Hash });
-choices!(DraftAssertionKind { Unclassified, ReportedExplicit, InferredOrUncertain, Unsupported, IdentityQuestion, Correction });
+value!(SetupJobReconsentRequest {
+    root_id: Id,
+    job_id: Id,
+    expected_revision: u64,
+    manifest_id: Id,
+    expected_fingerprint: Hash
+});
+choices!(DraftAssertionKind {
+    Unclassified,
+    ReportedExplicit,
+    InferredOrUncertain,
+    Unsupported,
+    IdentityQuestion,
+    Correction
+});

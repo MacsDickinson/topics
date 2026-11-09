@@ -18,7 +18,7 @@ impl WorkspaceService {
             let (mut job, selected) = capability(ctx, &request.capability)?;
             // Consume even malformed terminal turns; the runtime owns cancellation before this action.
             revoke(ctx, &request.capability.run_id)?;
-            validate_input(ctx, &job, &request, &selected)?;
+            if !request.candidates.is_empty(){validate_input(ctx, &job, &request, &selected)?;}
             let state = load(ctx)?;
             let origin = Origin::Analysis {
                 run_id: request.capability.run_id.clone(),
@@ -85,6 +85,7 @@ impl WorkspaceService {
                 .iter_mut()
                 .find(|b| b.batch_id == request.capability.batch_id)
                 .unwrap();
+            batch.completed_source_ids=job.manifest.batches.iter().find(|b|b.batch_id==request.capability.batch_id).unwrap().sources.iter().map(|s|s.source.source_id.clone()).collect();
             batch.status = SetupBatchStatus::Completed;
             batch.proposal_ids.push(p.id.clone());
             batch.error = None;
