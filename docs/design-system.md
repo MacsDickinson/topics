@@ -94,6 +94,15 @@ For connecting a notes root, offer a native folder chooser alongside the existin
 
 ## Setup and review patterns
 
+Folder setup uses the free MIT BoardUI Select and DatePicker components, adapted to the existing semantic tokens with pinned React Aria dependencies. See [setup controls](design/setup-controls.md) for source provenance, adaptations and verification. Use the role selector's canonical backend values and independent inclusive civil-date bounds; Apply commits a date, Cancel preserves it, and Clear removes the bound. Escape dismisses the picker and returns focus to its trigger. Changing scope invalidates the manifest preview and consent.
+
+Separate actionable **Needs attention** warnings from counted informational exclusions. An eligible oversized note blocks preview and offers an explicit exclusion action; a note already outside the committed date range does not block. Group excluded paths by reason behind disclosures, preserving the complete paths and reasons. Explain empty selection and reversed ranges beside the disabled action. Excluding a note does not imply that it was analysed.
+
+```tsx
+<DatePicker label="From date" value={fromDate} disabled={busy}
+  onChange={changeFromDateAndInvalidatePreview} />
+```
+
 Folder setup uses a hierarchical list of native selection controls with a role selector and explanation per folder. The exact manifest and exclusions precede the single transmission authorization. The receipt lists its included candidates, dependencies and deferred counts before the save action; changing selection clears the preview. Progress names failed and outstanding inputs instead of implying complete coverage. Topic evidence uses a collapsed disclosure; status is written in text. Graph and list representations must provide equivalent keyboard access and distinguish explicit from inferred links without color alone. Contextual decisions enumerate their scope before confirmation; correction previews show the actual statement, before and after, and the future rule.
 
 ### Changed scope and supplemental review

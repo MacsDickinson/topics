@@ -16,4 +16,5 @@ npm test
 npm run test:native
 npm run test:native:workspace
 npm run test:native:setup
+npm run test:native:setup:oversize
 TOPICS_SCRIPTED_REHEARSAL=1 npm run test:native:setup:rehearsal
