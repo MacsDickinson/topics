@@ -78,6 +78,16 @@ Definition of done / review checklist:
 - [ ] Keyboard, focus, labels, announcements, contrast, reduced motion, long text, narrow window and zoom checked in both supported themes.
 - [ ] Relevant tests and manual checks recorded with limitations; screenshots use synthetic data and isolated app data. No personal notes or remote font dependency.
 
+## Integrated window header
+
+The macOS shell uses a decorated overlay with the native traffic lights and a fixed 28px app-surface header. Reserve the first 80px for those controls, and keep the focused skip link below the header. Only empty header space is a drag region; interactive controls and selectable text remain outside it. The desktop sidebar sticks below the header and fits the remaining viewport; narrow navigation flows beneath it. See [window chrome](design/window-chrome.md) for configuration, examples and native evidence limits.
+
+```tsx
+<div className="window-chrome" aria-hidden="true">
+  <div className="window-chrome-drag" data-tauri-drag-region />
+</div>
+```
+
 ## Folder chooser
 
 For connecting a notes root, offer a native folder chooser alongside the existing labelled path field. Selecting a folder fills the field; only the explicit “Use notes folder” action connects it. Cancelling leaves the entered path and current workspace intact. The chooser is a user-triggered native action and does not grant model access.

@@ -48,3 +48,21 @@ test("header remains above scrolling content and desktop sidebar fits beneath it
   await page.evaluate(() => window.scrollTo(0, 400));
   await expect.poll(() => page.locator('.window-chrome').evaluate(el => el.getBoundingClientRect().top)).toBe(0);
 });
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [560, 1180]) {
+    test(`${theme} ${width}px first keyboard focus clears native controls`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.setViewportSize({ width, height: width === 560 ? 420 : 800 });
+      await workspaceFixture(page, { empty: true });
+      const skip = page.getByRole("link", { name: "Skip to content" });
+      await page.keyboard.press("Tab");
+      await expect(skip).toBeFocused();
+      const box = await skip.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(28);
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("main")).toBeFocused();
+    });
+  }
+}

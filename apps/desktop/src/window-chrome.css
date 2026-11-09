@@ -24,3 +24,5 @@
   .workspace { padding-top: 28px; }
   .sidebar { height: auto; }
 }
+/* The first keyboard focus must clear the native traffic lights. */
+.skip-link { top: calc(28px + var(--space-3)); }
