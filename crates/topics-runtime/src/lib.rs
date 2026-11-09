@@ -542,7 +542,7 @@ impl Runtime {
                         }
                         std::mem::take(&mut s.pending)
                     };
-                    if !pending.is_empty() {
+                    if !pending.is_empty() || host.requires_empty_commit() {
                         let permit = CommitPermit::new(Duration::from_secs(5));
                         {
                             let mut s = state.lock().unwrap();

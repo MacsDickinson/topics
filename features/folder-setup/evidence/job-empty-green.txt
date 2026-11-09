@@ -1,0 +1,25 @@
+Command: scripted_runtime --test-threads=1
+Synthetic isolated CODEX_HOME; no personal config/provider calls.
+
+
+running 15 tests
+test cancellation_after_buffer_and_late_completed_cannot_stage ... ok
+test duplicate_terminal_stages_once_and_closes_run ... ok
+test malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates ... ok
+test review_cancel_and_timeout_revoke_late_prepared_publication ... ok
+test review_cancel_stalled_host_has_bounded_terminal_and_releases_run_slot ... ok
+test review_child_environment_allowlist ... ok
+test review_overlapping_root_and_appdata_never_create_directories ... ok
+test review_published_outcome_survives_host_stall_and_error ... ok
+test review_staging_panic_emits_one_error_and_runtime_remains_usable ... ok
+test setup_empty_default_host_keeps_existing_no_publication_behavior ... ok
+test setup_empty_failed_and_cancelled_turns_never_checkpoint ... ok
+test setup_empty_revocation_denies_prepared_checkpoint ... ok
+test setup_empty_success_publishes_checkpoint_once_through_real_permit ... ok
+test unexpected_tools_block_real_run_before_selected_bytes ... ok
+test wrong_pinned_version_is_actionable_and_sends_no_bytes ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 36.46s
+
+
+Exit: 0
