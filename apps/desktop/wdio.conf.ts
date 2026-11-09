@@ -13,8 +13,11 @@ const sessionEnvironment = {
 assertNativeEnvironment(sessionEnvironment, process.env.TOPICS_TEST_SANDBOX);
 const live = process.env.TOPICS_TEST_LIVE === "1";
 const setup = process.env.TOPICS_TEST_SETUP === "1";
-const session =
-  process.env.TOPICS_TEST_STARTUP === "1"
+const session = setup
+  ? process.env.TOPICS_TEST_SETUP_RESTART === "1"
+    ? "setup-restart"
+    : "setup"
+  : process.env.TOPICS_TEST_STARTUP === "1"
     ? process.env.TOPICS_APP_DATA_DIR
       ? "relative"
       : "empty"

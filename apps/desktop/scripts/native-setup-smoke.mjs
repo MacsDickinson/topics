@@ -7,10 +7,11 @@ import {
   chmodSync,
   rmSync,
   existsSync,
+  symlinkSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { spawn } from "node:child_process";
+import { dirname, join, resolve } from "node:path";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   prepareNativeEnvironment,
@@ -29,7 +30,20 @@ if (!existsSync(childTemplate))
   throw new Error(
     "The frozen scripted job fixture is not present; integrate the job checkpoint first.",
   );
+const cargoLocator = spawnSync("rustup", ["which", "cargo"], {
+  encoding: "utf8",
+});
+if (cargoLocator.status !== 0)
+  throw new Error("Cannot locate the installed Rust toolchain");
+const toolchainBin = dirname(cargoLocator.stdout.trim());
+const registrySource = join(
+  process.env.CARGO_HOME || join(process.env.HOME, ".cargo"),
+  "registry",
+);
+if (!existsSync(registrySource))
+  throw new Error("Rust package cache is unavailable");
 const fixture = mkdtempSync(join(tmpdir(), "topics-native-setup-"));
+process.once("exit", () => rmSync(fixture, { recursive: true, force: true }));
 const notes = join(fixture, "notes"),
   appData = join(fixture, "app-data");
 const sources = [];
@@ -45,6 +59,10 @@ for (let i = 0; i < 100; i++) {
 const session = prepareNativeEnvironment(fixture),
   codexHome = join(session.HOME, ".codex");
 mkdirSync(codexHome);
+const cargoHome = join(fixture, "cargo-home");
+mkdirSync(cargoHome);
+// Use the installed package cache without reading the user's Cargo config or credentials.
+symlinkSync(registrySource, join(cargoHome, "registry"), "dir");
 const flagsSource = readFileSync(
   join(repo, "crates/topics-runtime/src/protocol.rs"),
   "utf8",
@@ -66,13 +84,18 @@ writeFileSync(
     .replace("@FLAGS@", JSON.stringify(flags)),
 );
 chmodSync(child, 0o700);
-writeFileSync(mode, "graph");
+writeFileSync(
+  mode,
+  process.env.TOPICS_SETUP_GRAPH_ONLY === "1" ? "graph" : "graph_claim",
+);
 const env = {
   ...process.env,
   HOME: session.HOME,
   CODEX_HOME: codexHome,
   XDG_DATA_HOME: session.XDG_DATA_HOME,
   CARGO_TARGET_DIR: target,
+  CARGO_HOME: cargoHome,
+  CARGO_NET_OFFLINE: "true",
   TOPICS_APP_DATA_DIR: appData,
   TOPICS_TEST_HOME: session.HOME,
   TOPICS_TEST_CODEX_HOME: codexHome,
@@ -81,11 +104,13 @@ const env = {
   TOPICS_TEST_WORKSPACE_ROOT: notes,
   TOPICS_TEST_CODEX: child,
   TOPICS_TEST_SETUP: "1",
+  TOPICS_TEST_GRAPH_ONLY:
+    process.env.TOPICS_SETUP_GRAPH_ONLY === "1" ? "1" : "0",
   TOPICS_TEST_SETUP_LOG: log,
   VITE_NATIVE_TEST: "1",
   TOPICS_TEST_REAL_APP_BINARY: join(target, "debug/topics-desktop"),
   TOPICS_TEST_APP_LAUNCHER: join(desktop, "scripts/native-app-launcher.mjs"),
-  PATH: `${join(desktop, "node_modules/.bin")}:${process.env.PATH}`,
+  PATH: `${join(desktop, "node_modules/.bin")}:${toolchainBin}:${process.env.PATH}`,
 };
 async function run(command, args) {
   await new Promise((resolveRun, rejectRun) => {
@@ -126,18 +151,19 @@ async function run(command, args) {
   });
 }
 try {
-  await run("npm", [
-    "run",
-    "tauri",
-    "--",
-    "build",
-    "--debug",
-    "--no-bundle",
-    "--features",
-    "native-test",
-    "--config",
-    "src-tauri/tauri.native-test.conf.json",
-  ]);
+  if (process.env.TOPICS_SETUP_SKIP_BUILD !== "1")
+    await run("npm", [
+      "run",
+      "tauri",
+      "--",
+      "build",
+      "--debug",
+      "--no-bundle",
+      "--features",
+      "native-test",
+      "--config",
+      "src-tauri/tauri.native-test.conf.json",
+    ]);
   await run("npm", ["exec", "--", "wdio", "run", "wdio.conf.ts"]);
   for (const file of [
     "index.sqlite3",
