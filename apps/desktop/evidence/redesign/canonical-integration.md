@@ -14,6 +14,7 @@ push, user-app restart, native suite or genuine model invocation occurred.
 | `1d1c37b` | `412cbaeaec38426a921877f1ae0efe43596ea18b` | Native synthetic hundred-note/restart harness and feature evidence imported unchanged. |
 | `a041a968cc0512515d0a5f0c91df18bce1bf74f3` | `07fd8081e3f4d42718f3be6a20b68e0111d79869` | Canonical generated assertions, reconsent, connection receipts, context and named diffs integrated; shared controls/sections/fields reapplied without changing requests or state logic. |
 | `41ed1c085a45db3f1ea0a40ffff70784d1ae0a3c` | `02047d105cd9eabb429152ae4994d5fb3e6da730` | Selected coverage/exclusions, size guard, readable units and native reconsent journey retained. |
+| `52a066a6cfdbe920a207907a034a1ccdd55a7d39` | Merge `37eb789bc53816618c313b712f26300f708c489a` | Authoritative runtime optional-context packing fix and handoff history merged directly; original RED/GREEN commits were not replayed. |
 
 Earlier feature equivalents remain documented in [README](README.md); the backend
 merge brings their original history into ancestry. The main owner should merge
@@ -79,11 +80,21 @@ baseline screenshots remain unchanged.
 
 ## Pending final acceptance
 
-The coordinator's final **64 KiB default budget** and **runtime packing fix** are
-explicit required dependencies still awaiting supplied SHAs at this checkpoint.
+The runtime packing fix is now integrated through exact main `52a066a`, including
+`7094155`/`85c664d` and the final handoff report. Desktop source tree
+`623f0407662ddb26719ab1498709db48de3c5024` and browser test tree
+`e58fbe32d12f89168aac39cbe253e5e3c569da94` are byte-for-byte identical to the
+98-check `d4eec57` checkpoint. There is no desktop diff from that merge; a fresh
+TypeScript/Vite build passed (see [`runtime-merge-build.txt`](runtime-merge-build.txt)).
+The browser suite was not needlessly repeated against identical source/tests.
+
+The coordinator's final committed **64 KiB default UI budget** remains an explicit
+required dependency awaiting its supplied SHA at this frozen checkpoint.
 The current authorized 41ed1c0 default is 256 KiB; no replacement type, handler or
 unsupplied backend patch has been invented here. Final validation/completion must
-follow those commits. Native fixture/package acceptance remains coordinated with
+follow that commit. The coordinator reports installed Codex 0.167.0 versus pinned
+0.166.0; runtime compatibility was not changed or repinned here.
+Native fixture/package acceptance remains coordinated with
 the feature manager; imported native green logs describe their runs, not a new run
 performed by this worker. Screen-reader/actual WebView zoom and genuine runtime
 acceptance are not established by these browser captures.
