@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::{
     fs,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::{Duration, Instant},
 };
 use topics_core::*;
@@ -22,6 +22,14 @@ fn isolated(name: &str, test: impl FnOnce()) {
         test();
         return;
     }
+    // Each child runs a real runtime and store. The 100-document graph fixture
+    // can exhaust the production publication budget when competing with the
+    // other synthetic hosts, so give it exclusive time in this test binary.
+    // Keep the smaller protocol scenarios concurrent with one another.
+    static FIXTURES: RwLock<()> = RwLock::new(());
+    let large = name == "hundred_documents_use_exact_multiple_scopes_and_one_draft_graph";
+    let _exclusive = large.then(|| FIXTURES.write().unwrap_or_else(|e| e.into_inner()));
+    let _shared = (!large).then(|| FIXTURES.read().unwrap_or_else(|e| e.into_inner()));
     let home = tempfile::tempdir().unwrap();
     let mut child = std::process::Command::new(std::env::current_exe().unwrap())
         .args(["--exact", name, "--nocapture"])
