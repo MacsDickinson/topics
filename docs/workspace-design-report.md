@@ -1,6 +1,6 @@
 # Workspace design prototype
 
-The signed development candidate is at `target/prototype/workspace-design-17cdb27/Topics.app`. Quit the existing Topics app before opening this separate bundle. The existing running prototype and its files were left unchanged.
+The signed development prototype is at `target/prototype/Topics.app`. The identical candidate remains at `target/prototype/workspace-design-17cdb27/Topics.app`. Once Topics was no longer running, the verified app was copied to the usual path; the previous app and metadata were preserved under `target/prototype/backups/before-workspace-design-20261110-203947/`. No app was launched or restarted.
 
 ## Changes
 
@@ -18,7 +18,11 @@ The production release bundle was built with `VITE_NATIVE_TEST=0`, without the n
 
 Independent Codex reviews accepted the window changes and setup tip `e9c7e9f`; the latter independently replayed the native regression and focused browser checks. Pointer evidence used PID-targeted synthetic input, not physical hardware. No screen-reader acceptance is claimed. See [window chrome](design/window-chrome.md), [setup controls](design/setup-controls.md), and the [team record](../features/workspace-controls/TEAM.md).
 
-## Remaining checks
+## Hosted verification
+
+Both [Core](https://github.com/MacsDickinson/topics/actions/runs/42778876789) and [Desktop](https://github.com/MacsDickinson/topics/actions/runs/42778875591) passed exact source `d47be22e1e0db92185b8260050dda1fbe68fc992`, including the full hosted Rust/browser/native check and evidence preservation. The signed production artifact remains source `17cdb27`; subsequent implementation changes are tests, documentation and evidence only. Signature verification passed again at the installed prototype path. The history below records the earlier failures and the reviewed test changes; those hosted checks are now resolved.
+
+### Check history
 
 [Hosted Core passed](https://github.com/MacsDickinson/topics/actions/runs/42722393635) source `17cdb27`. [Hosted Desktop failed](https://github.com/MacsDickinson/topics/actions/runs/42722393676) its light / 1180px first-Tab skip-link assertion, with 132 browser cases passing. A separate worker is investigating the initial keyboard-focus cause; the local result does not supersede that failure.
 
@@ -30,4 +34,6 @@ Local investigation reproduced this failure under concurrent protocol fixtures (
 
 The integrated protocol suite passed 27/27 again in 50.57s; formatting and diff checks passed. The next hosted rerun covers both this scheduling change and the reviewed keyboard preconditions.
 
-The user's required Claude review remains blocked by expired CLI OAuth authentication. The additional Codex reviews do not replace that requirement. This is a development candidate with these checks open.
+## Remaining review and scope
+
+The user's required Claude review remains blocked by expired CLI OAuth authentication, rechecked on 2026-11-10. The additional Codex reviews do not replace that requirement. Run `claude auth login` to restore the required review path. This is a working development prototype with final cross-provider approval open. Production preparation performance under competing load, physical hardware input and screen-reader acceptance remain outside the verified evidence. Large-note chunking and folder disconnect/fresh-session features remain proposed.
