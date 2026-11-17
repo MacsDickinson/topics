@@ -1,5 +1,8 @@
 @proposed @not_approved
-Feature: A library accumulates cited knowledge across sources
+Feature: See what changed across my sources before my next meeting
+  As someone preparing to meet the Ledger team
+  I want to spot changed decisions and trace their evidence
+  So I can act on current information without rereading all my notes
   Background:
     Given an isolated library with synthetic Markdown sources
 
@@ -16,7 +19,7 @@ Feature: A library accumulates cited knowledge across sources
     When I connect Engineering
     Then its local inventory is available before any provider call
     When I authorize its selected version containing a decision to move rollout to Tuesday
-    Then Changes shows the proposed Ledger update and both source-qualified citations
+    Then Today shows the proposed Ledger update and both source-qualified citations
     When I save that topic update
     Then the Ledger briefing shows Tuesday and links to the earlier Friday account
     And the other statements on Ledger retain their existing review status
@@ -31,21 +34,37 @@ Feature: A library accumulates cited knowledge across sources
   Scenario: Ambiguity becomes a question the user can defer
     Given two people named Alex are linked to different projects
     When an authorized transcript attributes a conflicting rollout date only to "Alex"
-    Then the topic change shows the unresolved attribution and cited conflict
+    Then Today reports a conflict and the topic change shows the unresolved attribution and cited conflict
     And deferring the question preserves the current decision and both people's identities
 
-  Scenario: An agent can read a permitted briefing and its changes
-    Given an external MCP client has a read grant for Ledger and both allowed sources
-    When it requests Ledger after a saved cursor
-    Then it receives the same permitted decision change, uncertainty and citations as the desktop
-    And the cursor still identifies that change boundary after restart
-    And the read grant cannot approve a proposed change
+  Scenario: A busy import gives me two useful updates
+    Given twelve notes repeat the saved Ledger date without adding evidence of a change
+    And a decision moves Ledger from Friday to Tuesday for the support handover
+    And two new accounts disagree about the Harbor launch
+    When the authorized import finishes and I open Today
+    Then I see exactly one Ledger update showing Friday to Tuesday and why
+    And I see exactly one Harbor question labelled as a disagreement
+    When I open the Ledger update
+    Then I can reveal both dated sources on its topic page
+    And its New indicator clears on Today and Ledger without approving anything
+    When I save the Ledger update, defer Harbor, and restart Topics
+    Then Today says I am caught up and Harbor is available under For later
+    And refreshing the same material does not raise either update again
 
-  Scenario: Private evidence cannot affect a client-visible briefing
-    Given an external MCP client can read a public Ledger decision
-    When I add a local-only note introducing a person and a cross-project concern
-    Then the private note stays out of provider analysis
-    And the client's briefing, change feed and visible counts reveal neither the note nor its derived connections
+  Scenario: Find a quiet topic when I need the answer again
+    Given Today has no new updates and Ledger has the alias "Cutover"
+    When I search for "Cutover" in Topics and open Ledger
+    Then I see the saved Tuesday decision, its rationale and the cited Engineering passage
+    And I can follow the earlier Friday account in its history
+
+  Scenario: One consent covers the reviewed inputs and respects privacy
+    Given Engineering contains ten eligible notes and one previously marked local-only
+    When I connect it and authorize the displayed eligible selection once
+    Then the analysis can proceed without requiring any per-file access decisions
+    And the provider receives no content, title or path from the local-only note
+    When I save a proposed topic group containing three sourced statements
+    Then one approval saves the displayed group with its citations
+    And those statements keep their sourced status
 
   Scenario: Source loss and removal have distinct consequences
     Given a saved decision cites Engineering
@@ -54,4 +73,4 @@ Feature: A library accumulates cited knowledge across sources
     When I remove Engineering and rebuild the derived index
     Then the desktop retains the decision history with its provenance
     And the removed source is no longer read on refresh
-    And the old client grant cannot retrieve its content or derived-only facts
+    And its previous analysis authorization cannot retrieve the removed evidence
