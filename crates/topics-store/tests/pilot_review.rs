@@ -240,6 +240,10 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
         (1, 1)
     );
     assert_eq!(
+        review.week.unwrap().material_judgements[0].evidence_at_cutoff,
+        PilotEvidenceAtCutoff::Analysed
+    );
+    assert_eq!(
         service
             .pilot_snapshot_get(PilotSnapshotGetRequest {
                 root_id,
