@@ -47,6 +47,20 @@ fn weekly_review_survives_restart_and_counts_distinct_material_changes() {
                 feedback_id: None,
             },
             PilotMaterialJudgement {
+                id: "pending".into(),
+                description: "Pending evidence".into(),
+                outcome: PilotMaterialOutcome::Omitted,
+                evidence_at_cutoff: PilotEvidenceAtCutoff::PendingUnavailable,
+                feedback_id: None,
+            },
+            PilotMaterialJudgement {
+                id: "unknown".into(),
+                description: "Uncertain evidence".into(),
+                outcome: PilotMaterialOutcome::Wrong,
+                evidence_at_cutoff: PilotEvidenceAtCutoff::Unknown,
+                feedback_id: None,
+            },
+            PilotMaterialJudgement {
                 id: "change-c".into(),
                 description: "C".into(),
                 outcome: PilotMaterialOutcome::Omitted,
@@ -80,6 +94,10 @@ fn weekly_review_survives_restart_and_counts_distinct_material_changes() {
             result.measures.first_learned
         ),
         (1, 2, 1)
+    );
+    assert_eq!(
+        (result.measures.pending_unavailable, result.measures.unknown),
+        (1, 1)
     );
     assert_eq!(result.measures.draft_quality, None);
 }
