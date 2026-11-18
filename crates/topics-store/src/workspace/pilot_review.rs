@@ -34,6 +34,70 @@ fn resolve_week_id(state: &State, week: &str, project: &str) -> WResult<Id> {
     }
     Ok(found.unwrap_or(fallback))
 }
+// A meeting owns feedback on itself plus feedback recorded after the
+// preceding meeting and no later than this meeting. Feedback views never move
+// the boundary and remain individually readable for audit.
+fn feedback_for_snapshot(state: &State, id: &str) -> WResult<BTreeMap<Id, PilotFeedback>> {
+    let selected = state
+        .pilot_snapshots
+        .get(id)
+        .ok_or_else(|| error("invalid_input", "Snapshot does not exist"))?;
+    let previous = if selected.feedback_only {
+        None
+    } else {
+        state
+            .pilot_snapshots
+            .values()
+            .filter(|s| {
+                !s.feedback_only
+                    && s.id != selected.id
+                    && s.briefing.root_id == selected.briefing.root_id
+                    && s.captured_at < selected.captured_at
+            })
+            .map(|s| &s.captured_at)
+            .max()
+    };
+    Ok(state
+        .pilot_feedback
+        .values()
+        .filter(|entry| {
+            if entry.snapshot_id == selected.id {
+                return true;
+            }
+            if selected.feedback_only {
+                return false;
+            }
+            state
+                .pilot_snapshots
+                .get(&entry.snapshot_id)
+                .is_some_and(|s| {
+                    s.feedback_only
+                        && s.briefing.root_id == selected.briefing.root_id
+                        && entry.recorded_at <= selected.captured_at
+                        && previous.is_none_or(|boundary| entry.recorded_at > *boundary)
+                })
+        })
+        .map(|entry| (entry.id.clone(), entry.clone()))
+        .collect())
+}
+fn feedback_for_week(
+    state: &State,
+    week: Option<&PilotWeek>,
+) -> WResult<BTreeMap<Id, PilotFeedback>> {
+    match week.and_then(|w| w.snapshot_id.as_deref()) {
+        Some(id) => feedback_for_snapshot(state, id),
+        None => Ok(BTreeMap::new()),
+    }
+}
+fn same_projection(a: &PilotBriefing, b: &PilotBriefing) -> bool {
+    let mut a = a.clone();
+    let mut b = b.clone();
+    a.generated_at.clear();
+    b.generated_at.clear();
+    a.briefing_token.clear();
+    b.briefing_token.clear();
+    a == b
+}
 fn unique_ids<'a>(ids: impl Iterator<Item = &'a str>) -> WResult<()> {
     let mut seen = BTreeSet::new();
     for id in ids {
@@ -95,7 +159,8 @@ fn add_observed_wrong(
         return Ok(());
     };
     let edits = setup::pilot_edits(ctx)?;
-    let wrong = observed_wrong(snapshot, state, &edits, &week.item_adjustments);
+    let feedback = feedback_for_snapshot(state, &snapshot.id)?;
+    let wrong = observed_wrong(snapshot, state, &edits, &week.item_adjustments, &feedback);
     result.wrong_items = wrong.len() as u32;
     Ok(())
 }
@@ -104,11 +169,11 @@ fn observed_wrong(
     state: &State,
     edits: &[(Candidate, Candidate, Timestamp)],
     adjustments: &[PilotItemAdjustment],
+    feedback: &BTreeMap<Id, PilotFeedback>,
 ) -> BTreeSet<Id> {
-    let mut wrong: BTreeSet<_> = state
-        .pilot_feedback
+    let mut wrong: BTreeSet<_> = feedback
         .values()
-        .filter(|f| f.snapshot_id == snapshot.id && f.kind == PilotFeedbackKind::Wrong)
+        .filter(|f| f.kind == PilotFeedbackKind::Wrong)
         .filter_map(|f| f.item_id.clone())
         .collect();
     for item in &snapshot.briefing.items {
@@ -173,10 +238,7 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
     };
     let Some(week) = week else { return result };
     let mut wrong = BTreeSet::new();
-    for entry in feedback
-        .values()
-        .filter(|f| Some(&f.snapshot_id) == week.snapshot_id.as_ref())
-    {
+    for entry in feedback.values() {
         match entry.kind {
             PilotFeedbackKind::Wrong => {
                 if let Some(id) = &entry.item_id {
@@ -210,11 +272,10 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
             PilotEvidenceAtCutoff::Unknown => result.unknown += 1,
         }
     }
-    for entry in feedback.values().filter(|entry| {
-        Some(&entry.snapshot_id) == week.snapshot_id.as_ref()
-            && entry.kind == PilotFeedbackKind::Omitted
-            && !linked.contains(&entry.id)
-    }) {
+    for entry in feedback
+        .values()
+        .filter(|entry| entry.kind == PilotFeedbackKind::Omitted && !linked.contains(&entry.id))
+    {
         match entry.evidence_at_cutoff {
             PilotEvidenceAtCutoff::Analysed => {
                 result.eligible_changes += 1;
@@ -352,8 +413,14 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
         } else {
             Inconclusive
         };
-        let am = measures(Some(a), &state.pilot_feedback);
-        let bm = measures(Some(b), &state.pilot_feedback);
+        let am = measures(
+            Some(a),
+            &feedback_for_week(state, Some(a)).unwrap_or_default(),
+        );
+        let bm = measures(
+            Some(b),
+            &feedback_for_week(state, Some(b)).unwrap_or_default(),
+        );
         if comparable && am.eligible_changes > 0 && bm.eligible_changes > 0 {
             out.omission_trend = if u64::from(bm.known_omissions) * u64::from(am.eligible_changes)
                 <= u64::from(am.known_omissions) * u64::from(bm.eligible_changes)
@@ -385,7 +452,8 @@ impl WorkspaceService {
                 .get(&id)
                 .cloned()
                 .map(|week| classified_week(week, &state.pilot_feedback));
-            let mut measures = measures(week.as_ref(), &state.pilot_feedback);
+            let relevant_feedback = feedback_for_week(&state, week.as_ref())?;
+            let mut measures = measures(week.as_ref(), &relevant_feedback);
             add_observed_wrong(ctx, &state, week.as_ref(), &mut measures)?;
             add_learning(&state, week.as_ref(), &mut measures);
             let comparisons = comparisons(&state, &request.project, &request.week);
@@ -424,6 +492,17 @@ impl WorkspaceService {
             {
                 return Err(error("invalid_input", "Snapshot does not exist"));
             }
+            if week
+                .snapshot_id
+                .as_ref()
+                .and_then(|id| state.pilot_snapshots.get(id))
+                .is_some_and(|snapshot| snapshot.feedback_only)
+            {
+                return Err(error(
+                    "invalid_input",
+                    "Weekly review requires an explicitly kept meeting briefing",
+                ));
+            }
             if !week.item_adjustments.is_empty() {
                 let snapshot = week
                     .snapshot_id
@@ -443,7 +522,8 @@ impl WorkspaceService {
                     ));
                 }
             }
-            week = classified_week(week, &state.pilot_feedback);
+            let relevant_feedback = feedback_for_week(&state, Some(&week))?;
+            week = classified_week(week, &relevant_feedback);
             if !week.rule_occurrences.is_empty() {
                 let snapshot = week
                     .snapshot_id
@@ -487,7 +567,7 @@ impl WorkspaceService {
                             "Feedback kind does not match the material outcome",
                         ));
                     }
-                    if Some(&entry.snapshot_id) != week.snapshot_id.as_ref() {
+                    if !relevant_feedback.contains_key(feedback_id) {
                         return Err(error(
                             "invalid_input",
                             "Feedback belongs to another briefing",
@@ -526,7 +606,7 @@ impl WorkspaceService {
                     ..Default::default()
                 },
             )?;
-            let mut measures = measures(Some(&week), &state.pilot_feedback);
+            let mut measures = measures(Some(&week), &relevant_feedback);
             add_observed_wrong(ctx, &state, Some(&week), &mut measures)?;
             add_learning(&state, Some(&week), &mut measures);
             let mut updated = state;
@@ -549,13 +629,15 @@ impl WorkspaceService {
         self.with(&request.root_id, |ctx| {
             let state = load(ctx)?;
             if let Some(snapshot) = state.pilot_snapshots.into_values().find(|snapshot| {
-                snapshot.briefing.root_id == request.root_id
+                !snapshot.feedback_only
+                    && snapshot.briefing.root_id == request.root_id
                     && snapshot.briefing.briefing_token == request.briefing_token
             }) {
                 return Ok(snapshot);
             }
             let briefing = self.observed_pilot_briefing(ctx, &request.briefing_token)?;
             let snapshot = PilotSnapshot {
+                feedback_only: false,
                 id: new_id(),
                 captured_at: now(),
                 briefing,
@@ -566,6 +648,38 @@ impl WorkspaceService {
             commit(
                 ctx,
                 "Capture Friday briefing",
+                vec![(path, record)],
+                CommitIntent::default(),
+            )?;
+            Ok(snapshot)
+        })
+    }
+    pub fn pilot_feedback_snapshot_create(
+        &self,
+        request: PilotSnapshotCreateRequest,
+    ) -> WResult<PilotSnapshot> {
+        self.with(&request.root_id, |ctx| {
+            let briefing = self.observed_pilot_briefing(ctx, &request.briefing_token)?;
+            let state = load(ctx)?;
+            if let Some(existing) = state
+                .pilot_snapshots
+                .values()
+                .find(|s| s.feedback_only && same_projection(&s.briefing, &briefing))
+            {
+                return Ok(existing.clone());
+            }
+            let snapshot = PilotSnapshot {
+                id: new_id(),
+                captured_at: now(),
+                briefing,
+                feedback_only: true,
+            };
+            let operation_id = new_id();
+            let path = format!("topics/pilot-snapshots/{}.md", snapshot.id);
+            let record = Record::new("pilot_snapshot", &snapshot.id, &operation_id, &snapshot)?;
+            commit(
+                ctx,
+                "Capture feedback briefing",
                 vec![(path, record)],
                 CommitIntent::default(),
             )?;
@@ -599,10 +713,8 @@ impl WorkspaceService {
             if !state.pilot_snapshots.contains_key(&request.snapshot_id) {
                 return Err(error("invalid_input", "Snapshot does not exist"));
             }
-            Ok(state
-                .pilot_feedback
+            Ok(feedback_for_snapshot(&state, &request.snapshot_id)?
                 .into_values()
-                .filter(|f| f.snapshot_id == request.snapshot_id)
                 .collect())
         })
     }
@@ -760,6 +872,7 @@ mod tests {
         assert!(!substantive_edit(&item, &before, &whitespace));
         assert!(substantive_edit(&item, &before, &after));
         let snapshot = PilotSnapshot {
+            feedback_only: false,
             id: "snapshot".into(),
             captured_at: "2026-11-20T11:00:00Z".into(),
             briefing: PilotBriefing {
@@ -788,7 +901,10 @@ mod tests {
         };
         state.pilot_feedback.insert(feedback.id.clone(), feedback);
         let edits = vec![(before, after, "2026-11-20T12:00:00Z".into())];
-        assert_eq!(observed_wrong(&snapshot, &state, &edits, &[]).len(), 1);
+        assert_eq!(
+            observed_wrong(&snapshot, &state, &edits, &[], &state.pilot_feedback).len(),
+            1
+        );
         assert!(
             observed_wrong(
                 &snapshot,
@@ -797,7 +913,8 @@ mod tests {
                 &[PilotItemAdjustment {
                     item_id: item.item_id,
                     wrong: false
-                }]
+                }],
+                &state.pilot_feedback
             )
             .is_empty()
         );
@@ -819,6 +936,7 @@ mod tests {
             recurred: true,
         };
         let snapshot = PilotSnapshot {
+            feedback_only: false,
             id: "snapshot".into(),
             captured_at: "2026-11-20T11:00:00Z".into(),
             briefing: PilotBriefing {
@@ -868,6 +986,81 @@ mod tests {
             (result.learning[1].eligible, result.learning[1].recurrences),
             (0, 0)
         );
+    }
+    #[test]
+    fn feedback_interval_boundaries_are_based_on_original_record_time() {
+        let snapshot = |id: &str, at: &str, feedback_only: bool| PilotSnapshot {
+            id: id.into(),
+            captured_at: at.into(),
+            feedback_only,
+            briefing: PilotBriefing {
+                root_id: "root".into(),
+                generated_at: at.into(),
+                since: None,
+                history_incomplete: false,
+                briefing_token: String::new(),
+                sources: vec![],
+                items: vec![],
+                rules: vec![],
+                occurrences: vec![],
+            },
+        };
+        let mut state = State::default();
+        for s in [
+            snapshot("prior", "2026-01-01T10:00:00Z", false),
+            snapshot("feedback", "2026-01-01T10:00:00Z", true),
+            snapshot("meeting", "2026-01-08T10:00:00Z", false),
+            snapshot("next", "2026-01-15T10:00:00Z", false),
+        ] {
+            state.pilot_snapshots.insert(s.id.clone(), s);
+        }
+        for (id, at) in [
+            ("at-start", "2026-01-01T10:00:00Z"),
+            ("within", "2026-01-04T10:00:00Z"),
+            ("at-end", "2026-01-08T10:00:00Z"),
+            ("after", "2026-01-08T10:00:01Z"),
+        ] {
+            state.pilot_feedback.insert(
+                id.into(),
+                PilotFeedback {
+                    id: id.into(),
+                    snapshot_id: "feedback".into(),
+                    item_id: None,
+                    kind: PilotFeedbackKind::Omitted,
+                    text: "synthetic".into(),
+                    evidence: None,
+                    evidence_at_cutoff: PilotEvidenceAtCutoff::Unknown,
+                    recorded_at: at.into(),
+                    recorded_by: "user".into(),
+                },
+            );
+        }
+        let mut foreign = snapshot("foreign", "2026-01-02T10:00:00Z", true);
+        foreign.briefing.root_id = "other-root".into();
+        state.pilot_snapshots.insert(foreign.id.clone(), foreign);
+        let mut foreign_feedback = state.pilot_feedback["within"].clone();
+        foreign_feedback.id = "foreign-entry".into();
+        foreign_feedback.snapshot_id = "foreign".into();
+        state
+            .pilot_feedback
+            .insert(foreign_feedback.id.clone(), foreign_feedback);
+        assert_eq!(
+            feedback_for_snapshot(&state, "meeting")
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            vec!["at-end", "within"]
+        );
+        assert_eq!(
+            feedback_for_snapshot(&state, "next")
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            vec!["after"]
+        );
+        assert_eq!(feedback_for_snapshot(&state, "feedback").unwrap().len(), 4);
     }
     #[test]
     fn enabled_drafts_use_latest_outcome_per_id() {

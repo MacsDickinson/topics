@@ -179,6 +179,12 @@ service_command!(
     pilot_snapshot_create
 );
 service_command!(
+    pilot_feedback_snapshot_create,
+    PilotSnapshotCreateRequest,
+    PilotSnapshot,
+    pilot_feedback_snapshot_create
+);
+service_command!(
     pilot_snapshot_list,
     RootRequest,
     Vec<PilotSnapshot>,

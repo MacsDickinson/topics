@@ -117,6 +117,7 @@ fn main() {
             workspace_source_get,
             pilot_briefing,
             pilot_snapshot_create,
+            pilot_feedback_snapshot_create,
             pilot_snapshot_list,
             pilot_snapshot_get,
             pilot_feedback_list,

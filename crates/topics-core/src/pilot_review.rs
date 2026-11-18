@@ -28,11 +28,16 @@ value!(PilotSnapshotGetRequest {
     root_id: Id,
     snapshot_id: Id
 });
-value!(PilotSnapshot {
-    id: Id,
-    captured_at: Timestamp,
-    briefing: crate::PilotBriefing
-});
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PilotSnapshot {
+    pub id: Id,
+    pub captured_at: Timestamp,
+    pub briefing: crate::PilotBriefing,
+    #[serde(default)]
+    pub feedback_only: bool,
+}
 choices!(PilotFeedbackKind {
     Wrong,
     Omitted,

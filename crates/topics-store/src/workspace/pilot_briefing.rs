@@ -148,7 +148,7 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
         since = state
             .pilot_snapshots
             .values()
-            .filter(|s| s.briefing.root_id == ctx.root_id)
+            .filter(|s| s.briefing.root_id == ctx.root_id && !s.feedback_only)
             .map(|s| &s.briefing.generated_at)
             .max()
             .cloned();
