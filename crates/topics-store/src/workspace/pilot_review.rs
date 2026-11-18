@@ -474,6 +474,13 @@ impl WorkspaceService {
         request: PilotSnapshotCreateRequest,
     ) -> WResult<PilotSnapshot> {
         self.with(&request.root_id, |ctx| {
+            let state = load(ctx)?;
+            if let Some(snapshot) = state.pilot_snapshots.into_values().find(|snapshot| {
+                snapshot.briefing.root_id == request.root_id
+                    && snapshot.briefing.briefing_token == request.briefing_token
+            }) {
+                return Ok(snapshot);
+            }
             let briefing = self.observed_pilot_briefing(ctx, &request.briefing_token)?;
             let snapshot = PilotSnapshot {
                 id: new_id(),
