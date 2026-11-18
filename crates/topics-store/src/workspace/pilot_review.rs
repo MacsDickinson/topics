@@ -71,6 +71,16 @@ fn add_observed_wrong(
         return Ok(());
     };
     let edits = setup::pilot_edits(ctx)?;
+    let wrong = observed_wrong(snapshot, state, &edits, &week.item_adjustments);
+    result.wrong_items = wrong.len() as u32;
+    Ok(())
+}
+fn observed_wrong(
+    snapshot: &PilotSnapshot,
+    state: &State,
+    edits: &[(Candidate, Candidate, Timestamp)],
+    adjustments: &[PilotItemAdjustment],
+) -> BTreeSet<Id> {
     let mut wrong: BTreeSet<_> = state
         .pilot_feedback
         .values()
@@ -83,13 +93,46 @@ fn add_observed_wrong(
         }) {
             wrong.insert(item.item_id.clone());
         }
-        if state.operations.iter().filter(|op| op.operation.created_at > snapshot.captured_at && !undone(state, &op.operation.id)).filter_map(|op| op.proposal.as_ref()).flat_map(|p| &p.applied_candidates).any(|candidate| matches!(candidate, Candidate::Correction { claim, .. } if claim.supersedes.contains(&item.revision_id) && claim.value.split_whitespace().collect::<Vec<_>>() != item.value.split_whitespace().collect::<Vec<_>>())) {
+        let corrected = |claim: &Claim| {
+            claim.supersedes.contains(&item.revision_id)
+                && claim.value.split_whitespace().collect::<Vec<_>>()
+                    != item.value.split_whitespace().collect::<Vec<_>>()
+        };
+        if state
+            .operations
+            .iter()
+            .filter(|op| {
+                op.operation.created_at > snapshot.captured_at && !undone(state, &op.operation.id)
+            })
+            .any(|op| {
+                let proposed = op.proposal.as_ref().is_some_and(|p| {
+                    p.applied_candidates.iter().any(
+                        |c| matches!(c, Candidate::Correction { claim, .. } if corrected(claim)),
+                    )
+                });
+                let rules: BTreeSet<_> = op
+                    .targets
+                    .iter()
+                    .filter_map(|t| t.record.as_ref())
+                    .filter(|r| r.record_kind == "rule")
+                    .filter_map(|r| serde_json::from_value::<Rule>(r.data.clone()).ok())
+                    .map(|r| r.source_revision_id)
+                    .collect();
+                let reviewed = op
+                    .targets
+                    .iter()
+                    .filter_map(|t| t.record.as_ref())
+                    .filter(|r| r.record_kind == "claim")
+                    .filter_map(|r| serde_json::from_value::<Claim>(r.data.clone()).ok())
+                    .any(|claim| rules.contains(&claim.revision_id) && corrected(&claim));
+                proposed || reviewed
+            })
+        {
             wrong.insert(item.item_id.clone());
         }
     }
-    apply_item_adjustments(&mut wrong, &week.item_adjustments);
-    result.wrong_items = wrong.len() as u32;
-    Ok(())
+    apply_item_adjustments(&mut wrong, adjustments);
+    wrong
 }
 fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) -> PilotWeekMeasures {
     let mut result = PilotWeekMeasures {
