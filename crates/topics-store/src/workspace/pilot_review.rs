@@ -139,21 +139,51 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
             PilotEvidenceAtCutoff::Unknown => result.unknown += 1,
         }
     }
-    let mut learning = BTreeMap::<Id, (u32, u32)>::new();
-    for occurrence in &week.rule_occurrences {
-        let counts = learning.entry(occurrence.rule_id.clone()).or_default();
-        counts.0 += 1;
-        counts.1 += u32::from(occurrence.recurred);
+    result
+}
+fn add_learning(state: &State, week: Option<&PilotWeek>, result: &mut PilotWeekMeasures) {
+    let Some(snapshot) = week
+        .and_then(|w| w.snapshot_id.as_ref())
+        .and_then(|id| state.pilot_snapshots.get(id))
+    else {
+        return;
+    };
+    let mut occurrences: BTreeMap<Id, (Id, bool)> = snapshot
+        .briefing
+        .occurrences
+        .iter()
+        .map(|o| (o.occurrence_id.clone(), (o.rule_id.clone(), o.recurred)))
+        .collect();
+    if let Some(week) = week {
+        for adjustment in &week.rule_occurrences {
+            if let Some((rule_id, recurred)) = occurrences.get_mut(&adjustment.id)
+                && *rule_id == adjustment.rule_id
+            {
+                *recurred = adjustment.recurred;
+            }
+        }
     }
-    result.learning = learning
-        .into_iter()
-        .map(|(rule_id, (eligible, recurrences))| PilotLearningMeasure {
-            rule_id,
-            eligible,
-            recurrences,
+    result.learning = snapshot
+        .briefing
+        .rules
+        .iter()
+        .map(|rule| {
+            let matching: Vec<_> = occurrences
+                .values()
+                .filter(|(id, _)| id == &rule.rule_id)
+                .collect();
+            PilotLearningMeasure {
+                rule_id: rule.rule_id.clone(),
+                topic_id: rule.topic_id.clone(),
+                topic_name: rule.topic_name.clone(),
+                predicate: rule.predicate.clone(),
+                match_value: rule.match_value.clone(),
+                replacement: rule.replacement.clone(),
+                eligible: matching.len() as u32,
+                recurrences: matching.iter().filter(|(_, recurred)| *recurred).count() as u32,
+            }
         })
         .collect();
-    result
 }
 fn classified_week(mut week: PilotWeek, feedback: &BTreeMap<Id, PilotFeedback>) -> PilotWeek {
     for item in &mut week.material_judgements {
@@ -258,6 +288,7 @@ impl WorkspaceService {
                 .map(|week| classified_week(week, &state.pilot_feedback));
             let mut measures = measures(week.as_ref(), &state.pilot_feedback);
             add_observed_wrong(ctx, &state, week.as_ref(), &mut measures)?;
+            add_learning(&state, week.as_ref(), &mut measures);
             let comparisons = comparisons(&state, &request.project, &request.week);
             Ok(PilotWeekResult {
                 week,
@@ -307,6 +338,27 @@ impl WorkspaceService {
                 }
             }
             week = classified_week(week, &state.pilot_feedback);
+            if !week.rule_occurrences.is_empty() {
+                let snapshot = week
+                    .snapshot_id
+                    .as_ref()
+                    .and_then(|id| state.pilot_snapshots.get(id))
+                    .ok_or_else(|| {
+                        error("invalid_input", "Occurrence adjustments require a snapshot")
+                    })?;
+                if week.rule_occurrences.iter().any(|a| {
+                    !snapshot
+                        .briefing
+                        .occurrences
+                        .iter()
+                        .any(|o| o.occurrence_id == a.id && o.rule_id == a.rule_id)
+                }) {
+                    return Err(error(
+                        "invalid_input",
+                        "Adjustment must reference an observed occurrence",
+                    ));
+                }
+            }
             let mut referenced_feedback = BTreeSet::new();
             for judgement in &week.material_judgements {
                 if let Some(feedback_id) = &judgement.feedback_id {
@@ -360,6 +412,7 @@ impl WorkspaceService {
             )?;
             let mut measures = measures(Some(&week), &state.pilot_feedback);
             add_observed_wrong(ctx, &state, Some(&week), &mut measures)?;
+            add_learning(&state, Some(&week), &mut measures);
             let mut updated = state;
             updated.pilot_weeks.insert(id, week.clone());
             let comparisons = comparisons(&updated, &week.project, &week.week);
@@ -373,6 +426,29 @@ impl WorkspaceService {
 }
 
 impl WorkspaceService {
+    pub fn pilot_snapshot_create(
+        &self,
+        request: PilotSnapshotCreateRequest,
+    ) -> WResult<PilotSnapshot> {
+        self.with(&request.root_id, |ctx| {
+            let briefing = self.observed_pilot_briefing(ctx, &request.briefing_token)?;
+            let snapshot = PilotSnapshot {
+                id: new_id(),
+                captured_at: now(),
+                briefing,
+            };
+            let op = new_id();
+            let path = format!("topics/pilot-snapshots/{}.md", snapshot.id);
+            let record = Record::new("pilot_snapshot", &snapshot.id, &op, &snapshot)?;
+            commit(
+                ctx,
+                "Capture Friday briefing",
+                vec![(path, record)],
+                CommitIntent::default(),
+            )?;
+            Ok(snapshot)
+        })
+    }
     pub fn pilot_snapshot_list(&self, request: RootRequest) -> WResult<Vec<PilotSnapshot>> {
         self.with(&request.root_id, |ctx| {
             let mut snapshots: Vec<_> = load(ctx)?.pilot_snapshots.into_values().collect();

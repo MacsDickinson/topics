@@ -107,6 +107,11 @@ value!(PilotDraftMeasures {
 });
 value!(PilotLearningMeasure {
     rule_id: Id,
+    topic_id: Id,
+    topic_name: String,
+    predicate: String,
+    match_value: String,
+    replacement: String,
     eligible: u32,
     recurrences: u32
 });
