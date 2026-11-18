@@ -6,8 +6,9 @@ import { hasConvergedResult } from './search-predicate.mjs';
 describe('Phase 0 real macOS app, real Rust store', () => {
   it('searches synthetic notes through IPC and shows No matches', async () => {
     const search = await $('input[type="search"]');
-    await search.waitForDisplayed();
+    await $('h1=Today').waitForDisplayed();
     await browser.keys(['Meta', 'k']);
+    await search.waitForDisplayed();
     await expect(search).toBeFocused();
     await search.setValue('ledger');
     await expect($('h2')).toHaveText('Ledger migration');
