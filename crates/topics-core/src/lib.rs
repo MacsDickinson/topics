@@ -47,3 +47,5 @@ pub use setup::*;
 
 pub mod pilot_review;
 pub use pilot_review::*;
+pub mod pilot_briefing;
+pub use pilot_briefing::*;
