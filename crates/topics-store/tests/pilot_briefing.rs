@@ -273,7 +273,22 @@ fn analysis_after_preview_but_before_approval_is_not_a_later_occurrence() {
     let mut f = Fixture::new();
     f.single(1);
     let topic = f.topics[0].clone();
-    f.correct();
+    let preview = f
+        .service
+        .setup_correction_preview(SetupCorrectionPreviewRequest {
+            root_id: f.root_id.clone(),
+            topic_id: topic.id.clone(),
+            revision_ids: vec![f.claims[0].revision_id.clone()],
+            predicate: "pronouns".into(),
+            replacement: "they/them".into(),
+            statement: "Alex uses they/them".into(),
+            rule_scope: RuleScope {
+                source_paths: vec![],
+                context: None,
+            },
+        })
+        .unwrap();
+    f.receipt = Some(preview.receipt);
     f.write(
         "before-approval.md",
         "# Transcript\nAlex uses he/him again.\n",
