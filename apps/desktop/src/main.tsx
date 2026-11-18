@@ -1,3 +1,4 @@
+import { Pilot } from "./Pilot";
 import { ContextReview } from "./ContextReview";
 import { FolderSetup } from "./FolderSetup";
 import {
@@ -45,6 +46,7 @@ import "./window-chrome.css";
 if (import.meta.env.VITE_NATIVE_TEST === "1")
   await import("@wdio/tauri-plugin");
 type Screen =
+  | "today"
   | "search"
   | "topics"
   | "inbox"
@@ -94,7 +96,8 @@ function App() {
     refreshSeq = useRef(0),
     scopeSeq = useRef(0),
     chatScopeSeq = useRef(0);
-  const [screen, setScreen] = useState<Screen>("search");
+  const [screen, setScreen] = useState<Screen>("today");
+  const [pilotCorrection, setPilotCorrection] = useState<{topicId: string; revisionId: string; statement: string} | null>(null);
   const [autoSetup, setAutoSetup] = useState(false);
   const [settings, setSettings] = useState(false),
     [path, setPath] = useState(""),
@@ -301,21 +304,7 @@ function App() {
         if (result.root) {
           const selected = result.root;
           void refresh(selected, generation);
-          void ipc<{ entry: string; root_id: string }>("setup_inventory", {
-            root_id: selected.root_id,
-            roles: [],
-          })
-            .then((inventory) => {
-              if (
-                !disposed &&
-                current(generation, selected.root_id) &&
-                inventory.root_id === selected.root_id &&
-                inventory.entry === "returning" &&
-                navigationSeq.current === 0
-              )
-                setScreen("topics");
-            })
-            .catch(() => undefined);
+
         }
       })
       .catch((e) => {
@@ -431,6 +420,7 @@ function App() {
     setProposals([]);
     setOperations([]);
     clearTopic();
+    setPilotCorrection(null);
     setManual(false);
     try {
       if (active)
@@ -790,6 +780,7 @@ function App() {
           </div>
           <div className="nav-group">
             <p className="nav-label">Review</p>
+            <button aria-current={screen === "today" && !manual && !settings ? "page" : undefined} disabled={!root} onClick={() => navigate("today")}><Icon name="inbox" /><span>Today</span></button>
             <button
               aria-current={
                 screen === "inbox" && !manual && !settings ? "page" : undefined
@@ -1070,6 +1061,7 @@ function App() {
             </section>
           ) : (
             <>
+              {screen === "today" && <Pilot key={root.root_id} rootId={root.root_id} openSetup={() => {setAutoSetup(false); navigate("setup");}} openCorrection={(item, feedback) => {setPilotCorrection({topicId: item.topic_id, revisionId: item.revision_id, statement: feedback.text}); navigate("topics"); void openTopic(item.topic_id);}} />}
               {screen === "search" && <Search key={root.root_id} />}
               {screen === "topics" && (
                 <section className="topics-view">
@@ -1152,7 +1144,9 @@ function App() {
                             rootId={root.root_id}
                             topicId={topic.topic.id}
                             topics={topics}
+                            initialCorrection={pilotCorrection?.topicId === topic.topic.id ? pilotCorrection : null}
                             onSaved={() => {
+                              setPilotCorrection(null);
                               void refresh(root);
                               void openTopic(topic.topic.id);
                             }}

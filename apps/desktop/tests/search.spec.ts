@@ -38,6 +38,7 @@ const steps: Record<string, (page: Page) => Promise<unknown>> = {
       };
     });
     await page.goto('/');
+    await page.getByRole('button', {name: 'Search', exact: true}).click();
   },
   'I focus the search box with Cmd+K': async (page) => {
     await expect(

@@ -26,11 +26,13 @@ export function ContextReview({
   topicId,
   topics,
   onSaved,
+  initialCorrection,
 }: {
   rootId: string;
   topicId: string;
   topics: Topic[];
   onSaved: () => void;
+  initialCorrection?: {revisionId: string; statement: string} | null;
 }) {
   const [review, setReview] = useState<SetupTopicReview | null>(null),
     [error, setError] = useState("");
@@ -122,6 +124,12 @@ export function ContextReview({
     invalidateApproval();
     void act(fn, (value) => setApproval(toApproval(value)), "preview");
   }
+  useEffect(() => {
+    if (initialCorrection && review?.topic.current_claims.some(c => c.revision_id === initialCorrection.revisionId)) {
+      setTarget(initialCorrection.revisionId);
+      setStatement(initialCorrection.statement);
+    }
+  }, [initialCorrection, review]);
   const claim = review?.topic.current_claims.find(
     (c) => c.revision_id === target,
   );
@@ -199,6 +207,7 @@ export function ContextReview({
         </p>
       )}
       {!review && !error && <p role="status">Loading review state…</p>}
+      {review && initialCorrection && !review.topic.current_claims.some(c => c.revision_id === initialCorrection.revisionId) && <p role="alert" className="notice">The original statement is no longer current. Your feedback is saved with the briefing; review the topic history before making a new correction.</p>}
       {busy && (
         <p role="status">
           {saving ? "Saving your change…" : "Preparing review…"}

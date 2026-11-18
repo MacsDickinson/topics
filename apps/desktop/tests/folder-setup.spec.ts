@@ -420,12 +420,12 @@ test("connection confirmation previews only the selected connection", async ({
   ).toEqual(["connection-one"]);
 });
 
-test("a returning root opens the saved map and still offers setup", async ({
+test("a returning root opens Today and still offers setup", async ({
   page,
 }) => {
   await workspaceFixture(page, { returning: true });
   await expect(
-    page.getByRole("heading", { name: "Topics", exact: true }),
+    page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Set up folder" }).click();
   await expect(
