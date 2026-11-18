@@ -80,7 +80,7 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
     }
     let mut items = vec![];
     let mut rules = vec![];
-    let occurrences: Vec<PilotOccurrence> = vec![];
+    let mut occurrences: Vec<PilotOccurrence> = vec![];
     if available {
         recover(ctx)?;
         let inventory = setup::inventory::inventory(ctx, &[])?;
@@ -219,94 +219,159 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                 });
             }
         }
-        // Preserve the original observation while applying an approved, still-active
-        // scoped rule only to an independent source, never an edited prior source.
-        for (_, runs) in &evidence {
-            for (at, _, candidates) in runs {
+        // Analysis checkpoints are committed under the same lock as rule approvals.
+        // Compare against the committed rule operation, never the preview timestamp.
+        let mut runs: Vec<_> = evidence.iter().flat_map(|(_, runs)| runs.iter()).collect();
+        runs.sort_by(|a, b| a.0.cmp(&b.0));
+        for rule in state.rules.values() {
+            let path = format!("topics/rules/{}.md", rule.id);
+            let Some(operation_id) = state.latest_operations.get(&path) else {
+                continue;
+            };
+            let Some(approval) = state
+                .operations
+                .iter()
+                .find(|op| &op.operation.id == operation_id && op.undo_of.is_none())
+            else {
+                continue;
+            };
+            let Some(corrected) = state.claims.get(&rule.source_revision_id) else {
+                continue;
+            };
+            let Some(topic) = state.topics.get(&rule.topic_id) else {
+                continue;
+            };
+            let mut prior_paths: BTreeSet<String> = corrected
+                .supersedes
+                .iter()
+                .filter_map(|id| state.claims.get(id))
+                .flat_map(|old| old.sources.iter())
+                .filter_map(|e| match e {
+                    Evidence::Passage { source } => Some(source.path.clone()),
+                    _ => None,
+                })
+                .collect();
+            let mut prior_passages = BTreeSet::new();
+            for (at, versions, candidates) in &runs {
+                if at <= &approval.operation.created_at {
+                    prior_paths.extend(versions.iter().map(|v| v.path.clone()));
+                    for candidate in candidates {
+                        if let Candidate::Claim { claim } = candidate
+                            && claim.subject_id == rule.topic_id
+                            && claim.predicate == rule.predicate
+                        {
+                            prior_passages.extend(claim.sources.iter().filter_map(|e| match e {
+                                Evidence::Passage { source } => Some(source.passage_hash.clone()),
+                                _ => None,
+                            }));
+                        }
+                    }
+                    continue;
+                }
                 for candidate in candidates {
                     let Candidate::Claim { claim } = candidate else {
                         continue;
                     };
-                    let Some(rule) = state.rules.values().find(|rule| {
-                        if claim.value != rule.match_value && claim.value != rule.replacement {
-                            return false;
-                        }
+                    if claim.value != rule.match_value && claim.value != rule.replacement {
+                        continue;
+                    }
+                    for source in claim.sources.iter().filter_map(|e| match e {
+                        Evidence::Passage { source } => Some(source),
+                        _ => None,
+                    }) {
                         let mut comparable = claim.clone();
                         comparable.value = rule.match_value.clone();
-                        proposals::rule_matches(rule, &comparable)
-                    }) else {
-                        continue;
-                    };
-                    let Some(corrected) = state.claims.get(&rule.source_revision_id) else {
-                        continue;
-                    };
-                    if at <= &corrected.recorded_at {
-                        continue;
-                    }
-                    let previous: BTreeSet<_> = corrected
-                        .supersedes
-                        .iter()
-                        .filter_map(|id| state.claims.get(id))
-                        .flat_map(|old| old.sources.iter())
-                        .filter_map(|e| match e {
-                            Evidence::Passage { source } => Some(source.path.as_str()),
-                            _ => None,
-                        })
-                        .collect();
-                    let refs: Vec<_> = claim
-                        .sources
-                        .iter()
-                        .filter_map(|e| match e {
-                            Evidence::Passage { source }
-                                if !previous.contains(source.path.as_str()) =>
-                            {
-                                let mut one = claim.clone();
-                                one.value = rule.match_value.clone();
-                                one.sources = vec![Evidence::Passage {
-                                    source: source.clone(),
-                                }];
-                                proposals::rule_matches(rule, &one).then(|| source.clone())
-                            }
-                            _ => None,
-                        })
-                        .collect();
-                    if refs.is_empty() {
-                        continue;
-                    }
-                    let Some(topic) = state.topics.get(&claim.subject_id) else {
-                        continue;
-                    };
-                    let identity = format!(
-                        "pilot-rule:{}:{}:{}",
-                        rule.id, claim.subject_id, refs[0].path
-                    );
-                    let item_id = stable_id(&identity);
-                    if items.iter().any(|item| {
-                        item.rule_id.as_ref() == Some(&rule.id)
-                            && item.topic_id == claim.subject_id
-                            && item.sources.iter().any(|existing| {
-                                refs.iter().any(|source| {
+                        comparable.sources = vec![Evidence::Passage {
+                            source: source.clone(),
+                        }];
+                        if !proposals::rule_matches(rule, &comparable)
+                            || !versions
+                                .iter()
+                                .any(|v| v.path == source.path && v.hash == source.document_hash)
+                        {
+                            continue;
+                        }
+                        let duplicate = prior_paths.contains(&source.path)
+                            || prior_passages.contains(&source.passage_hash);
+                        let observed = items.iter().any(|item| {
+                            item.rule_id.as_ref() == Some(&rule.id)
+                                && item.sources.iter().any(|existing| {
                                     existing.path == source.path
                                         || existing.passage_hash == source.passage_hash
                                 })
-                            })
-                    }) {
-                        continue;
+                        });
+                        if duplicate && !observed {
+                            continue;
+                        }
+                        prior_paths.insert(source.path.clone());
+                        prior_passages.insert(source.passage_hash.clone());
+                        let occurrence_id = stable_id(&format!(
+                            "pilot-rule:{}:{}:{}",
+                            rule.id, claim.subject_id, source.path
+                        ));
+                        // A matching correct raw draft must not appear a second time as a generic card.
+                        for item in &mut items {
+                            if item.rule_id.is_none()
+                                && item.topic_id == claim.subject_id
+                                && item.predicate == claim.predicate
+                                && item.value == claim.value
+                            {
+                                item.sources.retain(|existing| {
+                                    !(existing.path == source.path
+                                        && existing.document_hash == source.document_hash)
+                                });
+                            }
+                        }
+                        items.retain(|item| !item.sources.is_empty());
+                        if duplicate {
+                            continue;
+                        }
+                        items.push(PilotItem {
+                            item_id: occurrence_id.clone(),
+                            topic_id: topic.id.clone(),
+                            topic_name: topic.name.clone(),
+                            revision_id: claim.revision_id.clone(),
+                            predicate: claim.predicate.clone(),
+                            value: rule.replacement.clone(),
+                            sources: vec![source.clone()],
+                            rule_id: Some(rule.id.clone()),
+                            original_value: Some(claim.value.clone()),
+                        });
+                        occurrences.push(PilotOccurrence {
+                            rule_id: rule.id.clone(),
+                            occurrence_id,
+                            observed_at: at.clone(),
+                            recurred: false,
+                        });
                     }
-                    items.push(PilotItem {
-                        item_id,
-                        topic_id: topic.id.clone(),
-                        topic_name: topic.name.clone(),
-                        revision_id: claim.revision_id.clone(),
-                        predicate: claim.predicate.clone(),
-                        value: rule.replacement.clone(),
-                        sources: refs,
-                        rule_id: Some(rule.id.clone()),
-                        original_value: Some(claim.value.clone()),
-                    });
                 }
+                // Any already analysed source version is a prior snapshot, even if
+                // that analysis contained no eligible matching claim.
+                prior_paths.extend(versions.iter().map(|version| version.path.clone()));
             }
         }
+        // A recurrence means the wrong value actually reached the displayed projection.
+        for occurrence in &mut occurrences {
+            if let Some(rule) = state.rules.get(&occurrence.rule_id)
+                && let Some(card) = items
+                    .iter()
+                    .find(|item| item.item_id == occurrence.occurrence_id)
+            {
+                occurrence.recurred = items.iter().any(|item| {
+                    item.topic_id == rule.topic_id
+                        && item.predicate == rule.predicate
+                        && item.value == rule.match_value
+                        && item.sources.iter().any(|source| {
+                            card.sources.iter().any(|matched| {
+                                source.path == matched.path
+                                    && source.document_hash == matched.document_hash
+                            })
+                        })
+                });
+            }
+        }
+        occurrences
+            .sort_by(|a, b| (&a.rule_id, &a.occurrence_id).cmp(&(&b.rule_id, &b.occurrence_id)));
         items.sort_by(|a, b| {
             (&a.topic_name, &a.topic_id, &a.item_id).cmp(&(&b.topic_name, &b.topic_id, &b.item_id))
         });
