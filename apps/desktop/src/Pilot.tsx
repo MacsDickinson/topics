@@ -40,7 +40,17 @@ type Briefing = {
     recurred: boolean;
   }[];
 };
-type Snapshot = { id: string; captured_at: string; briefing: Briefing };
+function sameBriefingContent(a: Briefing, b: Briefing): boolean {
+  const { briefing_token: _aToken, generated_at: _aTime, ...aContent } = a;
+  const { briefing_token: _bToken, generated_at: _bTime, ...bContent } = b;
+  return JSON.stringify(aContent) === JSON.stringify(bContent);
+}
+type Snapshot = {
+  id: string;
+  captured_at: string;
+  briefing: Briefing;
+  feedback_only?: boolean;
+};
 type Classification =
   | "analysed"
   | "pending_unavailable"
@@ -376,7 +386,7 @@ export function Pilot({
               "Refresh and review the briefing before saving feedback.",
             );
           const g = generation.current;
-          current = await ipc<Snapshot>("pilot_snapshot_create", {
+          current = await ipc<Snapshot>("pilot_feedback_snapshot_create", {
             root_id: rootId,
             briefing_token: briefing.briefing_token,
           });
@@ -388,7 +398,10 @@ export function Pilot({
         }
         const entry = await ipc<Feedback>("pilot_feedback_save", {
           root_id: rootId,
-          feedback: { ...feedback, snapshot_id: current.id },
+          feedback: {
+            ...feedback,
+            snapshot_id: feedback.snapshot_id || current.id,
+          },
         });
         return { current, entry };
       },
@@ -444,6 +457,12 @@ export function Pilot({
     );
   }
   function saveWeek() {
+    if (weekSnapshot?.feedback_only) {
+      setError(
+        "Choose a kept meeting briefing before saving the weekly review.",
+      );
+      return;
+    }
     if (
       !week ||
       week.material_judgements.some((j) => !j.description.trim()) ||
@@ -522,19 +541,38 @@ export function Pilot({
       {shown && (
         <>
           <Section
-            title={snapshot ? "Saved briefing" : "Briefing"}
+            title={
+              snapshot
+                ? snapshot.feedback_only
+                  ? "Saved feedback view"
+                  : "Saved meeting briefing"
+                : "Briefing"
+            }
             description={
               snapshot
-                ? `Kept ${new Date(snapshot.captured_at).toLocaleString()}. Later source changes cannot rewrite this record.`
+                ? snapshot.feedback_only
+                  ? `Saved ${new Date(snapshot.captured_at).toLocaleString()} for feedback. This is not a kept meeting; later source changes cannot rewrite this view.`
+                  : `Kept ${new Date(snapshot.captured_at).toLocaleString()} for the meeting. Later source changes cannot rewrite this record.`
                 : `Checked ${new Date(shown.generated_at).toLocaleString()}.`
             }
           >
             <PilotSources sources={shown.sources} />
-            {shown.since && <p>Changes since the briefing on {new Date(shown.since).toLocaleString()}.</p>}
-            {shown.history_incomplete && <p role="status">Analysis history is incomplete. Some changes may be missing from this briefing.</p>}
+            {shown.since && (
+              <p>
+                Changes since the briefing on{" "}
+                {new Date(shown.since).toLocaleString()}.
+              </p>
+            )}
+            {shown.history_incomplete && (
+              <p role="status">
+                Analysis history is incomplete. Some changes may be missing from
+                this briefing.
+              </p>
+            )}
             {!shown.items.length && (
               <p>
-                {!shown.history_incomplete && shown.sources.length > 0 &&
+                {!shown.history_incomplete &&
+                shown.sources.length > 0 &&
                 shown.sources.every((s) => s.status === "checked")
                   ? "No new changes in analysed sources."
                   : "No topic changes are available in this briefing."}
@@ -568,7 +606,7 @@ export function Pilot({
             >
               Add missed commitment
             </Button>{" "}
-            {snapshot ? (
+            {snapshot && (
               <Button
                 onClick={() => {
                   setSnapshot(null);
@@ -577,17 +615,25 @@ export function Pilot({
               >
                 Back to Today
               </Button>
-            ) : (
+            )}{" "}
+            {(!snapshot || snapshot.feedback_only) && (
               <>
                 <Button
                   variant="primary"
-                  disabled={busy}
+                  disabled={
+                    busy ||
+                    (!!snapshot &&
+                      (!briefing ||
+                        !sameBriefingContent(snapshot.briefing, briefing)))
+                  }
                   onClick={() =>
                     void run(
                       () =>
                         ipc<Snapshot>("pilot_snapshot_create", {
                           root_id: rootId,
-                          briefing_token: shown.briefing_token,
+                          briefing_token: snapshot
+                            ? briefing!.briefing_token
+                            : shown.briefing_token,
                         }),
                       (v) => {
                         setSnapshot(v);
@@ -599,7 +645,15 @@ export function Pilot({
                   }
                 >
                   Keep briefing for meeting
-                </Button>{" "}
+                </Button>
+                {snapshot?.feedback_only &&
+                  briefing &&
+                  !sameBriefingContent(snapshot.briefing, briefing) && (
+                    <p>
+                      Return to Today and refresh the briefing before keeping
+                      the meeting record.
+                    </p>
+                  )}{" "}
                 <Button onClick={openSetup}>Review batch authorization</Button>
               </>
             )}
@@ -607,7 +661,10 @@ export function Pilot({
         </>
       )}
       {snapshots.length > 0 && (
-        <Section title="Saved briefings">
+        <Section
+          title="Saved briefings"
+          description="Meeting briefings are the records kept for a meeting. Feedback views preserve what you saw when you reported something between meetings."
+        >
           {snapshots.map((s) => (
             <p key={s.id}>
               <Button
@@ -623,7 +680,8 @@ export function Pilot({
                   )
                 }
               >
-                Open briefing {new Date(s.captured_at).toLocaleString()}
+                Open briefing ({s.feedback_only ? "feedback view" : "meeting"}){" "}
+                {new Date(s.captured_at).toLocaleString()}
               </Button>
             </p>
           ))}
@@ -682,45 +740,58 @@ export function Pilot({
           onCancel={() => setFeedback(null)}
         />
       )}
-      {snapshot &&
-        saved.filter((f) => f.snapshot_id === snapshot.id).length > 0 && (
-          <Section title="Your feedback">
-            {saved
-              .filter((f) => f.snapshot_id === snapshot.id)
-              .map((f) => {
-                const item = shown?.items.find((i) => i.item_id === f.item_id);
-                return (
-                  <article key={f.id} className="candidate">
-                    <p>{f.text}</p>
-                    <p>
-                      Reported by {f.recorded_by} ·{" "}
-                      {new Date(f.recorded_at).toLocaleString()}
-                    </p>
-                    <p>
-                      {
-                        classifications.find(
-                          ([v]) => v === f.evidence_at_cutoff,
-                        )?.[1]
-                      }
-                    </p>
-                    <Button onClick={() => setFeedback(f)}>
-                      Edit feedback
-                    </Button>
-                    {item && (
-                      <Button
-                        onClick={() => {
-                          if (!openCorrection(item, f))
-                            setUnsavedCorrection(true);
-                        }}
-                      >
-                        Review scoped correction for {item.topic_name}
-                      </Button>
-                    )}
-                  </article>
-                );
-              })}
-          </Section>
-        )}
+      {snapshot && saved.length > 0 && (
+        <Section title="Your feedback">
+          {!snapshot.feedback_only && (
+            <p>
+              Includes reports saved between the previous meeting and this
+              meeting. Each report keeps its original briefing view.
+            </p>
+          )}
+          {saved.map((f) => {
+            const origin = snapshots.find((s) => s.id === f.snapshot_id);
+            const item = (
+              f.snapshot_id === snapshot.id ? snapshot : origin
+            )?.briefing.items.find((i) => i.item_id === f.item_id);
+            return (
+              <article key={f.id} className="candidate">
+                <p>{f.text}</p>
+                {f.snapshot_id !== snapshot.id && (
+                  <p>Reported from an earlier feedback view.</p>
+                )}
+                <p>
+                  Reported by {f.recorded_by} ·{" "}
+                  {new Date(f.recorded_at).toLocaleString()}
+                </p>
+                <p>
+                  {
+                    classifications.find(
+                      ([v]) => v === f.evidence_at_cutoff,
+                    )?.[1]
+                  }
+                </p>
+                <Button onClick={() => setFeedback(f)}>Edit feedback</Button>
+                {f.kind === "wrong" && !item && (
+                  <p>
+                    The original item is not available in this view. Open the
+                    original feedback view to inspect its citation before making
+                    a scoped correction.
+                  </p>
+                )}
+                {item && (
+                  <Button
+                    onClick={() => {
+                      if (!openCorrection(item, f)) setUnsavedCorrection(true);
+                    }}
+                  >
+                    Review scoped correction for {item.topic_name}
+                  </Button>
+                )}
+              </article>
+            );
+          })}
+        </Section>
+      )}
       <details>
         <summary>Weekly review</summary>
         <Section
@@ -771,13 +842,30 @@ export function Pilot({
                   }
                 >
                   <option value="">None selected</option>
-                  {snapshots.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {new Date(s.captured_at).toLocaleString()}
-                    </option>
-                  ))}
+                  {snapshots
+                    .filter(
+                      (s) => !s.feedback_only || s.id === week.snapshot_id,
+                    )
+                    .sort(
+                      (a, b) =>
+                        Number(!!a.feedback_only) - Number(!!b.feedback_only),
+                    )
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.feedback_only
+                          ? "Feedback view (not a meeting) — "
+                          : "Meeting — "}
+                        {new Date(s.captured_at).toLocaleString()}
+                      </option>
+                    ))}
                 </select>
               </Field>
+              {weekSnapshot?.feedback_only && (
+                <p role="alert" className="notice">
+                  This saved feedback view is not a meeting briefing. Choose a
+                  kept meeting before saving the weekly review.
+                </p>
+              )}
               <div className="form-grid">
                 {(
                   [
@@ -872,6 +960,23 @@ export function Pilot({
                 <section aria-label="Briefing items to review">
                   <h4>Briefing items</h4>
                   <p>Count only changes that mattered at the meeting.</p>
+                  {(() => {
+                    const remaining = weekSnapshot.briefing.items.filter(
+                      (item) =>
+                        !week.material_judgements.some(
+                          (j) => j.id === item.item_id,
+                        ),
+                    ).length;
+                    return (
+                      <p>
+                        {remaining} briefing{" "}
+                        {remaining === 1
+                          ? "item still needs"
+                          : "items still need"}{" "}
+                        a materiality decision.
+                      </p>
+                    );
+                  })()}
                   {weekSnapshot.briefing.items.map((item) => (
                     <article className="candidate" key={item.item_id}>
                       <p>
@@ -923,6 +1028,10 @@ export function Pilot({
               {weekFeedback.length > 0 && (
                 <section aria-label="Meeting feedback">
                   <h4>Meeting feedback</h4>
+                  <p>
+                    Includes reports from feedback views since the previous kept
+                    meeting through this meeting.
+                  </p>
                   {weekFeedback.map((f) => (
                     <article className="candidate" key={f.id}>
                       <p>
