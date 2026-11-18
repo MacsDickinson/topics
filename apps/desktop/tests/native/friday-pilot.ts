@@ -46,4 +46,18 @@ describe('Friday pilot on a returning workspace', () => {
     expect(result.serverAssignedTime).toEqual(true);
     expect(result.recovered).toEqual('Friday was the first time we agreed on a handover.');
   });
+
+  it('reports a miss directly from Today and reopens it after reloading', async () => {
+    const sentence = 'The second meeting moved to Wednesday.';
+    await $('button=Topics missed something').click();
+    await $('#pilot-feedback').setValue(sentence);
+    await $('button=Save feedback').click();
+    await expect($(`p=${sentence}`)).toBeDisplayed();
+    await browser.refresh();
+    await expect($('h1=Today')).toBeDisplayed();
+    const latest = await $('button*=Open briefing');
+    await latest.waitForDisplayed();
+    await latest.click();
+    await expect($(`p=${sentence}`)).toBeDisplayed();
+  });
 });
