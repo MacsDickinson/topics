@@ -261,7 +261,16 @@ impl WorkspaceService {
                             rule.id, claim.subject_id, refs[0].path
                         );
                         let item_id = stable_id(&identity);
-                        if items.iter().any(|item| item.item_id == item_id) {
+                        if items.iter().any(|item| {
+                            item.rule_id.as_ref() == Some(&rule.id)
+                                && item.topic_id == claim.subject_id
+                                && item.sources.iter().any(|existing| {
+                                    refs.iter().any(|source| {
+                                        existing.path == source.path
+                                            || existing.passage_hash == source.passage_hash
+                                    })
+                                })
+                        }) {
                             continue;
                         }
                         items.push(PilotItem {

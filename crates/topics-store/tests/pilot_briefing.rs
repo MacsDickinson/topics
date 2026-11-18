@@ -76,6 +76,29 @@ fn approved_rule_applies_only_to_later_independent_source_and_undo_stops_it() {
     f.receipt = Some(preview.receipt);
     f.decide();
     let operation = f.result.as_ref().unwrap().operations[0].id.clone();
+    // A later edit of the original source is not an independent occurrence.
+    f.write(
+        "meeting.md",
+        "# Transcript\nAlex uses he/him, with an edit.\n",
+    );
+    f.preview(1);
+    f.authorize();
+    let cap = f.start();
+    let old_source = f.read(&cap)[0].citation.clone();
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "he/him", &old_source),
+        }],
+    );
+    assert!(
+        f.service
+            .pilot_briefing(f.root_request())
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| i.rule_id.is_none())
+    );
     f.write("later.md", "# Transcript\nAlex uses he/him.\n");
     f.preview(2);
     f.authorize();
