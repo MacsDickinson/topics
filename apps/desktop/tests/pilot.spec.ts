@@ -234,3 +234,110 @@ test("superseded briefing item offers history without losing feedback", async ({
     1,
   );
 });
+
+test("reviews two material surfaced changes and a reported omission without retyping", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { pilot: true, pilotTwoItems: true });
+  await page.getByRole("button", { name: "Topics missed something" }).click();
+  await page
+    .getByLabel("What was wrong or missed?")
+    .fill("Approval was required.");
+  await page.getByLabel("Evidence at briefing time").selectOption("analysed");
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await page.getByRole("button", { name: "Back to Today" }).click();
+  await page.getByRole("button", { name: "Topics missed something" }).click();
+  await page
+    .getByLabel("What was wrong or missed?")
+    .fill("The decision was new.");
+  await page
+    .getByLabel("Evidence at briefing time")
+    .selectOption("first_learned");
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  expect(
+    await page.evaluate(
+      () =>
+        new Set((window as any).pilotFeedback.map((f: any) => f.snapshot_id))
+          .size,
+    ),
+  ).toBe(1);
+  await page.getByText("Weekly review", { exact: true }).first().click();
+  await page
+    .getByRole("button", { name: "Week: Select date" })
+    .scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: "Week: Select date" }).click();
+  await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByLabel("Project", { exact: true }).fill("Ledger");
+  await page.getByRole("button", { name: "Open weekly review" }).click();
+  await page.getByLabel("Meeting briefing").selectOption("snapshot-one");
+  await page
+    .getByRole("button", { name: "Count Ledger launch as material" })
+    .click();
+  await page
+    .getByRole("button", { name: "Count Ledger owner as material" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Count Ledger launch as material" }),
+  ).toBeDisabled();
+  await expect(page.getByText("Approval was required.").last()).toBeVisible();
+  await expect(page.getByLabel("Total preparation minutes")).toHaveValue("");
+  await page.getByRole("button", { name: "Save weekly review" }).click();
+  await expect(page.getByText("Known in-scope omissions: 1 / 3")).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as any).pilotWeek.total_minutes),
+  ).toBeNull();
+});
+
+test("keeps a sentence across a stale briefing and requires a fresh review", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { pilot: true });
+  await page.getByRole("button", { name: "Topics missed something" }).click();
+  await page
+    .getByLabel("What was wrong or missed?")
+    .fill("A material decision was missed.");
+  await page.evaluate(() => {
+    (window as any).pilotBriefing.briefing_token = "changed-token";
+  });
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await expect(page.getByRole("alert")).toContainText("refresh and review");
+  await expect(
+    page.getByRole("button", { name: "I reviewed the refreshed briefing" }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("What was wrong or missed?")).toHaveValue(
+    "A material decision was missed.",
+  );
+  await page.getByRole("button", { name: "Refresh briefing" }).click();
+  await page
+    .getByRole("button", { name: "I reviewed the refreshed briefing" })
+    .click();
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await expect(page.getByText("A material decision was missed.")).toBeVisible();
+});
+
+test("weekly measurements retain unknown and zero and reject invalid values", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { pilot: true });
+  await page.getByText("Weekly review", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Week: Select date" }).click();
+  await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByLabel("Project", { exact: true }).fill("Ledger");
+  await page.getByRole("button", { name: "Open weekly review" }).click();
+  await expect(page.getByLabel("Sources", { exact: true })).toHaveValue("");
+  await page.getByLabel("Sources", { exact: true }).fill("0");
+  await page.getByLabel("Total preparation minutes").fill("-1");
+  await page.getByRole("button", { name: "Save weekly review" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "nonnegative whole number",
+  );
+  expect(await page.evaluate(() => (window as any).pilotWeek)).toBeNull();
+  await page.getByLabel("Total preparation minutes").fill("");
+  await page.getByRole("button", { name: "Save weekly review" }).click();
+  const week = await page.evaluate(() => (window as any).pilotWeek);
+  expect(week.source_count).toBe(0);
+  expect(week.total_minutes).toBeNull();
+  expect(week.decision_count).toBeNull();
+});

@@ -67,15 +67,15 @@ type Week = {
   project: string;
   phase: "baseline" | "pilot";
   snapshot_id: string | null;
-  source_count: number;
-  decision_count: number;
-  commitment_count: number;
-  total_minutes: number;
-  correction_minutes: number;
+  source_count: number | null;
+  decision_count: number | null;
+  commitment_count: number | null;
+  total_minutes: number | null;
+  correction_minutes: number | null;
   useful_change: string;
   workload_comparison: "comparable" | "materially_different" | "unknown";
   useful_change_judgement: "observed" | "none" | "unknown";
-  manual_commitments: number;
+  manual_commitments: number | null;
   item_adjustments: { item_id: string; wrong: boolean }[];
   material_judgements: Judgement[];
   rule_occurrences: { id: string; rule_id: string; recurred: boolean }[];
@@ -126,15 +126,15 @@ const blankWeek = (week: string, project: string): Week => ({
   project,
   phase: "pilot",
   snapshot_id: null,
-  source_count: 0,
-  decision_count: 0,
-  commitment_count: 0,
-  total_minutes: 0,
-  correction_minutes: 0,
+  source_count: null,
+  decision_count: null,
+  commitment_count: null,
+  total_minutes: null,
+  correction_minutes: null,
   useful_change: "",
   workload_comparison: "unknown",
   useful_change_judgement: "unknown",
-  manual_commitments: 0,
+  manual_commitments: null,
   item_adjustments: [],
   material_judgements: [],
   rule_occurrences: [],
@@ -144,12 +144,14 @@ const blankWeek = (week: string, project: string): Week => ({
 function FeedbackForm({
   feedback,
   busy,
+  reviewRequired,
   onChange,
   onSave,
   onCancel,
 }: {
   feedback: Feedback;
   busy: boolean;
+  reviewRequired: boolean;
   onChange: (value: Feedback) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -198,7 +200,7 @@ function FeedbackForm({
       </Field>
       <Button
         variant="primary"
-        disabled={busy || !feedback.text.trim()}
+        disabled={busy || reviewRequired || !feedback.text.trim()}
         onClick={onSave}
       >
         Save feedback
@@ -227,6 +229,9 @@ export function Pilot({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [numberDrafts, setNumberDrafts] = useState<Record<string, string>>({});
+  const [feedbackNeedsReview, setFeedbackNeedsReview] = useState(false);
+  const [requiredRefresh, setRequiredRefresh] = useState(0);
   const [unsavedCorrection, setUnsavedCorrection] = useState(false);
   const [weekFeedback, setWeekFeedback] = useState<Feedback[]>([]);
   const [feedback, setFeedback] = useState<Feedback | null>(null),
@@ -330,7 +335,14 @@ export function Pilot({
       const v = await fn();
       if (g === generation.current) done(v);
     } catch (e) {
-      if (g === generation.current) setError(apiError(e).message);
+      if (g === generation.current) {
+        const failure = apiError(e);
+        setError(failure.message);
+        if (failure.code === "stale_scope" && feedback && !snapshot) {
+          setFeedbackNeedsReview(true);
+          setRequiredRefresh(refreshVersion + 1);
+        }
+      }
     } finally {
       if (g === generation.current) setBusy(false);
     }
@@ -338,6 +350,7 @@ export function Pilot({
   const shown = snapshot?.briefing || briefing;
   const weekSnapshot = snapshots.find((s) => s.id === week?.snapshot_id);
   function startFeedback(item?: Item, kind?: "missed_commitment") {
+    setFeedbackNeedsReview(false);
     setFeedback({
       id: crypto.randomUUID(),
       snapshot_id: snapshot?.id || "",
@@ -351,7 +364,7 @@ export function Pilot({
     });
   }
   function saveFeedback() {
-    if (!feedback || !feedback.text.trim()) return;
+    if (!feedback || !feedback.text.trim() || feedbackNeedsReview) return;
     void run(
       async () => {
         let current = snapshot;
@@ -404,7 +417,25 @@ export function Pilot({
           project: project.trim(),
         }),
       (v) => {
-        setWeek(v.week || blankWeek(weekKey, project.trim()));
+        const loaded = v.week || blankWeek(weekKey, project.trim());
+        setWeek(loaded);
+        setNumberDrafts(
+          Object.fromEntries(
+            [
+              "source_count",
+              "decision_count",
+              "commitment_count",
+              "total_minutes",
+              "correction_minutes",
+              "manual_commitments",
+            ].map((key) => [
+              key,
+              loaded[key as keyof Week] == null
+                ? ""
+                : String(loaded[key as keyof Week]),
+            ]),
+          ),
+        );
         setMeasures(v.measures);
         setComparisons(v.comparisons);
       },
@@ -421,15 +452,46 @@ export function Pilot({
       );
       return;
     }
+    const numericKeys = [
+      "source_count",
+      "decision_count",
+      "commitment_count",
+      "total_minutes",
+      "correction_minutes",
+      "manual_commitments",
+    ] as const;
+    if (
+      numericKeys.some(
+        (key) =>
+          numberDrafts[key] &&
+          (!/^\d+$/.test(numberDrafts[key]) ||
+            !Number.isSafeInteger(Number(numberDrafts[key])) ||
+            Number(numberDrafts[key]) > 4294967295),
+      )
+    ) {
+      setError(
+        "Enter a nonnegative whole number, or leave the field blank when unknown.",
+      );
+      return;
+    }
+    const updated = {
+      ...week,
+      ...Object.fromEntries(
+        numericKeys.map((key) => [
+          key,
+          numberDrafts[key] ? Number(numberDrafts[key]) : null,
+        ]),
+      ),
+    } as Week;
     void run(
       () =>
         ipc<{
           week: Week | null;
           measures: Measures;
           comparisons: Comparisons;
-        }>("pilot_week_save", { root_id: rootId, week }),
+        }>("pilot_week_save", { root_id: rootId, week: updated }),
       (v) => {
-        setWeek(v.week || week);
+        setWeek(v.week || updated);
         setMeasures(v.measures);
         setComparisons(v.comparisons);
         setNotice("Weekly review saved locally.");
@@ -525,7 +587,9 @@ export function Pilot({
                         }),
                       (v) => {
                         setSnapshot(v);
-                        setSnapshots((old) => [v, ...old]);
+                        setSnapshots((old) =>
+                          old.some((s) => s.id === v.id) ? old : [v, ...old],
+                        );
                       },
                     )
                   }
@@ -572,10 +636,43 @@ export function Pilot({
           <Button onClick={() => setUnsavedCorrection(false)}>Dismiss</Button>
         </div>
       )}
+      {feedback && feedbackNeedsReview && (
+        <div className="notice" role="status">
+          <p>
+            The briefing changed while you were writing. Your sentence is kept;
+            refresh and review the updated evidence before saving.
+          </p>
+          {briefing &&
+            !loading &&
+            refreshVersion >= requiredRefresh &&
+            (feedback.kind !== "wrong" ||
+              briefing.items.some(
+                (item) => item.item_id === feedback.item_id,
+              )) && (
+              <Button onClick={() => setFeedbackNeedsReview(false)}>
+                I reviewed the refreshed briefing
+              </Button>
+            )}
+          {briefing &&
+            !loading &&
+            refreshVersion >= requiredRefresh &&
+            feedback.kind === "wrong" &&
+            !briefing.items.some(
+              (item) => item.item_id === feedback.item_id,
+            ) && (
+              <p>
+                The original item is no longer in this briefing. Keep your
+                sentence and report it against an appropriate saved briefing or
+                cancel this report.
+              </p>
+            )}
+        </div>
+      )}
       {feedback && (
         <FeedbackForm
           feedback={feedback}
           busy={busy}
+          reviewRequired={feedbackNeedsReview}
           onChange={setFeedback}
           onSave={saveFeedback}
           onCancel={() => setFeedback(null)}
@@ -690,12 +787,14 @@ export function Pilot({
                 ).map(([key, label]) => (
                   <Field key={key} id={`pilot-${key}`} label={label}>
                     <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={week[key]}
+                      type="text"
+                      inputMode="numeric"
+                      value={numberDrafts[key] ?? ""}
                       onChange={(e) =>
-                        setWeek({ ...week, [key]: Number(e.target.value) })
+                        setNumberDrafts({
+                          ...numberDrafts,
+                          [key]: e.target.value,
+                        })
                       }
                     />
                   </Field>
@@ -765,6 +864,108 @@ export function Pilot({
                 Record each distinct change once. Edit its classification as
                 evidence becomes clear.
               </p>
+              {weekSnapshot && (
+                <section aria-label="Briefing items to review">
+                  <h4>Briefing items</h4>
+                  <p>Count only changes that mattered at the meeting.</p>
+                  {weekSnapshot.briefing.items.map((item) => (
+                    <article className="candidate" key={item.item_id}>
+                      <p>
+                        {item.topic_name}: {item.predicate} — {item.value}
+                      </p>
+                      <details>
+                        <summary>Sources ({item.sources.length})</summary>
+                        {item.sources.map((source, i) => (
+                          <SourceEvidence key={i} source={source} />
+                        ))}
+                      </details>
+                      <Button
+                        disabled={week.material_judgements.some(
+                          (j) => j.id === item.item_id,
+                        )}
+                        onClick={() =>
+                          setWeek({
+                            ...week,
+                            material_judgements: [
+                              ...week.material_judgements,
+                              {
+                                id: item.item_id,
+                                description: `${item.topic_name}: ${item.predicate} — ${item.value}`,
+                                outcome: "surfaced_correctly",
+                                evidence_at_cutoff:
+                                  item.sources.length &&
+                                  item.sources.every((source) =>
+                                    weekSnapshot.briefing.sources.some(
+                                      (s) =>
+                                        s.analysed_hash ===
+                                          source.document_hash &&
+                                        s.path === source.path,
+                                    ),
+                                  )
+                                    ? "analysed"
+                                    : "unknown",
+                                feedback_id: null,
+                              },
+                            ],
+                          })
+                        }
+                      >
+                        Count {item.topic_name} {item.predicate} as material
+                      </Button>
+                    </article>
+                  ))}
+                </section>
+              )}
+              {weekFeedback.length > 0 && (
+                <section aria-label="Meeting feedback">
+                  <h4>Meeting feedback</h4>
+                  {weekFeedback.map((f) => (
+                    <article className="candidate" key={f.id}>
+                      <p>
+                        {f.text} —{" "}
+                        {
+                          classifications.find(
+                            ([v]) => v === f.evidence_at_cutoff,
+                          )?.[1]
+                        }
+                      </p>
+                      {f.kind === "omitted" ? (
+                        <p>
+                          Reported omissions are counted from this saved
+                          feedback.
+                        </p>
+                      ) : (
+                        f.kind === "wrong" && (
+                          <Button
+                            disabled={week.material_judgements.some(
+                              (j) =>
+                                j.feedback_id === f.id ||
+                                (f.item_id !== null && j.id === f.item_id),
+                            )}
+                            onClick={() =>
+                              setWeek({
+                                ...week,
+                                material_judgements: [
+                                  ...week.material_judgements,
+                                  {
+                                    id: f.item_id || crypto.randomUUID(),
+                                    description: f.text,
+                                    outcome: "wrong",
+                                    evidence_at_cutoff: f.evidence_at_cutoff,
+                                    feedback_id: f.id,
+                                  },
+                                ],
+                              })
+                            }
+                          >
+                            Count this wrong item as material
+                          </Button>
+                        )
+                      )}
+                    </article>
+                  ))}
+                </section>
+              )}
               {week.material_judgements.map((j, index) => (
                 <article className="candidate" key={j.id}>
                   <Field id={`judgement-${j.id}`} label="Material change">
@@ -799,11 +1000,25 @@ export function Pilot({
                       }
                     >
                       <option value="">None</option>
-                      {weekFeedback.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.text}
-                        </option>
-                      ))}
+                      {weekFeedback
+                        .filter(
+                          (f) =>
+                            ((j.outcome === "wrong" && f.kind === "wrong") ||
+                              (j.outcome === "omitted" &&
+                                f.kind === "omitted")) &&
+                            !week.material_judgements.some(
+                              (other) =>
+                                other.id !== j.id &&
+                                (other.feedback_id === f.id ||
+                                  (f.item_id !== null &&
+                                    other.id === f.item_id)),
+                            ),
+                        )
+                        .map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.text}
+                          </option>
+                        ))}
                     </select>
                   </Field>
                   <Field id={`outcome-${j.id}`} label="Outcome">
@@ -819,6 +1034,7 @@ export function Pilot({
                                     ...x,
                                     outcome: e.target
                                       .value as Judgement["outcome"],
+                                    feedback_id: null,
                                   }
                                 : x,
                           ),
@@ -1047,6 +1263,7 @@ export function Pilot({
               ) : (
                 <p>Draft quality unavailable.</p>
               )}
+              <p>Since correction approval, as of this briefing:</p>
               {measures.learning.length ? (
                 measures.learning.map((l) => (
                   <p key={l.rule_id}>
@@ -1073,7 +1290,7 @@ export function Pilot({
                 <li>Preparation time: {comparisons.preparation_time}</li>
                 <li>Useful change: {comparisons.useful_change}</li>
                 <li>Omission trend: {comparisons.omission_trend}</li>
-                <li>Source coverage: {comparisons.source_coverage}</li>
+                <li>Source status recorded: {comparisons.source_coverage}</li>
               </ul>
             </div>
           )}
