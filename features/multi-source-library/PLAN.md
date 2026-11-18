@@ -4,7 +4,7 @@ Proposed for discussion and BDD sign-off. The existing [agreed plan](../../docs/
 
 ## Pilot decision
 
-Start with the [Friday sync pilot](PILOT.md) in one existing workspace. Use the ordinary work-week sync to discover what Topics missed and measure the effort of correcting it. The two-folder registry below follows that experiment. The user endorsed the pilot direction on 2026-11-18. The revised [pilot scenarios](pilot.feature) are proposed for build sign-off.
+Start with the [Friday sync pilot](PILOT.md) in one existing workspace. Use the ordinary work-week sync to discover what Topics missed and measure the effort of correcting it. The two-folder registry below follows that experiment. The user endorsed the pilot direction on 2026-11-18. The user approved the [pilot scenarios](pilot.feature) and requested implementation.
 
 ## Who opens Topics, and why?
 

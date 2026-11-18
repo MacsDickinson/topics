@@ -1,5 +1,7 @@
 # The Friday sync pilot
 
+Approved for implementation on 2026-11-18, including the [pilot scenarios](pilot.feature).
+
 **Decision to make.** Does a dated briefing reduce the work of reconstructing and correcting what happened before a meeting? Does it catch something you would otherwise have had to discover on Friday? Start with one project in the existing work-Mac workspace. The person attending the meeting is the evaluator. Development uses fictional inputs in temporary directories. User-led field observation stays on the work Mac, including notes, evidence, corrections and the completed scorecard.
 
 ## From preparation to feedback

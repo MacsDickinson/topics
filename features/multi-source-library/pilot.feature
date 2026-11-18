@@ -1,4 +1,4 @@
-@proposed @not_approved
+@friday_pilot
 Feature: Learn from corrections I actually make in the Friday sync
   As the person preparing for the meeting
   I want to capture a missed or wrong update in a sentence
