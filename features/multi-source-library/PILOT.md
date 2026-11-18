@@ -25,6 +25,18 @@ Approved for implementation on 2026-11-18, including the [pilot scenarios](pilot
 
 ## Work Mac and subsequent distribution
 
-The existing prototype is a baseline build. The Today snapshot, omission capture and weekly tally above need implementation. Start the work-Mac rehearsal with a fictional folder, an empty absolute app-data directory and the work-approved provider/account before selecting work material. The current build is Apple silicon, ad-hoc signed, and its analysis path expects Codex 0.166.0. Check that the work Mac permits that build and backend. If work permits only Claude, use the manual scorecard for the baseline and record automated analysis as blocked until an approved backend is supported. Keep the executable transfer separate from app data and credentials.
+Use the Friday pilot build for this trial. Transfer the app archive by your work-approved channel. The app stores the briefing, feedback and weekly review in the selected folder, so create the work workspace on the work Mac. The Apple silicon prototype uses ad-hoc signing. Model analysis expects Codex 0.166.0 and the work-approved account. If work permits only Claude, you can still record baseline effort and commitments in Weekly review or the blank scorecard.
+
+For a first rehearsal, extract the archive and run the following commands from the directory containing `Topics.app`. This opens a separate test instance with an empty app-data directory and gives you a fictional folder to select.
+
+```sh
+pilot_dir=$(mktemp -d)
+mkdir "$pilot_dir/notes" "$pilot_dir/app-data"
+echo 'The handover is scheduled for Friday.' > "$pilot_dir/notes/meeting.md"
+echo "$pilot_dir/notes"
+TOPICS_APP_DATA_DIR="$pilot_dir/app-data" ./Topics.app/Contents/MacOS/topics-desktop
+```
+
+Choose the printed folder and open **Today**. Select **Topics missed something**, enter a sentence and save. Open the dated briefing again to see your feedback. For the field trial, launch the app normally and choose your approved work folder. In **Today → Weekly review**, choose a date, use the same project name each week and record the first sync as **Baseline**. Before each pilot sync use **Keep briefing for meeting**. Record total preparation time including corrections, then enter the correction minutes separately.
 
 A later distribution feature should cover an approved install channel, supported Mac architectures, signing and notarization, versioned updates, and recovery with the user's knowledge and history intact. No updater is needed to compare the first Friday sessions.
