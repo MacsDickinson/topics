@@ -26,7 +26,10 @@ fn later_independent_rule_occurrence_is_counted_once_and_snapshot_survives_undo(
     f.decide();
     let operation = f.result.as_ref().unwrap().operations[0].id.clone();
     let topic = f.topics[0].clone();
-    f.write("later.md", "# Transcript\nAlex uses he/him.\n");
+    f.write(
+        "later.md",
+        "# Transcript\nAlex uses he/him. Morgan uses he/him.\n",
+    );
     f.preview(2);
     f.authorize();
     let cap = f.start();
@@ -37,11 +40,20 @@ fn later_independent_rule_occurrence_is_counted_once_and_snapshot_survives_undo(
         .unwrap()
         .citation
         .clone();
+    let other = support::topic("Morgan", TopicKind::Person);
     f.publish(
         cap,
-        vec![Candidate::Claim {
-            claim: claim(&topic, "pronouns", "he/him", &source),
-        }],
+        vec![
+            Candidate::Claim {
+                claim: claim(&topic, "pronouns", "he/him", &source),
+            },
+            Candidate::Topic {
+                topic: other.clone(),
+            },
+            Candidate::Claim {
+                claim: claim(&other, "pronouns", "he/him", &source),
+            },
+        ],
     );
     let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
     let applied = briefing
@@ -51,6 +63,13 @@ fn later_independent_rule_occurrence_is_counted_once_and_snapshot_survives_undo(
         .unwrap();
     assert_eq!(applied.value, "they/them");
     assert_eq!(applied.sources[0].path, "later.md");
+    let unrelated = briefing
+        .items
+        .iter()
+        .find(|item| item.topic_id == other.id)
+        .unwrap();
+    assert_eq!(unrelated.value, "he/him");
+    assert!(unrelated.rule_id.is_none());
     assert_eq!(briefing.occurrences.len(), 1);
     assert!(!briefing.occurrences[0].recurred);
     let snapshot = f
