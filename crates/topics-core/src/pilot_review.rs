@@ -68,10 +68,21 @@ value!(PilotRuleOccurrence {
     rule_id: Id,
     recurred: bool
 });
+choices!(PilotWorkloadComparison {
+    Comparable,
+    MateriallyDifferent,
+    Unknown
+});
+choices!(PilotUsefulChange {
+    Observed,
+    None,
+    Unknown
+});
 value!(PilotWeek {
     week: String, project: String, phase: PilotPhase, snapshot_id: Option<Id>,
     source_count: u32, decision_count: u32, commitment_count: u32,
     total_minutes: u32, correction_minutes: u32, useful_change: String,
+    workload_comparison: PilotWorkloadComparison, useful_change_judgement: PilotUsefulChange,
     manual_commitments: u32, material_judgements: Vec<PilotMaterialJudgement>,
     rule_occurrences: Vec<PilotRuleOccurrence>, largest_cost_and_next_change: String
 });

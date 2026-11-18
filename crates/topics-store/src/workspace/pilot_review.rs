@@ -95,7 +95,11 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
         .iter()
         .copied()
         .filter(|w| w.phase == PilotPhase::Pilot && baseline.is_none_or(|b| w.week > b.week))
+        .rev()
         .take(2)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
         .collect();
     let mut out = PilotComparisons {
         baseline_week: baseline.map(|w| w.week.clone()),
@@ -106,10 +110,14 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
         source_coverage: Inconclusive,
     };
     if let (Some(base), [a, b]) = (baseline, pilots.as_slice()) {
-        let comparable = [*a, *b].iter().all(|w| {
-            w.source_count == base.source_count
-                && w.decision_count == base.decision_count
-                && w.commitment_count == base.commitment_count
+        let comparable = [*a, *b].iter().all(|w| match w.workload_comparison {
+            PilotWorkloadComparison::Comparable => true,
+            PilotWorkloadComparison::MateriallyDifferent => false,
+            PilotWorkloadComparison::Unknown => {
+                w.source_count == base.source_count
+                    && w.decision_count == base.decision_count
+                    && w.commitment_count == base.commitment_count
+            }
         });
         if comparable {
             out.preparation_time =
@@ -119,12 +127,18 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
                     Miss
                 };
         }
-        out.useful_change =
-            if !a.useful_change.trim().is_empty() || !b.useful_change.trim().is_empty() {
-                Pass
-            } else {
-                Miss
-            };
+        out.useful_change = if [a.useful_change_judgement, b.useful_change_judgement]
+            .contains(&PilotUsefulChange::Observed)
+        {
+            Pass
+        } else if [a.useful_change_judgement, b.useful_change_judgement]
+            .iter()
+            .all(|v| *v == PilotUsefulChange::None)
+        {
+            Miss
+        } else {
+            Inconclusive
+        };
         let am = measures(Some(a), &state.pilot_feedback);
         let bm = measures(Some(b), &state.pilot_feedback);
         if comparable && am.eligible_changes > 0 && bm.eligible_changes > 0 {
