@@ -248,6 +248,38 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
             .unwrap(),
         snapshot
     );
+    let mut rebuilt = WorkspaceService::open(tmp.path().join("rebuilt-app-data")).unwrap();
+    let rebuilt_root = rebuilt
+        .root_set(RootSetRequest {
+            path: root.to_string_lossy().into(),
+            create: false,
+        })
+        .unwrap()
+        .root
+        .root_id;
+    assert_eq!(
+        rebuilt
+            .pilot_snapshot_get(PilotSnapshotGetRequest {
+                root_id: rebuilt_root.clone(),
+                snapshot_id: snapshot.id.clone()
+            })
+            .unwrap(),
+        snapshot
+    );
+    let rebuilt_week = rebuilt
+        .pilot_week_get(PilotWeekGetRequest {
+            root_id: rebuilt_root,
+            week: "2026-11-20".into(),
+            project: "Fictional".into(),
+        })
+        .unwrap();
+    assert_eq!(
+        (
+            rebuilt_week.measures.known_omissions,
+            rebuilt_week.measures.eligible_changes
+        ),
+        (1, 1)
+    );
 }
 
 #[test]
