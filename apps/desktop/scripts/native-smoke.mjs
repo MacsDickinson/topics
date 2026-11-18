@@ -103,8 +103,10 @@ try {
   ]);
   run('node', ['--test', 'scripts/native-proxy.test.mjs']);
   if (!startupOnly) run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts']);
-  if (workspace && !startupOnly)
+  if (workspace && !startupOnly) {
     run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts', '--spec', './tests/native/friday-pilot.ts']);
+    run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts', '--spec', './tests/native/friday-restart.ts']);
+  }
   if (JSON.stringify(sourceSnapshot(newNotes)) !== newBefore)
     throw new Error('Native smoke modified synthetic new-root notes');
   if (JSON.stringify(sourceSnapshot(notes)) !== before)
