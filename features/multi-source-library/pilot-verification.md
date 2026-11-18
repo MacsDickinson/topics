@@ -5,10 +5,10 @@ This is a map of synthetic automated evidence, not a field result. Every service
 The following service commands were run in this worker with `TOPICS_APP_DATA_DIR` set to a new absolute temporary directory, `CARGO_TARGET_DIR=/tmp/topics-friday-review-target`, `CARGO_INCREMENTAL=0`, `CARGO_PROFILE_DEV_DEBUG=0`, and `CARGO_PROFILE_TEST_DEBUG=0`:
 
 - `cargo test -p topics-store --test pilot_review --test pilot_snapshot_view --lib`: 4 review tests, 2 snapshot tests and 15 library tests passed.
-- `cargo test -p topics-store --test pilot_review_journey`: the one-in-three journey passed.
+- `cargo test -p topics-store --test pilot_briefing --test pilot_review --test pilot_review_journey --test pilot_snapshot_view`: all 14 synthetic service tests passed, including the one-in-three journey.
 - `cargo clippy -p topics-store --lib --test pilot_review --test pilot_snapshot_view -- -D warnings`: passed before the final journey test was added.
 
-The `pilot_briefing` and desktop tests listed below are coverage pointers; their final integrated execution and native packaging are the coordinator's responsibility. Desktop Playwright tests use mocked IPC, not the native service. An embedded/native journey and the field baseline plus pilot weeks remain separate evidence.
+The desktop tests listed below are coverage pointers; their final integrated execution and native packaging are the coordinator's responsibility. Desktop Playwright tests use mocked IPC, not the native service. An embedded/native journey and the field baseline plus pilot weeks remain separate evidence.
 
 | Approved scenario | Automated assertions and limits |
 |---|---|
