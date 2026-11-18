@@ -21,15 +21,15 @@ fn weekly_review_survives_restart_and_counts_distinct_material_changes() {
         project: "Fictional".into(),
         phase: PilotPhase::Baseline,
         snapshot_id: None,
-        source_count: 3,
-        decision_count: 3,
-        commitment_count: 1,
+        source_count: Some(3),
+        decision_count: Some(3),
+        commitment_count: Some(1),
         total_minutes: Some(20),
         correction_minutes: Some(5),
         useful_change: String::new(),
         workload_comparison: PilotWorkloadComparison::Unknown,
         useful_change_judgement: PilotUsefulChange::Unknown,
-        manual_commitments: 1,
+        manual_commitments: Some(1),
         item_adjustments: vec![],
         material_judgements: vec![
             PilotMaterialJudgement {
@@ -209,15 +209,15 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
         project: "Fictional".into(),
         phase: PilotPhase::Pilot,
         snapshot_id: Some(snapshot.id.clone()),
-        source_count: 1,
-        decision_count: 1,
-        commitment_count: 0,
+        source_count: Some(1),
+        decision_count: Some(1),
+        commitment_count: Some(0),
         total_minutes: Some(10),
         correction_minutes: Some(1),
         useful_change: String::new(),
         workload_comparison: PilotWorkloadComparison::Unknown,
         useful_change_judgement: PilotUsefulChange::Unknown,
-        manual_commitments: 0,
+        manual_commitments: Some(0),
         item_adjustments: vec![],
         material_judgements: vec![PilotMaterialJudgement {
             id: "change".into(),
@@ -388,15 +388,15 @@ fn comparable_workloads_and_extension_week_are_used_for_decision() {
         project: "Fictional".into(),
         phase,
         snapshot_id: None,
-        source_count: sources,
-        decision_count: 2,
-        commitment_count: 1,
+        source_count: Some(sources),
+        decision_count: Some(2),
+        commitment_count: Some(1),
         total_minutes: Some(minutes),
         correction_minutes: Some(1),
         useful_change: String::new(),
         useful_change_judgement: useful,
         workload_comparison: workload,
-        manual_commitments: 0,
+        manual_commitments: Some(0),
         item_adjustments: vec![],
         material_judgements: vec![PilotMaterialJudgement {
             id: "a".into(),
@@ -542,15 +542,15 @@ fn missing_measurements_and_blank_workloads_do_not_claim_time_savings() {
         project: "Fiction".into(),
         phase,
         snapshot_id: None,
-        source_count: 0,
-        decision_count: 0,
-        commitment_count: 0,
+        source_count: Some(0),
+        decision_count: Some(0),
+        commitment_count: Some(0),
         total_minutes: minutes,
         correction_minutes: None,
         useful_change: String::new(),
         workload_comparison: PilotWorkloadComparison::Unknown,
         useful_change_judgement: PilotUsefulChange::Unknown,
-        manual_commitments: 0,
+        manual_commitments: Some(0),
         item_adjustments: vec![],
         material_judgements: vec![],
         rule_occurrences: vec![],
@@ -589,6 +589,26 @@ fn missing_measurements_and_blank_workloads_do_not_claim_time_savings() {
         .unwrap();
     let mut saved = variant.week.unwrap();
     assert_eq!(saved.project, "Fiction");
+    // A blank count comes from a partially completed desktop scorecard.
+    let mut form = serde_json::to_value(&saved).unwrap();
+    form["decision_count"] = serde_json::Value::Null;
+    form["manual_commitments"] = serde_json::json!(0);
+    service
+        .pilot_week_save(PilotWeekSaveRequest {
+            root_id: r_root.clone(),
+            week: serde_json::from_value(form).unwrap(),
+        })
+        .unwrap();
+    let reopened = service
+        .pilot_week_get(PilotWeekGetRequest {
+            root_id: r_root.clone(),
+            week: saved.week.clone(),
+            project: saved.project.clone(),
+        })
+        .unwrap();
+    let reopened = serde_json::to_value(reopened.week.unwrap()).unwrap();
+    assert!(reopened["decision_count"].is_null());
+    assert_eq!(reopened["manual_commitments"], 0);
     saved.project = "  FICTION  ".into();
     saved.workload_comparison = PilotWorkloadComparison::Comparable;
     saved.total_minutes = None;

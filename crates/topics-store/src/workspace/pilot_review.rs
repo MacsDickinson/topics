@@ -317,10 +317,14 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
             PilotWorkloadComparison::Comparable => true,
             PilotWorkloadComparison::MateriallyDifferent => false,
             PilotWorkloadComparison::Unknown => {
-                (base.source_count > 0 || base.decision_count > 0 || base.commitment_count > 0)
-                    && w.source_count == base.source_count
-                    && w.decision_count == base.decision_count
-                    && w.commitment_count == base.commitment_count
+                let counts = [
+                    base.source_count,
+                    base.decision_count,
+                    base.commitment_count,
+                ];
+                counts.iter().all(Option::is_some)
+                    && counts.iter().flatten().any(|n| *n > 0)
+                    && counts == [w.source_count, w.decision_count, w.commitment_count]
             }
         });
         if comparable
@@ -830,15 +834,15 @@ mod tests {
             project: "Fictional".into(),
             phase: PilotPhase::Pilot,
             snapshot_id: Some(snapshot.id.clone()),
-            source_count: 1,
-            decision_count: 1,
-            commitment_count: 0,
+            source_count: Some(1),
+            decision_count: Some(1),
+            commitment_count: Some(0),
             total_minutes: Some(5),
             correction_minutes: Some(0),
             useful_change: String::new(),
             workload_comparison: PilotWorkloadComparison::Unknown,
             useful_change_judgement: PilotUsefulChange::Unknown,
-            manual_commitments: 0,
+            manual_commitments: Some(0),
             item_adjustments: vec![],
             material_judgements: vec![],
             rule_occurrences: vec![PilotRuleOccurrence {
