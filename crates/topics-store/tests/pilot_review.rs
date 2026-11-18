@@ -142,12 +142,54 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
             snapshot_id: snapshot.id.clone(),
         })
         .unwrap();
-    assert_eq!(entries, vec![edited]);
+    assert_eq!(entries, vec![edited.clone()]);
+    let operation_id = service
+        .history_list(RootRequest {
+            root_id: root_id.clone(),
+        })
+        .unwrap()
+        .operations
+        .last()
+        .unwrap()
+        .id
+        .clone();
+    service
+        .undo(UndoRequest {
+            root_id: root_id.clone(),
+            operation_id,
+        })
+        .unwrap();
+    let restored = service
+        .pilot_feedback_list(PilotSnapshotGetRequest {
+            root_id: root_id.clone(),
+            snapshot_id: snapshot.id.clone(),
+        })
+        .unwrap();
+    assert_eq!(restored, vec![first.clone()]);
+    let mut second = first.clone();
+    second.id = "fa83e013-a40e-48ce-b7fd-20c16afc000c".into();
+    second.text = "Another distinct miss".into();
+    service
+        .pilot_feedback_save(PilotFeedbackSaveRequest {
+            root_id: root_id.clone(),
+            feedback: second,
+        })
+        .unwrap();
+    assert_eq!(
+        service
+            .pilot_feedback_list(PilotSnapshotGetRequest {
+                root_id: root_id.clone(),
+                snapshot_id: snapshot.id.clone()
+            })
+            .unwrap()
+            .len(),
+        2
+    );
     assert_eq!(
         service
             .pilot_snapshot_get(PilotSnapshotGetRequest {
                 root_id,
-                snapshot_id: snapshot.id
+                snapshot_id: snapshot.id.clone()
             })
             .unwrap(),
         snapshot

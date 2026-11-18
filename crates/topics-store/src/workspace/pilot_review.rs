@@ -89,8 +89,7 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
     let baseline = weeks
         .iter()
         .copied()
-        .filter(|w| w.phase == PilotPhase::Baseline)
-        .next_back();
+        .rfind(|w| w.phase == PilotPhase::Baseline);
     let pilots: Vec<_> = weeks
         .iter()
         .copied()
@@ -218,13 +217,12 @@ impl WorkspaceService {
                 }
             }
             let mut dependencies = Vec::new();
-            if let Some(snapshot_id) = &week.snapshot_id {
-                if let Some(op) = state
+            if let Some(snapshot_id) = &week.snapshot_id
+                && let Some(op) = state
                     .latest_operations
                     .get(&format!("topics/pilot-snapshots/{snapshot_id}.md"))
-                {
-                    dependencies.push(op.clone());
-                }
+            {
+                dependencies.push(op.clone());
             }
             for feedback_id in referenced_feedback {
                 if let Some(op) = state
