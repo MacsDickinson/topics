@@ -49,4 +49,6 @@ Topic         → ask/correct → scope/consent → proposal → human decision
 
 ### Friday pilot: Today and weekly review
 
+For one source, Today shows its status, path and last successful analysis together. For several sources, show counts by status, with unavailable or incomplete sources first. Each disclosure opens the paths and analysis times. Keep the meeting actions reachable without expanding the inventory.
+
 Today opens for a configured workspace and refreshes the local briefing. Source status and last-success time remain visible beside the scope, with an explicit route to folder setup and exact batch authorization. A user can keep the displayed briefing at meeting time, reopen it, report a wrong item, omission or missed commitment, and classify evidence now or later. Weekly review records baseline or pilot effort, distinct material changes and later examples, and displays unknown and unavailable measures. Saved feedback is not an approval; a correction continues through the existing scoped preview, approval and history. Source and snapshot failures are shown as failures, never as a clear briefing.

@@ -2,17 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { DatePicker, Select } from "./boardui/controls";
 import { ipc, apiError } from "./ipc";
 import { SourceEvidence } from "./Evidence";
+import { PilotSources, type PilotSource } from "./PilotSources";
 import { Button, Field, PageHeader, Section } from "./ui";
 import type { SourceRef } from "./workspace-types";
 
-type Source = {
-  source_id: string;
-  path: string;
-  current_hash: string | null;
-  analysed_hash: string | null;
-  status: "checked" | "pending" | "unavailable" | "skipped" | "partial";
-  last_success_at: string | null;
-};
 type Item = {
   item_id: string;
   topic_id: string;
@@ -28,7 +21,7 @@ type Briefing = {
   root_id: string;
   generated_at: string;
   briefing_token: string;
-  sources: Source[];
+  sources: PilotSource[];
   items: Item[];
   rules: {
     rule_id: string;
@@ -121,13 +114,6 @@ type Measures = {
     eligible: number;
     recurrences: number;
   }[];
-};
-const status: Record<Source["status"], string> = {
-  checked: "Analysed",
-  pending: "Awaiting batch authorization",
-  unavailable: "Source unavailable",
-  skipped: "Excluded from this briefing",
-  partial: "Analysis incomplete",
 };
 const classifications: [Classification, string][] = [
   ["unknown", "Unclassified / unknown"],
@@ -478,28 +464,7 @@ export function Pilot({
                 : `Checked ${new Date(shown.generated_at).toLocaleString()}.`
             }
           >
-            <p>
-              Scope: {shown.sources.length} source
-              {shown.sources.length === 1 ? "" : "s"}. A clear briefing does not
-              establish that all real-world changes were found.
-            </p>
-            <ul>
-              {shown.sources.map((s) => (
-                <li key={s.source_id}>
-                  <strong>{s.path}</strong> — {status[s.status]}; last
-                  successful analysis:{" "}
-                  {s.last_success_at
-                    ? new Date(s.last_success_at).toLocaleString()
-                    : "never"}
-                </li>
-              ))}
-            </ul>
-            {!shown.sources.length && (
-              <p>
-                No sources are in this briefing. Choose the scope in folder
-                setup.
-              </p>
-            )}
+            <PilotSources sources={shown.sources} />
             {!shown.items.length && (
               <p>
                 {shown.sources.length > 0 &&
