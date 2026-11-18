@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 pub struct PilotBriefing {
     pub root_id: Id,
     pub generated_at: Timestamp,
+    pub briefing_token: Hash,
+    pub rules: Vec<PilotRule>,
+    pub occurrences: Vec<PilotOccurrence>,
     pub sources: Vec<PilotSource>,
     pub items: Vec<PilotItem>,
 }
@@ -42,4 +45,25 @@ pub struct PilotItem {
     pub sources: Vec<SourceRef>,
     pub rule_id: Option<Id>,
     pub original_value: Option<String>,
+}
+
+/// Approved scoped correction available at briefing time, including rules with no later example.
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PilotRule {
+    pub rule_id: Id,
+    pub topic_id: Id,
+    pub topic_name: String,
+    pub predicate: String,
+    pub match_value: String,
+    pub replacement: String,
+}
+/// An independently observed, post-approval occurrence in a completed analysis.
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PilotOccurrence {
+    pub rule_id: Id,
+    pub occurrence_id: Id,
+    pub observed_at: Timestamp,
+    pub recurred: bool,
 }
