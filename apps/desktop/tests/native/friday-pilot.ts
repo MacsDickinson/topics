@@ -48,6 +48,9 @@ describe('Friday pilot on a returning workspace', () => {
   });
 
   it('reports a miss directly from Today', async () => {
+    // The preceding client kept a meeting briefing while Today was already open.
+    await $('button=Refresh briefing').click();
+    await expect($('p*=Changes since the briefing')).toBeDisplayed();
     const sentence = 'The second meeting moved to Wednesday.';
     await $('button=Topics missed something').click();
     await $('#pilot-feedback').setValue(sentence);
