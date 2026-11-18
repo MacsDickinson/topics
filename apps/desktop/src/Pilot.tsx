@@ -217,7 +217,7 @@ export function Pilot({
 }: {
   rootId: string;
   openSetup: () => void;
-  openCorrection: (item: Item, feedback: Feedback) => void;
+  openCorrection: (item: Item, feedback: Feedback) => boolean;
 }) {
   const [briefing, setBriefing] = useState<Briefing | null>(null),
     [snapshot, setSnapshot] = useState<Snapshot | null>(null),
@@ -227,6 +227,7 @@ export function Pilot({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [unsavedCorrection, setUnsavedCorrection] = useState(false);
   const [weekFeedback, setWeekFeedback] = useState<Feedback[]>([]);
   const [feedback, setFeedback] = useState<Feedback | null>(null),
     [saved, setSaved] = useState<Feedback[]>([]);
@@ -560,6 +561,17 @@ export function Pilot({
           ))}
         </Section>
       )}
+      {unsavedCorrection && (
+        <div className="notice" role="status">
+          <p>
+            This briefing item is not a saved topic yet, or the topic list has
+            not loaded. Your feedback is preserved; review and save the topic in
+            folder setup, then return here.
+          </p>
+          <Button onClick={openSetup}>Open folder setup</Button>{" "}
+          <Button onClick={() => setUnsavedCorrection(false)}>Dismiss</Button>
+        </div>
+      )}
       {feedback && (
         <FeedbackForm
           feedback={feedback}
@@ -594,7 +606,12 @@ export function Pilot({
                       Edit feedback
                     </Button>
                     {item && (
-                      <Button onClick={() => openCorrection(item, f)}>
+                      <Button
+                        onClick={() => {
+                          if (!openCorrection(item, f))
+                            setUnsavedCorrection(true);
+                        }}
+                      >
                         Review scoped correction for {item.topic_name}
                       </Button>
                     )}
@@ -631,8 +648,7 @@ export function Pilot({
           </Button>
           {week && (
             <>
-              <div className="field">
-                <span className="board-label">Phase</span>
+              <Field id="pilot-phase" label="Phase">
                 <Select
                   label="Phase"
                   value={week.phase === "baseline" ? "Baseline" : "Pilot"}
@@ -645,7 +661,7 @@ export function Pilot({
                     })
                   }
                 />
-              </div>
+              </Field>
               <Field id="pilot-snapshot" label="Meeting briefing">
                 <select
                   value={week.snapshot_id || ""}

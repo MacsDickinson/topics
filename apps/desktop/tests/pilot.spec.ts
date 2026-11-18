@@ -51,7 +51,9 @@ test("keeps a sourced briefing, captures and reopens feedback, and records an ho
     1,
   );
   await page.getByText("Weekly review", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Week: Select date" }).scrollIntoViewIfNeeded();
+  await page
+    .getByRole("button", { name: "Week: Select date" })
+    .scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "Week: Select date" }).click();
   await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
   await page.getByRole("button", { name: "Apply" }).click();
@@ -71,7 +73,9 @@ test("shows available draft measures from the synthetic fixture", async ({
 }) => {
   await workspaceFixture(page, { pilot: true, draftEnabled: true });
   await page.getByText("Weekly review", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Week: Select date" }).scrollIntoViewIfNeeded();
+  await page
+    .getByRole("button", { name: "Week: Select date" })
+    .scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "Week: Select date" }).click();
   await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
   await page.getByRole("button", { name: "Apply" }).click();
@@ -159,5 +163,74 @@ test("a miss can be reported directly from an empty Today briefing", async ({
   );
   expect(calls.indexOf("pilot_snapshot_create")).toBeLessThan(
     calls.indexOf("pilot_feedback_save"),
+  );
+});
+
+test("unsaved briefing topic explains how to continue and preserves feedback", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { pilot: true });
+  await page.getByRole("button", { name: "Correct Ledger" }).click();
+  await page
+    .getByLabel("What was wrong or missed?")
+    .fill("The owner needs correction.");
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await page
+    .getByRole("button", { name: "Review scoped correction for Ledger" })
+    .click();
+  await expect(page.getByText(/not a saved topic yet/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open folder setup" }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => (window as any).pilotFeedback)).toHaveLength(
+    1,
+  );
+});
+
+test("weekly phase uses the accessible Board UI selector inside Field", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { pilot: true });
+  await page.getByText("Weekly review", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Week: Select date" }).click();
+  await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
+  await page.getByRole("button", { name: "Apply" }).click();
+  await page.getByLabel("Project", { exact: true }).fill("Ledger");
+  await page.getByRole("button", { name: "Open weekly review" }).click();
+  const control = page.getByRole("button", { name: "Phase" });
+  await expect(control).toBeVisible();
+  await expect(
+    page.locator(".board-select").filter({ has: control }),
+  ).toHaveCount(1);
+  await control.scrollIntoViewIfNeeded();
+  await control.click();
+  await page.getByRole("option", { name: "Baseline" }).click();
+  await expect(control).toContainText("Baseline");
+});
+
+test("superseded briefing item offers history without losing feedback", async ({
+  page,
+}) => {
+  await workspaceFixture(page, { pilot: true, populated: true });
+  await page.getByRole("button", { name: "Correct Ledger" }).click();
+  await page
+    .getByLabel("What was wrong or missed?")
+    .fill("The previous value was wrong.");
+  await page.getByRole("button", { name: "Save feedback" }).click();
+  await page.evaluate(() => {
+    (window as any).claims[0].revision_id = "new-revision";
+  });
+  await page
+    .getByRole("button", { name: "Review scoped correction for Ledger" })
+    .click();
+  await expect(
+    page.getByText(/original statement is no longer current/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Open history" }).click();
+  await expect(
+    page.getByRole("heading", { name: "History", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => (window as any).pilotFeedback)).toHaveLength(
+    1,
   );
 });

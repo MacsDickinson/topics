@@ -27,12 +27,14 @@ export function ContextReview({
   topics,
   onSaved,
   initialCorrection,
+  onHistory,
 }: {
   rootId: string;
   topicId: string;
   topics: Topic[];
   onSaved: () => void;
-  initialCorrection?: {revisionId: string; statement: string} | null;
+  onHistory?: () => void;
+  initialCorrection?: { revisionId: string; statement: string } | null;
 }) {
   const [review, setReview] = useState<SetupTopicReview | null>(null),
     [error, setError] = useState("");
@@ -45,6 +47,8 @@ export function ContextReview({
   const [target, setTarget] = useState<string | null>(null),
     [statement, setStatement] = useState(""),
     [replacement, setReplacement] = useState(""),
+    [scopeMode, setScopeMode] = useState<"cited" | "topic">("cited"),
+    [scopePhrase, setScopePhrase] = useState(""),
     [busy, setBusy] = useState(false),
     [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0),
@@ -125,14 +129,30 @@ export function ContextReview({
     void act(fn, (value) => setApproval(toApproval(value)), "preview");
   }
   useEffect(() => {
-    if (initialCorrection && review?.topic.current_claims.some(c => c.revision_id === initialCorrection.revisionId)) {
+    if (
+      initialCorrection &&
+      review?.topic.current_claims.some(
+        (c) => c.revision_id === initialCorrection.revisionId,
+      )
+    ) {
       setTarget(initialCorrection.revisionId);
       setStatement(initialCorrection.statement);
     }
   }, [initialCorrection, review]);
+  useEffect(() => {
+    setScopeMode("cited");
+    setScopePhrase("");
+  }, [rootId, topicId, target]);
   const claim = review?.topic.current_claims.find(
     (c) => c.revision_id === target,
   );
+  const citedPaths = [
+    ...new Set(
+      claim?.sources.flatMap((s) =>
+        s.kind === "passage" ? [s.source.path] : [],
+      ) || [],
+    ),
+  ];
   function confirm() {
     if (mutation.current !== null) return;
     setTarget(null);
@@ -159,10 +179,8 @@ export function ContextReview({
           replacement,
           statement,
           rule_scope: {
-            source_paths: claim.sources.flatMap((s) =>
-              s.kind === "passage" ? [s.source.path] : [],
-            ),
-            context: null,
+            source_paths: scopeMode === "cited" ? citedPaths : [],
+            context: scopeMode === "topic" ? scopePhrase.trim() || null : null,
           },
         }),
       (preview) => ({ kind: "correction", preview }),
@@ -207,7 +225,18 @@ export function ContextReview({
         </p>
       )}
       {!review && !error && <p role="status">Loading review state…</p>}
-      {review && initialCorrection && !review.topic.current_claims.some(c => c.revision_id === initialCorrection.revisionId) && <p role="alert" className="notice">The original statement is no longer current. Your feedback is saved with the briefing; review the topic history before making a new correction.</p>}
+      {review &&
+        initialCorrection &&
+        !review.topic.current_claims.some(
+          (c) => c.revision_id === initialCorrection.revisionId,
+        ) && (
+          <p role="alert" className="notice">
+            The original statement is no longer current. Your feedback is saved
+            with the briefing; review the topic history before making a new
+            correction.{" "}
+            {onHistory && <Button onClick={onHistory}>Open history</Button>}
+          </p>
+        )}
       {busy && (
         <p role="status">
           {saving ? "Saving your change…" : "Preparing review…"}
@@ -409,8 +438,68 @@ export function ContextReview({
                   }}
                 />
               </Field>
+              <fieldset disabled={saving} className="correction-scope">
+                <legend>Future correction scope</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="correction-scope"
+                    checked={scopeMode === "cited"}
+                    onChange={() => {
+                      invalidateApproval();
+                      setScopeMode("cited");
+                    }}
+                  />{" "}
+                  Existing cited notes
+                </label>
+                <p>
+                  {citedPaths.length
+                    ? citedPaths.join(", ")
+                    : "No cited note is available for this statement. Choose the cross-note scope to continue."}
+                </p>
+                <label>
+                  <input
+                    type="radio"
+                    name="correction-scope"
+                    checked={scopeMode === "topic"}
+                    onChange={() => {
+                      invalidateApproval();
+                      setScopeMode("topic");
+                    }}
+                  />{" "}
+                  This topic and exact value in other notes
+                </label>
+                {scopeMode === "topic" && (
+                  <>
+                    <p>
+                      Match only {review.topic.topic.name}, predicate{" "}
+                      {claim.predicate}, and exact old value “{claim.value}” in
+                      source passages. This may include the cited notes.
+                    </p>
+                    <Field
+                      id="correction-phrase"
+                      label="Required passage phrase (optional)"
+                      hint="When provided, the exact phrase must appear in the cited passage."
+                    >
+                      <input
+                        value={scopePhrase}
+                        disabled={saving}
+                        onChange={(e) => {
+                          invalidateApproval();
+                          setScopePhrase(e.target.value);
+                        }}
+                      />
+                    </Field>
+                  </>
+                )}
+              </fieldset>
               <Button
-                disabled={busy || !statement.trim() || !replacement.trim()}
+                disabled={
+                  busy ||
+                  !statement.trim() ||
+                  !replacement.trim() ||
+                  (scopeMode === "cited" && !citedPaths.length)
+                }
                 onClick={preview}
               >
                 Preview correction
@@ -463,10 +552,11 @@ export function ContextReview({
                     </article>
                   ))}
                   <p>
-                    Future rule: {correction.rule.match_value} →{" "}
+                    Future rule: {review.topic.topic.name},{" "}
+                    {correction.rule.predicate}: {correction.rule.match_value} →{" "}
                     {correction.rule.replacement}; scope:{" "}
                     {correction.rule.scope.source_paths.join(", ") ||
-                      "No source paths"}
+                      "all source paths for this topic, predicate and exact old value"}
                     ; {correction.rule.scope.context || "no additional context"}
                     .
                   </p>

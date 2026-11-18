@@ -46,15 +46,17 @@ async function openReview(page: Page, multipleTopics = false) {
           // Capture the authorized request without simulating persisted acceptance.
           const result = {
             receipt,
-            status: "conflict",
+            status: w.decisionSuccess ? "completed" : "conflict",
             operations: [],
             saved_ids: [],
             deferred_ids: [],
-            error: {
-              code: "conflict",
-              message: "Synthetic decision captured; no storage change.",
-              details: null,
-            },
+            error: w.decisionSuccess
+              ? null
+              : {
+                  code: "conflict",
+                  message: "Synthetic decision captured; no storage change.",
+                  details: null,
+                },
           };
           if (w.holdDecision)
             return new Promise((resolve) => {
@@ -425,3 +427,102 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
     await approveVisible(page, "statements");
   });
 }
+
+test("a recurring correction can be scoped to an exact topic value across notes with a phrase", async ({
+  page,
+}) => {
+  await openReview(page);
+  await page.getByRole("button", { name: "That’s wrong", exact: true }).click();
+  await page
+    .getByLabel("Your statement")
+    .fill("Sam means Sam Patel for support handovers.");
+  await page.getByLabel("Replacement", { exact: true }).fill("Sam Patel");
+  await page.getByLabel("This topic and exact value in other notes").check();
+  await page
+    .getByLabel("Required passage phrase (optional)")
+    .fill("support handover");
+  await page.getByRole("button", { name: "Preview correction" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review correction" }),
+  ).toBeVisible();
+  await expect(page.locator(".consent")).toContainText("support handover");
+  const request = await page.evaluate(
+    () =>
+      (window as any).calls
+        .filter((c: any) => c.command === "setup_correction_preview")
+        .at(-1).args.request,
+  );
+  expect(request.rule_scope).toEqual({
+    source_paths: [],
+    context: "support handover",
+  });
+  await page.getByLabel("Required passage phrase (optional)").fill("handover");
+  await expect(
+    page.getByRole("button", { name: "Approve correction" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Preview correction" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review correction" }),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    (window as any).decisionSuccess = true;
+  });
+  await page.getByRole("button", { name: "Approve correction" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review correction" }),
+  ).toHaveCount(0);
+  const decision = await page.evaluate(
+    () =>
+      (window as any).calls
+        .filter((c: any) => c.command === "setup_decide")
+        .at(-1).args.request,
+  );
+  expect(decision.receipt_id).toMatch(/^correction-/);
+});
+
+test("ordinary correction keeps cited-note scope", async ({ page }) => {
+  await openReview(page);
+  await begin(page, "correction");
+  const request = await page.evaluate(
+    () =>
+      (window as any).calls
+        .filter((c: any) => c.command === "setup_correction_preview")
+        .at(-1).args.request,
+  );
+  expect(request.rule_scope).toEqual({
+    source_paths: ["Meetings/one.md"],
+    context: null,
+  });
+});
+
+test("scope changes invalidate an in-flight correction preview", async ({
+  page,
+}) => {
+  await openReview(page);
+  await page.evaluate(() => {
+    (window as any).holdPreview = "setup_correction_preview";
+  });
+  await begin(page, "correction", false);
+  await expect
+    .poll(() => page.evaluate(() => (window as any).heldPreviews.length))
+    .toBe(1);
+  await page.getByLabel("This topic and exact value in other notes").check();
+  await page.evaluate(() => (window as any).heldPreviews.shift()());
+  await expect(
+    page.getByRole("button", { name: "Approve correction" }),
+  ).toHaveCount(0);
+  await page.evaluate(() => {
+    (window as any).holdPreview = null;
+  });
+  await page.getByRole("button", { name: "Preview correction" }).click();
+  const scope = await page.evaluate(
+    () =>
+      (window as any).calls
+        .filter((c: any) => c.command === "setup_correction_preview")
+        .at(-1).args.request.rule_scope,
+  );
+  expect(scope).toEqual({ source_paths: [], context: null });
+  await expect(
+    page.getByRole("heading", { name: "Review correction" }),
+  ).toBeVisible();
+});

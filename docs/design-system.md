@@ -165,3 +165,9 @@ For failed setup batches, show a short static explanation beside coverage and th
 ## Friday pilot briefing and review
 
 Today uses the existing page header, sections, fields, buttons, source evidence and candidate panels. List each source's availability and last successful analysis in text; loading, failure, exclusion and an empty analysed result remain distinct. A saved briefing names its capture time and keeps the original source passages. Feedback is a labelled local form with an explicit save action and an optional classification; it never implies approval of accepted knowledge. Weekly review shows numerator and denominator, unavailable draft quality, and later-rule examples as text. A scoped correction carries the affected topic and revision into the existing preview and approval flow; the saved feedback remains separate.
+
+### Scoped recurring corrections
+
+The correction composer defaults to the existing cited notes and lists their paths. An explicit radio choice can extend the future rule to passages in any note for the same topic, predicate and exact old value; an optional phrase further restricts matching to passages containing that exact phrase. Show the topic, old value, path scope and phrase again in the returned preview, and require the usual explicit approval. Changing either scope choice or phrase invalidates visible and pending previews; an in-flight approved mutation stays locked. If an item has no saved topic or its revision is no longer current, keep its feedback and offer folder setup or history instead of suggesting a correction was applied.
+
+Board UI `Select` forwards the `Field` id and accessibility descriptions to its React Aria control. A `Field` can wrap the component with a visible label while the select retains its accessible name; native selects elsewhere remain native controls.

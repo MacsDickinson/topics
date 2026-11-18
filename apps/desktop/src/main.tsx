@@ -1061,7 +1061,7 @@ function App() {
             </section>
           ) : (
             <>
-              {screen === "today" && <Pilot key={root.root_id} rootId={root.root_id} openSetup={() => {setAutoSetup(false); navigate("setup");}} openCorrection={(item, feedback) => {setPilotCorrection({topicId: item.topic_id, revisionId: item.revision_id, statement: feedback.text}); navigate("topics"); void openTopic(item.topic_id);}} />}
+              {screen === "today" && <Pilot key={root.root_id} rootId={root.root_id} openSetup={() => {setAutoSetup(false); navigate("setup");}} openCorrection={(item, feedback) => {if (!topics.some(t => t.id === item.topic_id)) return false; setPilotCorrection({topicId: item.topic_id, revisionId: item.revision_id, statement: feedback.text}); navigate("topics"); void openTopic(item.topic_id); return true;}} />}
               {screen === "search" && <Search key={root.root_id} />}
               {screen === "topics" && (
                 <section className="topics-view">
@@ -1144,6 +1144,7 @@ function App() {
                             rootId={root.root_id}
                             topicId={topic.topic.id}
                             topics={topics}
+                            onHistory={() => navigate("history")}
                             initialCorrection={pilotCorrection?.topicId === topic.topic.id ? pilotCorrection : null}
                             onSaved={() => {
                               setPilotCorrection(null);
