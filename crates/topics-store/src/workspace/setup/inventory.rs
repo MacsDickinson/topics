@@ -43,7 +43,10 @@ fn overrides(roles: &[FolderRoleOverride]) -> WResult<()> {
     }
     Ok(())
 }
-pub(super) fn inventory(ctx: &Context, roles: &[FolderRoleOverride]) -> WResult<SetupInventory> {
+pub(in crate::workspace) fn inventory(
+    ctx: &Context,
+    roles: &[FolderRoleOverride],
+) -> WResult<SetupInventory> {
     overrides(roles)?;
     let state = load(ctx)?;
     let mut documents = vec![];

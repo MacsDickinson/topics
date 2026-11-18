@@ -93,6 +93,10 @@ impl WorkspaceService {
             bump(&mut job)?;
             coverage(&mut job);
             let mut saved = checkpoint(ctx, &job.job_id)?;
+            let sources = job.manifest.batches.iter().find(|b| b.batch_id == request.capability.batch_id).unwrap().sources.iter().map(|s| s.source.clone()).collect();
+            let mut raw = request.candidates.clone();
+            proposal::remap(&mut raw, &job.graph.canonical_ids)?;
+            saved.pilot_runs.push(PilotRun { at: now(), batch_id: request.capability.batch_id.clone(), sources, candidates: raw });
             saved.job = job.clone();
             saved.owner = ctx.instance_id.clone();
             let mut prepared = prepare_checkpoint(&job_path(ctx, &job.job_id)?, &saved)?;

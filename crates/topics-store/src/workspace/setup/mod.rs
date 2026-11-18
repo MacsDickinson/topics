@@ -3,7 +3,7 @@ mod context;
 mod decisions;
 mod draft;
 mod graph;
-mod inventory;
+pub(super) mod inventory;
 mod jobs;
 mod reconsent;
 mod review;
@@ -30,7 +30,16 @@ struct DraftEdit {
     statement: UserStatement,
 }
 #[derive(Clone, Serialize, Deserialize)]
+struct PilotRun {
+    at: Timestamp,
+    batch_id: Id,
+    sources: Vec<SourceSummary>,
+    candidates: Vec<Candidate>,
+}
+#[derive(Clone, Serialize, Deserialize)]
 struct Checkpoint {
+    #[serde(default)]
+    pilot_runs: Vec<PilotRun>,
     owner: Id,
     job: SetupJob,
     edits: Vec<DraftEdit>,
@@ -222,6 +231,11 @@ fn save_job(ctx: &Context, job: &SetupJob) -> WResult<()> {
             owner: ctx.instance_id.clone(),
             job: job.clone(),
             edits,
+            pilot_runs: if job_path(ctx, &job.job_id)?.exists() {
+                checkpoint(ctx, &job.job_id)?.pilot_runs
+            } else {
+                vec![]
+            },
         },
     )
 }
@@ -300,4 +314,32 @@ fn coverage(job: &mut SetupJob) {
             SetupJobStatus::FinishedWithGaps
         };
     }
+}
+
+// Local human briefing evidence, committed with the corresponding successful checkpoint.
+type PilotEvidence = (
+    SetupJob,
+    Vec<(Timestamp, Vec<SourceSummary>, Vec<Candidate>)>,
+);
+pub(super) fn pilot_evidence(ctx: &Context) -> WResult<Vec<PilotEvidence>> {
+    let dir = setup_dir(ctx).join("jobs");
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut result = Vec::new();
+    for path in json_entries(&dir)? {
+        let saved: Checkpoint = read_json(&path)?;
+        if saved.job.schema == SCHEMA && saved.job.root_id == ctx.root_id {
+            result.push((
+                saved.job,
+                saved
+                    .pilot_runs
+                    .into_iter()
+                    .map(|r| (r.at, r.sources, r.candidates))
+                    .collect(),
+            ));
+        }
+    }
+    result.sort_by_key(|(job, _)| job.created_at.clone());
+    Ok(result)
 }
