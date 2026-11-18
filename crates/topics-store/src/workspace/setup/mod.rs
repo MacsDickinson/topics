@@ -344,15 +344,48 @@ type PilotEvidence = (
     SetupJob,
     Vec<(Timestamp, Vec<SourceSummary>, Vec<Candidate>)>,
 );
-pub(super) fn pilot_evidence(ctx: &Context) -> WResult<Vec<PilotEvidence>> {
+pub(super) fn pilot_evidence(ctx: &Context) -> WResult<(Vec<PilotEvidence>, bool)> {
     let dir = setup_dir(ctx).join("jobs");
     if !dir.exists() {
-        return Ok(vec![]);
+        return Ok((vec![], false));
     }
     let mut result = Vec::new();
+    let mut incomplete = false;
     for path in json_entries(&dir)? {
-        let saved: Checkpoint = read_json(&path)?;
+        let saved: Checkpoint = match read_json(&path) {
+            Ok(saved) => saved,
+            Err(_) => {
+                incomplete = true;
+                continue;
+            }
+        };
+        if saved.job.root_id == ctx.root_id && saved.job.schema != SCHEMA {
+            incomplete = true;
+            continue;
+        }
         if saved.job.schema == SCHEMA && saved.job.root_id == ctx.root_id {
+            if saved.job.manifest.root_id != ctx.root_id
+                || saved.job.manifest.batches.len() != saved.job.batches.len()
+                || saved
+                    .job
+                    .manifest
+                    .batches
+                    .iter()
+                    .zip(&saved.job.batches)
+                    .any(|(spec, batch)| spec.batch_id != batch.batch_id)
+            {
+                incomplete = true;
+                continue;
+            }
+            if saved.job.batches.iter().any(|batch| {
+                batch.status == SetupBatchStatus::Completed
+                    && !saved
+                        .pilot_runs
+                        .iter()
+                        .any(|run| run.batch_id == batch.batch_id)
+            }) {
+                incomplete = true;
+            }
             result.push((
                 saved.job,
                 saved
@@ -364,5 +397,5 @@ pub(super) fn pilot_evidence(ctx: &Context) -> WResult<Vec<PilotEvidence>> {
         }
     }
     result.sort_by_key(|(job, _)| job.created_at.clone());
-    Ok(result)
+    Ok((result, incomplete))
 }

@@ -80,12 +80,14 @@ impl WorkspaceService {
                 &p.id,
                 &request.capability.batch_id,
             )?;
-            let batch = job
-                .batches
-                .iter_mut()
-                .find(|b| b.batch_id == request.capability.batch_id)
-                .unwrap();
-            batch.completed_source_ids=job.manifest.batches.iter().find(|b|b.batch_id==request.capability.batch_id).unwrap().sources.iter().map(|s|s.source.source_id.clone()).collect();
+            let sources: Vec<SourceSummary> = job.manifest.batches.iter()
+                .find(|batch| batch.batch_id == request.capability.batch_id)
+                .ok_or_else(|| error("stale_scope", "Manifest batch is unavailable"))?
+                .sources.iter().map(|source| source.source.clone()).collect();
+            let batch = job.batches.iter_mut()
+                .find(|batch| batch.batch_id == request.capability.batch_id)
+                .ok_or_else(|| error("stale_scope", "Setup batch is unavailable"))?;
+            batch.completed_source_ids = sources.iter().map(|source| source.source_id.clone()).collect();
             batch.status = SetupBatchStatus::Completed;
             batch.proposal_ids.push(p.id.clone());
             batch.error = None;
@@ -93,7 +95,6 @@ impl WorkspaceService {
             bump(&mut job)?;
             coverage(&mut job);
             let mut saved = checkpoint(ctx, &job.job_id)?;
-            let sources = job.manifest.batches.iter().find(|b| b.batch_id == request.capability.batch_id).unwrap().sources.iter().map(|s| s.source.clone()).collect();
             let mut raw = request.candidates.clone();
             proposal::remap(&mut raw, &job.graph.canonical_ids)?;
             saved.pilot_runs.push(PilotRun { at: now(), batch_id: request.capability.batch_id.clone(), sources, candidates: raw });

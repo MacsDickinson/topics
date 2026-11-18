@@ -47,6 +47,16 @@ pub(in crate::workspace) fn inventory(
     ctx: &Context,
     roles: &[FolderRoleOverride],
 ) -> WResult<SetupInventory> {
+    inventory_impl(ctx, roles, true)
+}
+pub(in crate::workspace) fn pilot_inventory(ctx: &Context) -> WResult<SetupInventory> {
+    inventory_impl(ctx, &[], false)
+}
+fn inventory_impl(
+    ctx: &Context,
+    roles: &[FolderRoleOverride],
+    include_jobs: bool,
+) -> WResult<SetupInventory> {
     overrides(roles)?;
     let state = load(ctx)?;
     let mut documents = vec![];
@@ -221,11 +231,15 @@ pub(in crate::workspace) fn inventory(
         excluded,
         eligible_bytes: total,
         saved_topic_count,
-        resumable_job_ids: jobs(ctx)?
-            .into_iter()
-            .filter(|j| !matches!(j.status, SetupJobStatus::Finished))
-            .map(|j| j.job_id)
-            .collect(),
+        resumable_job_ids: if include_jobs {
+            jobs(ctx)?
+                .into_iter()
+                .filter(|j| !matches!(j.status, SetupJobStatus::Finished))
+                .map(|j| j.job_id)
+                .collect()
+        } else {
+            vec![]
+        },
     })
 }
 fn limits(l: &SetupLimits) -> WResult<()> {

@@ -43,7 +43,7 @@ pub(super) fn project(ctx: &Context) -> WResult<PilotBriefing> {
 }
 
 fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBriefing> {
-    let evidence = setup::pilot_evidence(ctx)?;
+    let (evidence, incomplete_history) = setup::pilot_evidence(ctx)?;
     let mut sources = BTreeMap::<String, PilotSource>::new();
     // Retain selected versions even if the root or an individual file disappears.
     for (job, runs) in &evidence {
@@ -83,7 +83,7 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
     let mut occurrences: Vec<PilotOccurrence> = vec![];
     if available {
         recover(ctx)?;
-        let inventory = setup::inventory::inventory(ctx, &[])?;
+        let inventory = setup::inventory::pilot_inventory(ctx)?;
         for doc in inventory.documents {
             let entry = sources
                 .entry(doc.source.path.clone())
@@ -105,18 +105,24 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                 PilotSourceStatus::Pending
             };
         }
-        for (job, _) in &evidence {
+        for (job, runs) in &evidence {
             for (spec, batch) in job.manifest.batches.iter().zip(&job.batches) {
                 for source in &spec.sources {
                     if let Some(entry) = sources.get_mut(&source.source.path)
                         && entry.current_hash.as_ref() == Some(&source.source.hash)
                         && entry.status != PilotSourceStatus::Checked
-                        && matches!(
+                        && (matches!(
                             batch.status,
                             SetupBatchStatus::Failed
                                 | SetupBatchStatus::Cancelled
                                 | SetupBatchStatus::Running
-                        )
+                        ) || (batch.status == SetupBatchStatus::Completed
+                            && !runs.iter().any(|(_, versions, _)| {
+                                versions.iter().any(|version| {
+                                    version.path == source.source.path
+                                        && version.hash == source.source.hash
+                                })
+                            })))
                     {
                         entry.status = PilotSourceStatus::Partial;
                     }
@@ -150,7 +156,12 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                 });
             }
         }
-        for (job, _) in &evidence {
+        let current_job_id = evidence.last().map(|(job, _)| job.job_id.as_str());
+        let all_runs: Vec<_> = evidence.iter().flat_map(|(_, runs)| runs.iter()).collect();
+        for (job, job_runs) in &evidence {
+            if Some(job.job_id.as_str()) != current_job_id {
+                continue;
+            }
             for item in &job.graph.items {
                 if item.disposition == DraftDisposition::Dismissed {
                     continue;
@@ -185,9 +196,26 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                         _ => None,
                     })
                     .collect();
+                let refs: Vec<_> = refs
+                    .into_iter()
+                    .filter(|source| {
+                        sources.get(&source.path).is_some_and(|status| {
+                            status.status == PilotSourceStatus::Checked
+                                && status.current_hash.as_ref() == Some(&source.document_hash)
+                        })
+                    })
+                    .collect();
                 if refs.is_empty() {
                     continue;
                 }
+                let mut matching_times = job_runs.iter().filter(|(_, versions, candidates)| {
+                    candidates.iter().any(|candidate| matches!(candidate, Candidate::Claim { claim: raw } if raw.subject_id == claim.subject_id && raw.predicate == claim.predicate && raw.value == claim.value))
+                        && versions.iter().any(|version| refs.iter().any(|source| source.path == version.path && source.document_hash == version.hash))
+                }).map(|(at, _, _)| at);
+                let Some(first_current) = matching_times.next() else {
+                    continue;
+                };
+                if all_runs.iter().any(|(at, _, candidates)| at < first_current && candidates.iter().any(|candidate| matches!(candidate, Candidate::Claim { claim: raw } if raw.subject_id == claim.subject_id && raw.predicate == claim.predicate && raw.value == claim.value))) { continue; }
                 let identity = serde_json::to_string(&(
                     topic.id.as_str(),
                     claim.predicate.as_str(),
@@ -293,22 +321,25 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                         }
                         let duplicate = prior_paths.contains(&source.path)
                             || prior_passages.contains(&source.passage_hash);
-                        let observed = items.iter().any(|item| {
-                            item.rule_id.as_ref() == Some(&rule.id)
-                                && item.sources.iter().any(|existing| {
-                                    existing.path == source.path
-                                        || existing.passage_hash == source.passage_hash
-                                })
-                        });
+                        let occurrence_id = stable_id(&format!(
+                            "pilot-rule:{}:{}:{}",
+                            rule.id, claim.subject_id, source.path
+                        ));
+                        let observed = occurrences
+                            .iter()
+                            .any(|occurrence| occurrence.occurrence_id == occurrence_id)
+                            || items.iter().any(|item| {
+                                item.rule_id.as_ref() == Some(&rule.id)
+                                    && item.sources.iter().any(|existing| {
+                                        existing.path == source.path
+                                            || existing.passage_hash == source.passage_hash
+                                    })
+                            });
                         if duplicate && !observed {
                             continue;
                         }
                         prior_paths.insert(source.path.clone());
                         prior_passages.insert(source.passage_hash.clone());
-                        let occurrence_id = stable_id(&format!(
-                            "pilot-rule:{}:{}:{}",
-                            rule.id, claim.subject_id, source.path
-                        ));
                         // A matching correct raw draft must not appear a second time as a generic card.
                         for item in &mut items {
                             if item.rule_id.is_none()
@@ -323,20 +354,51 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                             }
                         }
                         items.retain(|item| !item.sources.is_empty());
+                        let visible = sources.get(&source.path).is_some_and(|status| {
+                            status.status == PilotSourceStatus::Checked
+                                && status.current_hash.as_ref() == Some(&source.document_hash)
+                        });
                         if duplicate {
+                            if visible
+                                && let Some(item) = items.iter_mut().find(|item| {
+                                    item.rule_id.as_ref() == Some(&rule.id)
+                                        && item.sources.iter().any(|old| {
+                                            old.path == source.path
+                                                || old.passage_hash == source.passage_hash
+                                        })
+                                })
+                            {
+                                item.sources = vec![source.clone()];
+                                item.revision_id = claim.revision_id.clone();
+                                item.original_value = Some(claim.value.clone());
+                            } else if visible && observed {
+                                items.push(PilotItem {
+                                    item_id: occurrence_id.clone(),
+                                    topic_id: topic.id.clone(),
+                                    topic_name: topic.name.clone(),
+                                    revision_id: claim.revision_id.clone(),
+                                    predicate: claim.predicate.clone(),
+                                    value: rule.replacement.clone(),
+                                    sources: vec![source.clone()],
+                                    rule_id: Some(rule.id.clone()),
+                                    original_value: Some(claim.value.clone()),
+                                });
+                            }
                             continue;
                         }
-                        items.push(PilotItem {
-                            item_id: occurrence_id.clone(),
-                            topic_id: topic.id.clone(),
-                            topic_name: topic.name.clone(),
-                            revision_id: claim.revision_id.clone(),
-                            predicate: claim.predicate.clone(),
-                            value: rule.replacement.clone(),
-                            sources: vec![source.clone()],
-                            rule_id: Some(rule.id.clone()),
-                            original_value: Some(claim.value.clone()),
-                        });
+                        if visible {
+                            items.push(PilotItem {
+                                item_id: occurrence_id.clone(),
+                                topic_id: topic.id.clone(),
+                                topic_name: topic.name.clone(),
+                                revision_id: claim.revision_id.clone(),
+                                predicate: claim.predicate.clone(),
+                                value: rule.replacement.clone(),
+                                sources: vec![source.clone()],
+                                rule_id: Some(rule.id.clone()),
+                                original_value: Some(claim.value.clone()),
+                            });
+                        }
                         occurrences.push(PilotOccurrence {
                             rule_id: rule.id.clone(),
                             occurrence_id,
@@ -386,6 +448,19 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                 current_hash: None,
                 analysed_hash: None,
                 status: PilotSourceStatus::Unavailable,
+                last_success_at: None,
+            },
+        );
+    }
+    if incomplete_history {
+        sources.insert(
+            "Analysis history incomplete".into(),
+            PilotSource {
+                source_id: stable_id(&format!("pilot-history:{}", ctx.root_id)),
+                path: "Analysis history incomplete".into(),
+                current_hash: None,
+                analysed_hash: None,
+                status: PilotSourceStatus::Partial,
                 last_success_at: None,
             },
         );
