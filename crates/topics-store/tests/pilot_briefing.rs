@@ -396,6 +396,23 @@ fn a_meeting_briefing_keeps_changes_across_analyses_until_the_next_snapshot() {
             .unwrap();
         let update = claim(&f.topics[0], "decision", decision, &source.citation);
         f.publish(cap, vec![Candidate::Claim { claim: update }]);
+        if path == "monday.md" {
+            let tuesday = f.service.pilot_briefing(f.root_request()).unwrap();
+            let evidence = f
+                .service
+                .pilot_feedback_snapshot_create(PilotSnapshotCreateRequest {
+                    root_id: f.root_id.clone(),
+                    briefing_token: tuesday.briefing_token,
+                })
+                .unwrap();
+            assert!(
+                evidence
+                    .briefing
+                    .items
+                    .iter()
+                    .any(|item| item.value == decision)
+            );
+        }
     }
     let friday = keep(&f);
     let mut decisions: Vec<_> = friday
