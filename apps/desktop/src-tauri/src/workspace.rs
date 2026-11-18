@@ -8,6 +8,8 @@ use std::{
 };
 use tauri::Emitter;
 use tauri_plugin_dialog::DialogExt;
+use topics_core::pilot_briefing::PilotBriefing;
+use topics_core::pilot_review::*;
 use topics_core::setup::*;
 use topics_core::workspace::*;
 use topics_runtime::{CommitPermit, HostTools, RunRequest, Runtime, RuntimeConfig};
@@ -169,6 +171,49 @@ macro_rules! service_command {
     };
 }
 service_command!(workspace_root_get, RootGetRequest, RootGetResult, root_get);
+service_command!(pilot_briefing, RootRequest, PilotBriefing, pilot_briefing);
+service_command!(
+    pilot_snapshot_create,
+    PilotSnapshotCreateRequest,
+    PilotSnapshot,
+    pilot_snapshot_create
+);
+service_command!(
+    pilot_snapshot_list,
+    RootRequest,
+    Vec<PilotSnapshot>,
+    pilot_snapshot_list
+);
+service_command!(
+    pilot_snapshot_get,
+    PilotSnapshotGetRequest,
+    PilotSnapshot,
+    pilot_snapshot_get
+);
+service_command!(
+    pilot_feedback_list,
+    PilotSnapshotGetRequest,
+    Vec<PilotFeedback>,
+    pilot_feedback_list
+);
+service_command!(
+    pilot_feedback_save,
+    PilotFeedbackSaveRequest,
+    PilotFeedback,
+    pilot_feedback_save
+);
+service_command!(
+    pilot_week_get,
+    PilotWeekGetRequest,
+    PilotWeekResult,
+    pilot_week_get
+);
+service_command!(
+    pilot_week_save,
+    PilotWeekSaveRequest,
+    PilotWeekResult,
+    pilot_week_save
+);
 service_command!(
     workspace_scope_preview,
     ScopePreviewRequest,
