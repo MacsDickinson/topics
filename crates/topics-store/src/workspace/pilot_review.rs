@@ -648,6 +648,71 @@ mod tests {
         assert!(counted.is_empty());
     }
     #[test]
+    fn learning_retains_zero_examples_and_deduplicates_and_adjusts_observations() {
+        let rule = |id: &str| PilotRule {
+            rule_id: id.into(),
+            topic_id: "topic".into(),
+            topic_name: "Fictional".into(),
+            predicate: "owner".into(),
+            match_value: "Sam".into(),
+            replacement: "Sam Patel".into(),
+        };
+        let occurrence = PilotOccurrence {
+            rule_id: "r1".into(),
+            occurrence_id: "occurrence".into(),
+            observed_at: "2026-11-20T10:00:00Z".into(),
+            recurred: true,
+        };
+        let snapshot = PilotSnapshot {
+            id: "snapshot".into(),
+            captured_at: "2026-11-20T11:00:00Z".into(),
+            briefing: PilotBriefing {
+                root_id: "root".into(),
+                generated_at: "2026-11-20T11:00:00Z".into(),
+                briefing_token: "token".into(),
+                sources: vec![],
+                items: vec![],
+                rules: vec![rule("r1"), rule("r2")],
+                occurrences: vec![occurrence.clone(), occurrence],
+            },
+        };
+        let week = PilotWeek {
+            week: "2026-11-20".into(),
+            project: "Fictional".into(),
+            phase: PilotPhase::Pilot,
+            snapshot_id: Some(snapshot.id.clone()),
+            source_count: 1,
+            decision_count: 1,
+            commitment_count: 0,
+            total_minutes: 5,
+            correction_minutes: 0,
+            useful_change: String::new(),
+            workload_comparison: PilotWorkloadComparison::Unknown,
+            useful_change_judgement: PilotUsefulChange::Unknown,
+            manual_commitments: 0,
+            item_adjustments: vec![],
+            material_judgements: vec![],
+            rule_occurrences: vec![PilotRuleOccurrence {
+                id: "occurrence".into(),
+                rule_id: "r1".into(),
+                recurred: false,
+            }],
+            largest_cost_and_next_change: String::new(),
+        };
+        let mut state = State::default();
+        state.pilot_snapshots.insert(snapshot.id.clone(), snapshot);
+        let mut result = measures(Some(&week), &state.pilot_feedback);
+        add_learning(&state, Some(&week), &mut result);
+        assert_eq!(
+            (result.learning[0].eligible, result.learning[0].recurrences),
+            (1, 0)
+        );
+        assert_eq!(
+            (result.learning[1].eligible, result.learning[1].recurrences),
+            (0, 0)
+        );
+    }
+    #[test]
     fn enabled_drafts_use_latest_outcome_per_id() {
         let events = [
             DraftObservation {
