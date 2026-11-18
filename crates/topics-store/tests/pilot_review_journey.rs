@@ -6,9 +6,45 @@ use topics_core::*;
 #[test]
 fn meeting_snapshot_keeps_two_items_and_reports_one_catchable_miss_in_three() {
     let mut f = Fixture::new();
-    f.single(2);
+    f.write(
+        "meeting.md",
+        "# Transcript\nAlex uses he/him, leads Ledger, and the release needs approval.\n",
+    );
+    f.preview(1);
+    f.authorize();
+    let capability = f.start();
+    let source = f.read(&capability)[0].citation.clone();
+    let alex = topic("Alex", TopicKind::Person);
+    f.publish(
+        capability,
+        vec![
+            Candidate::Topic {
+                topic: alex.clone(),
+            },
+            Candidate::Claim {
+                claim: claim(&alex, "pronouns", "he/him", &source),
+            },
+            Candidate::Claim {
+                claim: claim(&alex, "team", "Ledger", &source),
+            },
+        ],
+    );
+    f.all_receipt();
+    f.decide();
     let displayed = f.service.pilot_briefing(f.root_request()).unwrap();
     assert_eq!(displayed.items.len(), 2);
+    assert_eq!(displayed.sources[0].status, PilotSourceStatus::Checked);
+    assert_eq!(
+        displayed.sources[0].current_hash,
+        displayed.sources[0].analysed_hash
+    );
+    assert!(source.excerpt.contains("release needs approval"));
+    assert!(
+        displayed
+            .items
+            .iter()
+            .all(|item| !item.value.contains("release needs approval"))
+    );
     let snapshot = f
         .service
         .pilot_snapshot_create(PilotSnapshotCreateRequest {
@@ -33,7 +69,7 @@ fn meeting_snapshot_keeps_two_items_and_reports_one_catchable_miss_in_three() {
             root_id: f.root_id.clone(),
             feedback: feedback(
                 "3474b27e-5757-48ec-af52-0b6d370d1ead",
-                "A third decision was absent",
+                "The release needs approval",
                 PilotEvidenceAtCutoff::Analysed,
             ),
         })
