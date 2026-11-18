@@ -181,15 +181,26 @@ fn failed_batch_is_incomplete_while_other_completed_source_is_checked() {
 }
 
 #[test]
-fn briefing_token_is_stable_and_changes_with_the_visible_source_version() {
+fn a_displayed_briefing_remains_savable_only_while_its_contents_match() {
     let mut f = Fixture::new();
     f.write("project/meeting.md", "# Meeting\nA decision.\n");
     let first = f.service.pilot_briefing(f.root_request()).unwrap();
     let again = f.service.pilot_briefing(f.root_request()).unwrap();
-    assert_eq!(first.briefing_token, again.briefing_token);
+    let capture = |token| PilotSnapshotCreateRequest {
+        root_id: first.root_id.clone(),
+        briefing_token: token,
+    };
+    let saved = f
+        .service
+        .pilot_snapshot_create(capture(first.briefing_token.clone()))
+        .unwrap();
+    assert_eq!(saved.briefing, first);
     f.write("project/meeting.md", "# Meeting\nA changed decision.\n");
-    let changed = f.service.pilot_briefing(f.root_request()).unwrap();
-    assert_ne!(first.briefing_token, changed.briefing_token);
+    let error = f
+        .service
+        .pilot_snapshot_create(capture(again.briefing_token))
+        .unwrap_err();
+    assert_eq!(error.code, "stale_scope");
 }
 
 #[test]

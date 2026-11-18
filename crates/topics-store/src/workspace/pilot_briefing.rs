@@ -33,11 +33,7 @@ impl WorkspaceService {
             }
             Err(e) => return Err(e),
         };
-        if available {
-            project(&ctx)
-        } else {
-            project_with_availability(&ctx, false)
-        }
+        self.issue_pilot_view(project_with_availability(&ctx, available)?)
     }
 }
 
