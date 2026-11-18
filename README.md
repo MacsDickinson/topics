@@ -1,23 +1,26 @@
 # Topics
 
-Topics is a local-first macOS app for ongoing people, projects and threads in Markdown notes. The topic-workspace prototype adds reviewed discovery and sourced understanding to the Phase 0 search foundation.
+Topics is a local-first macOS app for ongoing people, projects and threads in Markdown notes. The Friday pilot helps you prepare for a meeting and learn which changes your briefing caught or missed.
 
+- Open Today to see changes and check when the underlying notes were last analysed.
+- Keep the briefing before your meeting. Record a wrong fact, an omitted decision or a missed commitment in a sentence.
+- Use Weekly review to compare one baseline sync with two pilot syncs, including preparation time, correction effort and known omissions.
 - Analyse selected notes and review proposed topics, claims and connections.
 - Accept, edit or reject changes before they become current knowledge.
 - Open topics to inspect facts, evidence, uncertainty and revision history.
 - Correct facts through topic chat, then approve the replacement and its scoped correction rule.
 - Browse sources, set privacy labels, capture topics manually, and undo operations through History.
 
-The current milestone adds folder setup and topic-centred review: inspect the local folder structure, approve an exact analysis manifest, build a starting topic map in bounded batches, and save a baseline without individually confirming every imported assertion. Imported understanding is labelled “From your notes”; explicit confirmations remain separate. See the [folder setup plan and scenarios](features/folder-setup/PLAN.md). A signed development build is available below; the bounded genuine setup journey passes, while required cross-provider review and final validation remain pending. The persistent task backlog and bullet-journal daily review follow this milestone.
+Folder setup builds a starting topic map from the notes you select for analysis. The pilot runs in one workspace and preserves dated briefings and feedback as app-owned Markdown. Automatic action extraction is a later milestone. [Friday pilot and work-Mac rehearsal](features/multi-source-library/PILOT.md) · [Folder setup scenarios](features/folder-setup/PLAN.md)
 
 UI contributors: follow the [design system](docs/design-system.md) for tokens, components, patterns and review requirements.
 
 ## Run
 
-The delivered local app is placed at `target/prototype/Topics.app`. Open it from Finder or from this checkout:
+Open the local Friday pilot build from Finder or from this checkout.
 
 ```sh
-open target/prototype/Topics.app
+open target/prototype/friday-pilot/Topics.app
 ```
 
 To run from source with the pinned Rust toolchain and project-local Node:
