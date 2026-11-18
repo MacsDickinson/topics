@@ -30,6 +30,7 @@ fn weekly_review_survives_restart_and_counts_distinct_material_changes() {
         workload_comparison: PilotWorkloadComparison::Unknown,
         useful_change_judgement: PilotUsefulChange::Unknown,
         manual_commitments: 1,
+        item_adjustments: vec![],
         material_judgements: vec![
             PilotMaterialJudgement {
                 id: "change-a".into(),
@@ -224,6 +225,7 @@ fn comparable_workloads_and_extension_week_are_used_for_decision() {
         useful_change_judgement: useful,
         workload_comparison: workload,
         manual_commitments: 0,
+        item_adjustments: vec![],
         material_judgements: vec![PilotMaterialJudgement {
             id: "a".into(),
             description: "decision".into(),

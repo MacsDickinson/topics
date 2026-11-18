@@ -256,6 +256,29 @@ fn jobs(ctx: &Context) -> WResult<Vec<SetupJob>> {
     out.sort_by_key(|j| j.created_at.clone());
     Ok(out)
 }
+// Read only local human draft edit checkpoints; callers already hold the workspace lock.
+pub(super) fn pilot_edits(ctx: &Context) -> WResult<Vec<(Candidate, Candidate, Timestamp)>> {
+    let dir = setup_dir(ctx).join("jobs");
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut out = Vec::new();
+    for path in json_entries(&dir)? {
+        if let Ok(saved) = read_json::<Checkpoint>(&path)
+            && saved.job.schema == SCHEMA
+            && saved.job.root_id == ctx.root_id
+            && saved.job.manifest.root_id == ctx.root_id
+        {
+            out.extend(
+                saved
+                    .edits
+                    .into_iter()
+                    .map(|edit| (edit.before, edit.after, edit.statement.recorded_at)),
+            );
+        }
+    }
+    Ok(out)
+}
 fn revision(job: &SetupJob, expected: u64) -> WResult<()> {
     if job.revision != expected {
         Err(error(

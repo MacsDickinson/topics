@@ -19,6 +19,78 @@ fn unique_ids<'a>(ids: impl Iterator<Item = &'a str>) -> WResult<()> {
     }
     Ok(())
 }
+fn substantive_edit(item: &PilotItem, before: &Candidate, after: &Candidate) -> bool {
+    let (Candidate::Claim { claim: before }, Candidate::Claim { claim: after }) = (before, after)
+    else {
+        return false;
+    };
+    let original_sources: Vec<_> = after
+        .sources
+        .iter()
+        .filter(|e| !matches!(e, Evidence::UserStatement { .. }))
+        .collect();
+    let before_sources: Vec<_> = before
+        .sources
+        .iter()
+        .filter(|e| !matches!(e, Evidence::UserStatement { .. }))
+        .collect();
+    before.revision_id == item.revision_id
+        && before.subject_id == item.topic_id
+        && before.predicate == item.predicate
+        && before.value.trim() == item.value.trim()
+        && before.value.split_whitespace().collect::<Vec<_>>()
+            != after.value.split_whitespace().collect::<Vec<_>>()
+        && before.subject_id == after.subject_id
+        && before.predicate == after.predicate
+        && before.valid_from == after.valid_from
+        && before.valid_to == after.valid_to
+        && before.uncertainty == after.uncertainty
+        && before_sources == original_sources
+}
+fn apply_item_adjustments(wrong: &mut BTreeSet<Id>, adjustments: &[PilotItemAdjustment]) {
+    for adjustment in adjustments {
+        if adjustment.wrong {
+            wrong.insert(adjustment.item_id.clone());
+        } else {
+            wrong.remove(&adjustment.item_id);
+        }
+    }
+}
+fn add_observed_wrong(
+    ctx: &Context,
+    state: &State,
+    week: Option<&PilotWeek>,
+    result: &mut PilotWeekMeasures,
+) -> WResult<()> {
+    let Some(week) = week else { return Ok(()) };
+    let Some(snapshot) = week
+        .snapshot_id
+        .as_ref()
+        .and_then(|id| state.pilot_snapshots.get(id))
+    else {
+        return Ok(());
+    };
+    let edits = setup::pilot_edits(ctx)?;
+    let mut wrong: BTreeSet<_> = state
+        .pilot_feedback
+        .values()
+        .filter(|f| f.snapshot_id == snapshot.id && f.kind == PilotFeedbackKind::Wrong)
+        .filter_map(|f| f.item_id.clone())
+        .collect();
+    for item in &snapshot.briefing.items {
+        if edits.iter().any(|(before, after, at)| {
+            at > &snapshot.captured_at && substantive_edit(item, before, after)
+        }) {
+            wrong.insert(item.item_id.clone());
+        }
+        if state.operations.iter().filter(|op| op.operation.created_at > snapshot.captured_at && !undone(state, &op.operation.id)).filter_map(|op| op.proposal.as_ref()).flat_map(|p| &p.applied_candidates).any(|candidate| matches!(candidate, Candidate::Correction { claim, .. } if claim.supersedes.contains(&item.revision_id) && claim.value.split_whitespace().collect::<Vec<_>>() != item.value.split_whitespace().collect::<Vec<_>>())) {
+            wrong.insert(item.item_id.clone());
+        }
+    }
+    apply_item_adjustments(&mut wrong, &week.item_adjustments);
+    result.wrong_items = wrong.len() as u32;
+    Ok(())
+}
 fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) -> PilotWeekMeasures {
     let mut result = PilotWeekMeasures {
         wrong_items: 0,
@@ -50,7 +122,12 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
     }
     result.wrong_items = wrong.len() as u32;
     for item in &week.material_judgements {
-        match item.evidence_at_cutoff {
+        let classification = item
+            .feedback_id
+            .as_ref()
+            .and_then(|id| feedback.get(id))
+            .map_or(item.evidence_at_cutoff, |entry| entry.evidence_at_cutoff);
+        match classification {
             PilotEvidenceAtCutoff::Analysed => {
                 result.eligible_changes += 1;
                 if item.outcome == PilotMaterialOutcome::Omitted {
@@ -167,7 +244,8 @@ impl WorkspaceService {
             let id = week_id(&request.week, &request.project)?;
             let state = load(ctx)?;
             let week = state.pilot_weeks.get(&id).cloned();
-            let measures = measures(week.as_ref(), &state.pilot_feedback);
+            let mut measures = measures(week.as_ref(), &state.pilot_feedback);
+            add_observed_wrong(ctx, &state, week.as_ref(), &mut measures)?;
             let comparisons = comparisons(&state, &request.project, &request.week);
             Ok(PilotWeekResult {
                 week,
@@ -188,6 +266,7 @@ impl WorkspaceService {
             }
             unique_ids(week.material_judgements.iter().map(|j| j.id.as_str()))?;
             unique_ids(week.rule_occurrences.iter().map(|j| j.id.as_str()))?;
+            unique_ids(week.item_adjustments.iter().map(|j| j.item_id.as_str()))?;
             let state = load(ctx)?;
             if week
                 .snapshot_id
@@ -195,6 +274,25 @@ impl WorkspaceService {
                 .is_some_and(|id| !state.pilot_snapshots.contains_key(id))
             {
                 return Err(error("invalid_input", "Snapshot does not exist"));
+            }
+            if !week.item_adjustments.is_empty() {
+                let snapshot = week
+                    .snapshot_id
+                    .as_ref()
+                    .and_then(|id| state.pilot_snapshots.get(id))
+                    .ok_or_else(|| error("invalid_input", "Item adjustments require a snapshot"))?;
+                if week.item_adjustments.iter().any(|a| {
+                    !snapshot
+                        .briefing
+                        .items
+                        .iter()
+                        .any(|i| i.item_id == a.item_id)
+                }) {
+                    return Err(error(
+                        "invalid_input",
+                        "Adjustment item is not in the snapshot",
+                    ));
+                }
             }
             let mut referenced_feedback = BTreeSet::new();
             for judgement in &week.material_judgements {
@@ -247,7 +345,8 @@ impl WorkspaceService {
                     ..Default::default()
                 },
             )?;
-            let measures = measures(Some(&week), &state.pilot_feedback);
+            let mut measures = measures(Some(&week), &state.pilot_feedback);
+            add_observed_wrong(ctx, &state, Some(&week), &mut measures)?;
             let mut updated = state;
             updated.pilot_weeks.insert(id, week.clone());
             let comparisons = comparisons(&updated, &week.project, &week.week);
@@ -411,6 +510,54 @@ fn draft_measures(events: Option<&[DraftObservation]>) -> Option<PilotDraftMeasu
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn substantive_edits_and_reports_count_one_item_and_can_be_adjusted() {
+        let item = PilotItem {
+            item_id: "item".into(),
+            topic_id: "topic".into(),
+            topic_name: "Fiction".into(),
+            revision_id: "revision".into(),
+            predicate: "owner".into(),
+            value: "Sam".into(),
+            sources: vec![],
+            rule_id: None,
+            original_value: None,
+        };
+        let claim = |value: &str| Claim {
+            id: "claim".into(),
+            revision_id: "revision".into(),
+            subject_id: "topic".into(),
+            predicate: "owner".into(),
+            value: value.into(),
+            uncertainty: None,
+            sources: vec![],
+            supersedes: vec![],
+            recorded_at: "2026-01-01T00:00:00Z".into(),
+            valid_from: None,
+            valid_to: None,
+        };
+        let before = Candidate::Claim {
+            claim: claim("Sam"),
+        };
+        let whitespace = Candidate::Claim {
+            claim: claim(" Sam "),
+        };
+        let after = Candidate::Claim {
+            claim: claim("Alex"),
+        };
+        assert!(!substantive_edit(&item, &before, &whitespace));
+        assert!(substantive_edit(&item, &before, &after));
+        let mut counted = BTreeSet::from([item.item_id.clone()]);
+        counted.insert(item.item_id.clone());
+        apply_item_adjustments(
+            &mut counted,
+            &[PilotItemAdjustment {
+                item_id: item.item_id,
+                wrong: false,
+            }],
+        );
+        assert!(counted.is_empty());
+    }
     #[test]
     fn enabled_drafts_use_latest_outcome_per_id() {
         let events = [
