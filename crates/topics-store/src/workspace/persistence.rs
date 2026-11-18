@@ -148,6 +148,9 @@ pub(super) fn target_path(root: &Path, path: &str, create: bool) -> WResult<Path
             "unresolved",
             "reviews",
             "receipts",
+            "pilot-weeks",
+            "pilot-snapshots",
+            "pilot-feedback",
         ]
         .contains(&parts[1])
     {
@@ -535,6 +538,9 @@ pub(super) fn recover(ctx: &Context) -> WResult<()> {
 
 #[derive(Default)]
 pub(super) struct State {
+    pub pilot_weeks: BTreeMap<Id, PilotWeek>,
+    pub pilot_snapshots: BTreeMap<Id, PilotSnapshot>,
+    pub pilot_feedback: BTreeMap<Id, PilotFeedback>,
     pub topics: BTreeMap<Id, Topic>,
     pub claims: BTreeMap<Id, Claim>,
     pub connections: BTreeMap<Id, Connection>,
@@ -774,12 +780,15 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             "unresolved" => "unresolved",
             "reviews" => "review",
             "receipts" => "receipt",
+            "pilot-weeks" => "pilot_week",
+            "pilot-snapshots" => "pilot_snapshot",
+            "pilot-feedback" => "pilot_feedback",
             _ => "",
         };
         let key = match kind {
             "claim" => "revision_id",
             "source" => "source_id",
-            "unresolved" | "receipt" => "",
+            "unresolved" | "receipt" | "pilot_week" => "",
             _ => "id",
         };
         if record.record_kind != kind
@@ -846,6 +855,9 @@ pub(super) fn load(ctx: &Context) -> WResult<State> {
             "statement" => insert!(statements, UserStatement),
             "review" if integrity => insert!(reviews, ReviewMetadata),
             "receipt" if integrity => insert!(receipts, SetupDecisionResult),
+            "pilot_week" if integrity => insert!(pilot_weeks, PilotWeek),
+            "pilot_snapshot" if integrity => insert!(pilot_snapshots, PilotSnapshot),
+            "pilot_feedback" if integrity => insert!(pilot_feedback, PilotFeedback),
             "unresolved" => {
                 if let Ok(c) = serde_json::from_value(record.data.clone()) {
                     state.unresolved.push(c);

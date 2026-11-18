@@ -31,9 +31,13 @@ value!(PilotSnapshotGetRequest {
 value!(PilotSnapshot {
     id: Id,
     captured_at: Timestamp,
-    briefing: serde_json::Value
+    briefing: crate::PilotBriefing
 });
-choices!(PilotFeedbackKind { Wrong, Omitted });
+choices!(PilotFeedbackKind {
+    Wrong,
+    Omitted,
+    MissedCommitment
+});
 choices!(PilotEvidenceAtCutoff {
     Analysed,
     PendingUnavailable,
@@ -43,7 +47,7 @@ choices!(PilotEvidenceAtCutoff {
 value!(PilotFeedback {
     id: Id, snapshot_id: Id, item_id: Option<Id>, kind: PilotFeedbackKind,
     text: String, evidence: Option<String>, evidence_at_cutoff: PilotEvidenceAtCutoff,
-    recorded_at: Timestamp
+    recorded_at: Timestamp, recorded_by: String
 });
 value!(PilotFeedbackSaveRequest {
     root_id: Id,
@@ -92,8 +96,18 @@ value!(PilotLearningMeasure {
     recurrences: u32
 });
 value!(PilotWeekMeasures {
-    wrong_items: u32, reported_misses: u32, known_omissions: u32, eligible_changes: u32,
+    wrong_items: u32, reported_misses: u32, missed_commitments: u32, known_omissions: u32, eligible_changes: u32,
     pending_unavailable: u32, first_learned: u32, unknown: u32,
     draft_quality: Option<PilotDraftMeasures>, learning: Vec<PilotLearningMeasure>
 });
-value!(PilotWeekResult { week: Option<PilotWeek>, measures: PilotWeekMeasures });
+choices!(PilotComparisonStatus {
+    Pass,
+    Miss,
+    Inconclusive
+});
+value!(PilotComparisons {
+    baseline_week: Option<String>, pilot_weeks: Vec<String>,
+    preparation_time: PilotComparisonStatus, useful_change: PilotComparisonStatus,
+    omission_trend: PilotComparisonStatus, source_coverage: PilotComparisonStatus
+});
+value!(PilotWeekResult { week: Option<PilotWeek>, measures: PilotWeekMeasures, comparisons: PilotComparisons });
