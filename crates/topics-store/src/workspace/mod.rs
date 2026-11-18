@@ -2,6 +2,7 @@
 mod persistence;
 mod pilot_briefing;
 mod pilot_review;
+mod pilot_views;
 mod proposals;
 mod scopes;
 mod setup;
@@ -61,6 +62,7 @@ pub struct WorkspaceService {
     base: TopicsService,
     fault: std::sync::Mutex<Option<usize>>,
     instance_id: Id,
+    pilot_views: pilot_views::IssuedViews,
 }
 impl WorkspaceService {
     /// Human-only persisted correction/edit evidence retrieval; never a model tool.
@@ -86,6 +88,7 @@ impl WorkspaceService {
             base: TopicsService::open(app_data).map_err(internal)?,
             fault: std::sync::Mutex::new(None),
             instance_id: new_id(),
+            pilot_views: Default::default(),
         })
     }
     fn context(&self, expected: Option<&str>) -> WResult<Context> {
