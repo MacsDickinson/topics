@@ -10,6 +10,30 @@ fn week_id(week: &str, project: &str) -> WResult<Id> {
     }
     Ok(stable_id(&format!("pilot-week:{}:{}", week, project)))
 }
+fn canonical_project(project: &str) -> String {
+    project
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
+fn resolve_week_id(state: &State, week: &str, project: &str) -> WResult<Id> {
+    let canonical = canonical_project(project);
+    let fallback = week_id(week, &canonical)?;
+    let mut matches = state
+        .pilot_weeks
+        .iter()
+        .filter(|(_, w)| w.week == week && canonical_project(&w.project) == canonical)
+        .map(|(id, _)| id.clone());
+    let found = matches.next();
+    if matches.next().is_some() {
+        return Err(error(
+            "conflict",
+            "Multiple saved weeks match this project; resolve duplicate records",
+        ));
+    }
+    Ok(found.unwrap_or(fallback))
+}
 fn unique_ids<'a>(ids: impl Iterator<Item = &'a str>) -> WResult<()> {
     let mut seen = BTreeSet::new();
     for id in ids {
@@ -164,7 +188,11 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
         }
     }
     result.wrong_items = wrong.len() as u32;
+    let mut linked = BTreeSet::new();
     for item in &week.material_judgements {
+        if let Some(id) = &item.feedback_id {
+            linked.insert(id);
+        }
         let classification = item
             .feedback_id
             .as_ref()
@@ -176,6 +204,21 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
                 if item.outcome == PilotMaterialOutcome::Omitted {
                     result.known_omissions += 1;
                 }
+            }
+            PilotEvidenceAtCutoff::PendingUnavailable => result.pending_unavailable += 1,
+            PilotEvidenceAtCutoff::FirstLearned => result.first_learned += 1,
+            PilotEvidenceAtCutoff::Unknown => result.unknown += 1,
+        }
+    }
+    for entry in feedback.values().filter(|entry| {
+        Some(&entry.snapshot_id) == week.snapshot_id.as_ref()
+            && entry.kind == PilotFeedbackKind::Omitted
+            && !linked.contains(&entry.id)
+    }) {
+        match entry.evidence_at_cutoff {
+            PilotEvidenceAtCutoff::Analysed => {
+                result.eligible_changes += 1;
+                result.known_omissions += 1;
             }
             PilotEvidenceAtCutoff::PendingUnavailable => result.pending_unavailable += 1,
             PilotEvidenceAtCutoff::FirstLearned => result.first_learned += 1,
@@ -241,7 +284,10 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
     let mut weeks: Vec<_> = state
         .pilot_weeks
         .values()
-        .filter(|w| w.project == project && w.week.as_str() <= through)
+        .filter(|w| {
+            canonical_project(&w.project) == canonical_project(project)
+                && w.week.as_str() <= through
+        })
         .collect();
     weeks.sort_by(|a, b| a.week.cmp(&b.week));
     let baseline = weeks
@@ -271,18 +317,24 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
             PilotWorkloadComparison::Comparable => true,
             PilotWorkloadComparison::MateriallyDifferent => false,
             PilotWorkloadComparison::Unknown => {
-                w.source_count == base.source_count
+                (base.source_count > 0 || base.decision_count > 0 || base.commitment_count > 0)
+                    && w.source_count == base.source_count
                     && w.decision_count == base.decision_count
                     && w.commitment_count == base.commitment_count
             }
         });
-        if comparable {
-            out.preparation_time =
-                if a.total_minutes < base.total_minutes && b.total_minutes < base.total_minutes {
-                    Pass
-                } else {
-                    Miss
-                };
+        if comparable
+            && base.correction_minutes.is_some()
+            && a.correction_minutes.is_some()
+            && b.correction_minutes.is_some()
+            && let (Some(base_time), Some(a_time), Some(b_time)) =
+                (base.total_minutes, a.total_minutes, b.total_minutes)
+        {
+            out.preparation_time = if a_time < base_time && b_time < base_time {
+                Pass
+            } else {
+                Miss
+            };
         }
         out.useful_change = if [a.useful_change_judgement, b.useful_change_judgement]
             .contains(&PilotUsefulChange::Observed)
@@ -322,8 +374,8 @@ fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons 
 impl WorkspaceService {
     pub fn pilot_week_get(&self, request: PilotWeekGetRequest) -> WResult<PilotWeekResult> {
         self.with(&request.root_id, |ctx| {
-            let id = week_id(&request.week, &request.project)?;
             let state = load(ctx)?;
+            let id = resolve_week_id(&state, &request.week, &request.project)?;
             let week = state
                 .pilot_weeks
                 .get(&id)
@@ -343,8 +395,16 @@ impl WorkspaceService {
     pub fn pilot_week_save(&self, request: PilotWeekSaveRequest) -> WResult<PilotWeekResult> {
         self.with(&request.root_id, |ctx| {
             let mut week = request.week;
-            let id = week_id(&week.week, &week.project)?;
-            if week.correction_minutes > week.total_minutes {
+            let state = load(ctx)?;
+            let id = resolve_week_id(&state, &week.week, &week.project)?;
+            if let Some(old) = state.pilot_weeks.get(&id) {
+                week.project = old.project.clone();
+            }
+            if week
+                .correction_minutes
+                .zip(week.total_minutes)
+                .is_some_and(|(correction, total)| correction > total)
+            {
                 return Err(error(
                     "invalid_input",
                     "Correction time cannot exceed total time",
@@ -353,7 +413,6 @@ impl WorkspaceService {
             unique_ids(week.material_judgements.iter().map(|j| j.id.as_str()))?;
             unique_ids(week.rule_occurrences.iter().map(|j| j.id.as_str()))?;
             unique_ids(week.item_adjustments.iter().map(|j| j.item_id.as_str()))?;
-            let state = load(ctx)?;
             if week
                 .snapshot_id
                 .as_ref()
@@ -414,6 +473,16 @@ impl WorkspaceService {
                     let entry = state.pilot_feedback.get(feedback_id).ok_or_else(|| {
                         error("invalid_input", "Referenced feedback does not exist")
                     })?;
+                    if !matches!(
+                        (entry.kind, judgement.outcome),
+                        (PilotFeedbackKind::Wrong, PilotMaterialOutcome::Wrong)
+                            | (PilotFeedbackKind::Omitted, PilotMaterialOutcome::Omitted)
+                    ) {
+                        return Err(error(
+                            "invalid_input",
+                            "Feedback kind does not match the material outcome",
+                        ));
+                    }
                     if Some(&entry.snapshot_id) != week.snapshot_id.as_ref() {
                         return Err(error(
                             "invalid_input",
@@ -764,8 +833,8 @@ mod tests {
             source_count: 1,
             decision_count: 1,
             commitment_count: 0,
-            total_minutes: 5,
-            correction_minutes: 0,
+            total_minutes: Some(5),
+            correction_minutes: Some(0),
             useful_change: String::new(),
             workload_comparison: PilotWorkloadComparison::Unknown,
             useful_change_judgement: PilotUsefulChange::Unknown,

@@ -24,8 +24,8 @@ fn weekly_review_survives_restart_and_counts_distinct_material_changes() {
         source_count: 3,
         decision_count: 3,
         commitment_count: 1,
-        total_minutes: 20,
-        correction_minutes: 5,
+        total_minutes: Some(20),
+        correction_minutes: Some(5),
         useful_change: String::new(),
         workload_comparison: PilotWorkloadComparison::Unknown,
         useful_change_judgement: PilotUsefulChange::Unknown,
@@ -212,8 +212,8 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
         source_count: 1,
         decision_count: 1,
         commitment_count: 0,
-        total_minutes: 10,
-        correction_minutes: 1,
+        total_minutes: Some(10),
+        correction_minutes: Some(1),
         useful_change: String::new(),
         workload_comparison: PilotWorkloadComparison::Unknown,
         useful_change_judgement: PilotUsefulChange::Unknown,
@@ -229,6 +229,71 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
         rule_occurrences: vec![],
         largest_cost_and_next_change: String::new(),
     };
+    let mut classified = first.clone();
+    classified.evidence_at_cutoff = PilotEvidenceAtCutoff::Analysed;
+    service
+        .pilot_feedback_save(PilotFeedbackSaveRequest {
+            root_id: root_id.clone(),
+            feedback: classified.clone(),
+        })
+        .unwrap();
+    let mut without_rows = week.clone();
+    without_rows.material_judgements.clear();
+    let initial = service
+        .pilot_week_save(PilotWeekSaveRequest {
+            root_id: root_id.clone(),
+            week: without_rows,
+        })
+        .unwrap();
+    assert_eq!(
+        (
+            initial.measures.known_omissions,
+            initial.measures.eligible_changes
+        ),
+        (1, 1)
+    );
+    let mut missed = first.clone();
+    missed.id = "e6c06fe9-7a61-4b3b-a60d-cc1a3d14fa57".into();
+    missed.kind = PilotFeedbackKind::MissedCommitment;
+    let missed = service
+        .pilot_feedback_save(PilotFeedbackSaveRequest {
+            root_id: root_id.clone(),
+            feedback: missed,
+        })
+        .unwrap();
+    let mut invalid_commitment = week.clone();
+    invalid_commitment.material_judgements[0].feedback_id = Some(missed.id);
+    assert!(
+        service
+            .pilot_week_save(PilotWeekSaveRequest {
+                root_id: root_id.clone(),
+                week: invalid_commitment
+            })
+            .is_err()
+    );
+    let mut bad = week.clone();
+    bad.material_judgements[0].outcome = PilotMaterialOutcome::SurfacedCorrectly;
+    assert!(
+        service
+            .pilot_week_save(PilotWeekSaveRequest {
+                root_id: root_id.clone(),
+                week: bad
+            })
+            .is_err()
+    );
+    let mut duplicate = week.clone();
+    duplicate.material_judgements.push(PilotMaterialJudgement {
+        id: "duplicate".into(),
+        ..duplicate.material_judgements[0].clone()
+    });
+    assert!(
+        service
+            .pilot_week_save(PilotWeekSaveRequest {
+                root_id: root_id.clone(),
+                week: duplicate
+            })
+            .is_err()
+    );
     service
         .pilot_week_save(PilotWeekSaveRequest {
             root_id: root_id.clone(),
@@ -326,8 +391,8 @@ fn comparable_workloads_and_extension_week_are_used_for_decision() {
         source_count: sources,
         decision_count: 2,
         commitment_count: 1,
-        total_minutes: minutes,
-        correction_minutes: 1,
+        total_minutes: Some(minutes),
+        correction_minutes: Some(1),
         useful_change: String::new(),
         useful_change_judgement: useful,
         workload_comparison: workload,
@@ -455,5 +520,87 @@ fn snapshot_rejects_unobserved_token_and_old_root() {
             .unwrap_err()
             .code,
         "stale_scope"
+    );
+}
+
+#[test]
+fn missing_measurements_and_blank_workloads_do_not_claim_time_savings() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("fictional");
+    std::fs::create_dir(&root).unwrap();
+    let mut service = WorkspaceService::open(tmp.path().join("app")).unwrap();
+    let root_id = service
+        .root_set(RootSetRequest {
+            path: root.to_string_lossy().into(),
+            create: false,
+        })
+        .unwrap()
+        .root
+        .root_id;
+    let make = |date: &str, phase, minutes| PilotWeek {
+        week: date.into(),
+        project: "Fiction".into(),
+        phase,
+        snapshot_id: None,
+        source_count: 0,
+        decision_count: 0,
+        commitment_count: 0,
+        total_minutes: minutes,
+        correction_minutes: None,
+        useful_change: String::new(),
+        workload_comparison: PilotWorkloadComparison::Unknown,
+        useful_change_judgement: PilotUsefulChange::Unknown,
+        manual_commitments: 0,
+        item_adjustments: vec![],
+        material_judgements: vec![],
+        rule_occurrences: vec![],
+        largest_cost_and_next_change: String::new(),
+    };
+    for w in [
+        make("2026-11-06", PilotPhase::Baseline, Some(30)),
+        make("2026-11-13", PilotPhase::Pilot, Some(20)),
+        make("2026-11-20", PilotPhase::Pilot, Some(10)),
+    ] {
+        service
+            .pilot_week_save(PilotWeekSaveRequest {
+                root_id: root_id.clone(),
+                week: w,
+            })
+            .unwrap();
+    }
+    let r_root = root_id.clone();
+    let r = service
+        .pilot_week_get(PilotWeekGetRequest {
+            root_id,
+            week: "2026-11-20".into(),
+            project: "Fiction".into(),
+        })
+        .unwrap();
+    assert_eq!(
+        r.comparisons.preparation_time,
+        PilotComparisonStatus::Inconclusive
+    );
+    let variant = service
+        .pilot_week_get(PilotWeekGetRequest {
+            root_id: r_root.clone(),
+            week: "2026-11-20".into(),
+            project: "  FICTION  ".into(),
+        })
+        .unwrap();
+    let mut saved = variant.week.unwrap();
+    assert_eq!(saved.project, "Fiction");
+    saved.project = "  FICTION  ".into();
+    saved.workload_comparison = PilotWorkloadComparison::Comparable;
+    saved.total_minutes = None;
+    let saved = service
+        .pilot_week_save(PilotWeekSaveRequest {
+            root_id: r_root.clone(),
+            week: saved,
+        })
+        .unwrap();
+    assert_eq!(saved.week.unwrap().project, "Fiction");
+    assert_eq!(
+        saved.comparisons.preparation_time,
+        PilotComparisonStatus::Inconclusive
     );
 }
