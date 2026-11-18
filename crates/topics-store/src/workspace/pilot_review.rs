@@ -763,6 +763,8 @@ mod tests {
             id: "snapshot".into(),
             captured_at: "2026-11-20T11:00:00Z".into(),
             briefing: PilotBriefing {
+                since: None,
+                history_incomplete: false,
                 root_id: "root".into(),
                 generated_at: "2026-11-20T11:00:00Z".into(),
                 briefing_token: "token".into(),
@@ -820,6 +822,8 @@ mod tests {
             id: "snapshot".into(),
             captured_at: "2026-11-20T11:00:00Z".into(),
             briefing: PilotBriefing {
+                since: None,
+                history_incomplete: false,
                 root_id: "root".into(),
                 generated_at: "2026-11-20T11:00:00Z".into(),
                 briefing_token: "token".into(),

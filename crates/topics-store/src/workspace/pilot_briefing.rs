@@ -81,6 +81,7 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
     let mut items = vec![];
     let mut rules = vec![];
     let mut occurrences: Vec<PilotOccurrence> = vec![];
+    let mut since = None;
     if available {
         recover(ctx)?;
         let inventory = setup::inventory::pilot_inventory(ctx)?;
@@ -144,6 +145,13 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
             }
         }
         let state = load(ctx)?;
+        since = state
+            .pilot_snapshots
+            .values()
+            .filter(|s| s.briefing.root_id == ctx.root_id)
+            .map(|s| &s.briefing.generated_at)
+            .max()
+            .cloned();
         for rule in state.rules.values() {
             if let Some(topic) = state.topics.get(&rule.topic_id) {
                 rules.push(PilotRule {
@@ -157,9 +165,18 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
             }
         }
         let current_job_id = evidence.last().map(|(job, _)| job.job_id.as_str());
-        let all_runs: Vec<_> = evidence.iter().flat_map(|(_, runs)| runs.iter()).collect();
+        let mut first_seen = BTreeMap::new();
+        for (at, _, candidates) in evidence.iter().flat_map(|(_, runs)| runs) {
+            for candidate in candidates {
+                if let Candidate::Claim { claim } = candidate {
+                    let key = (&claim.subject_id, &claim.predicate, &claim.value);
+                    let earliest = first_seen.entry(key).or_insert(at);
+                    *earliest = (*earliest).min(at);
+                }
+            }
+        }
         for (job, job_runs) in &evidence {
-            if Some(job.job_id.as_str()) != current_job_id {
+            if since.is_none() && Some(job.job_id.as_str()) != current_job_id {
                 continue;
             }
             for item in &job.graph.items {
@@ -208,14 +225,20 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                 if refs.is_empty() {
                     continue;
                 }
-                let mut matching_times = job_runs.iter().filter(|(_, versions, candidates)| {
+                let matching_times = job_runs.iter().filter(|(_, versions, candidates)| {
                     candidates.iter().any(|candidate| matches!(candidate, Candidate::Claim { claim: raw } if raw.subject_id == claim.subject_id && raw.predicate == claim.predicate && raw.value == claim.value))
                         && versions.iter().any(|version| refs.iter().any(|source| source.path == version.path && source.document_hash == version.hash))
                 }).map(|(at, _, _)| at);
-                let Some(first_current) = matching_times.next() else {
+                let Some(first_current) = matching_times.min() else {
                     continue;
                 };
-                if all_runs.iter().any(|(at, _, candidates)| at < first_current && candidates.iter().any(|candidate| matches!(candidate, Candidate::Claim { claim: raw } if raw.subject_id == claim.subject_id && raw.predicate == claim.predicate && raw.value == claim.value))) { continue; }
+                let first = first_seen[&(&claim.subject_id, &claim.predicate, &claim.value)];
+                if since
+                    .as_ref()
+                    .map_or(first < first_current, |cutoff| first <= cutoff)
+                {
+                    continue;
+                }
                 let identity = serde_json::to_string(&(
                     topic.id.as_str(),
                     claim.predicate.as_str(),
@@ -432,6 +455,14 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
                 });
             }
         }
+        if let Some(cutoff) = &since {
+            let earlier: BTreeSet<_> = occurrences
+                .iter()
+                .filter(|o| o.observed_at <= *cutoff)
+                .map(|o| &o.occurrence_id)
+                .collect();
+            items.retain(|item| !earlier.contains(&item.item_id));
+        }
         occurrences
             .sort_by(|a, b| (&a.rule_id, &a.occurrence_id).cmp(&(&b.rule_id, &b.occurrence_id)));
         items.sort_by(|a, b| {
@@ -452,26 +483,23 @@ fn project_with_availability(ctx: &Context, available: bool) -> WResult<PilotBri
             },
         );
     }
-    if incomplete_history {
-        sources.insert(
-            "Analysis history incomplete".into(),
-            PilotSource {
-                source_id: stable_id(&format!("pilot-history:{}", ctx.root_id)),
-                path: "Analysis history incomplete".into(),
-                current_hash: None,
-                analysed_hash: None,
-                status: PilotSourceStatus::Partial,
-                last_success_at: None,
-            },
-        );
-    }
     let sources: Vec<_> = sources.into_values().collect();
     let briefing_token = hash(
-        &serde_json::to_vec(&(&ctx.root_id, &sources, &items, &rules, &occurrences))
-            .map_err(internal)?,
+        &serde_json::to_vec(&(
+            &ctx.root_id,
+            &since,
+            incomplete_history,
+            &sources,
+            &items,
+            &rules,
+            &occurrences,
+        ))
+        .map_err(internal)?,
     );
     Ok(PilotBriefing {
         root_id: ctx.root_id.clone(),
+        since,
+        history_incomplete: incomplete_history,
         generated_at: now(),
         briefing_token,
         sources,

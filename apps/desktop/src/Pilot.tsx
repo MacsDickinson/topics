@@ -20,6 +20,8 @@ type Item = {
 type Briefing = {
   root_id: string;
   generated_at: string;
+  since: string | null;
+  history_incomplete: boolean;
   briefing_token: string;
   sources: PilotSource[];
   items: Item[];
@@ -528,9 +530,11 @@ export function Pilot({
             }
           >
             <PilotSources sources={shown.sources} />
+            {shown.since && <p>Changes since the briefing on {new Date(shown.since).toLocaleString()}.</p>}
+            {shown.history_incomplete && <p role="status">Analysis history is incomplete. Some changes may be missing from this briefing.</p>}
             {!shown.items.length && (
               <p>
-                {shown.sources.length > 0 &&
+                {!shown.history_incomplete && shown.sources.length > 0 &&
                 shown.sources.every((s) => s.status === "checked")
                   ? "No new changes in analysed sources."
                   : "No topic changes are available in this briefing."}

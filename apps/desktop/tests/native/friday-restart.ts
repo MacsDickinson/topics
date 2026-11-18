@@ -1,3 +1,4 @@
+import { openDatePicker } from "./interaction";
 import { $, expect } from '@wdio/globals';
 
 describe('Friday meeting history after restarting Topics', () => {
@@ -11,7 +12,7 @@ describe('Friday meeting history after restarting Topics', () => {
 
   it('saves and reopens a partial weekly scorecard through real IPC', async () => {
     await $('summary=Weekly review').click();
-    await $('button[aria-label="Week: Select date"]').click();
+    await openDatePicker('Week: Select date');
     await $('.board-date-chip').setValue('2026-11-20');
     await $('button=Apply').click();
     await $('#pilot-project').setValue('Fictional ledger');

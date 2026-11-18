@@ -367,6 +367,55 @@ fn rule_scope_and_independence_must_match_the_same_citation() {
 }
 
 #[test]
+fn a_meeting_briefing_keeps_changes_across_analyses_until_the_next_snapshot() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let keep = |f: &Fixture| {
+        let view = f.service.pilot_briefing(f.root_request()).unwrap();
+        f.service
+            .pilot_snapshot_create(PilotSnapshotCreateRequest {
+                root_id: f.root_id.clone(),
+                briefing_token: view.briefing_token,
+            })
+            .unwrap()
+    };
+    let baseline = keep(&f);
+    assert!(!baseline.briefing.items.is_empty());
+    for (path, decision) in [
+        ("monday.md", "Book the room"),
+        ("thursday.md", "Invite the team"),
+    ] {
+        f.write(path, &format!("# Minutes\n{decision}.\n"));
+        f.preview(8);
+        f.authorize();
+        let cap = f.start();
+        let source = f
+            .read(&cap)
+            .into_iter()
+            .find(|s| s.summary.path == path)
+            .unwrap();
+        let update = claim(&f.topics[0], "decision", decision, &source.citation);
+        f.publish(cap, vec![Candidate::Claim { claim: update }]);
+    }
+    let friday = keep(&f);
+    let mut decisions: Vec<_> = friday
+        .briefing
+        .items
+        .iter()
+        .map(|i| i.value.as_str())
+        .collect();
+    decisions.sort();
+    assert_eq!(decisions, ["Book the room", "Invite the team"]);
+    assert!(
+        f.service
+            .pilot_briefing(f.root_request())
+            .unwrap()
+            .items
+            .is_empty()
+    );
+}
+
+#[test]
 fn skipped_older_source_keeps_success_but_contributes_no_current_card() {
     let mut f = Fixture::new();
     f.single(1);
@@ -469,9 +518,13 @@ fn damaged_checkpoint_preserves_healthy_evidence_and_signals_incomplete_history(
             .iter()
             .any(|source| source.status == PilotSourceStatus::Checked)
     );
-    assert!(briefing.sources.iter().any(
-        |source| source.status == PilotSourceStatus::Partial && source.path.contains("history")
-    ));
+    assert!(briefing.history_incomplete);
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .all(|source| source.path != "Analysis history incomplete")
+    );
 }
 
 #[test]
@@ -496,9 +549,13 @@ fn legacy_completed_checkpoint_reports_unknown_analysis_history() {
     value.as_object_mut().unwrap().remove("pilot_runs");
     std::fs::write(checkpoint, serde_json::to_vec(&value).unwrap()).unwrap();
     let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
-    assert!(briefing.sources.iter().any(
-        |source| source.status == PilotSourceStatus::Partial && source.path.contains("history")
-    ));
+    assert!(briefing.history_incomplete);
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .all(|source| source.path != "Analysis history incomplete")
+    );
     assert!(
         briefing
             .sources

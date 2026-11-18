@@ -7,6 +7,10 @@ use serde::{Deserialize, Serialize};
 pub struct PilotBriefing {
     pub root_id: Id,
     pub generated_at: Timestamp,
+    #[serde(default)]
+    pub since: Option<Timestamp>,
+    #[serde(default)]
+    pub history_incomplete: bool,
     pub briefing_token: Hash,
     pub rules: Vec<PilotRule>,
     pub occurrences: Vec<PilotOccurrence>,
