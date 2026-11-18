@@ -679,16 +679,46 @@ mod tests {
         };
         assert!(!substantive_edit(&item, &before, &whitespace));
         assert!(substantive_edit(&item, &before, &after));
-        let mut counted = BTreeSet::from([item.item_id.clone()]);
-        counted.insert(item.item_id.clone());
-        apply_item_adjustments(
-            &mut counted,
-            &[PilotItemAdjustment {
-                item_id: item.item_id,
-                wrong: false,
-            }],
+        let snapshot = PilotSnapshot {
+            id: "snapshot".into(),
+            captured_at: "2026-11-20T11:00:00Z".into(),
+            briefing: PilotBriefing {
+                root_id: "root".into(),
+                generated_at: "2026-11-20T11:00:00Z".into(),
+                briefing_token: "token".into(),
+                sources: vec![],
+                items: vec![item.clone()],
+                rules: vec![],
+                occurrences: vec![],
+            },
+        };
+        let mut state = State::default();
+        let feedback = PilotFeedback {
+            id: "feedback".into(),
+            snapshot_id: snapshot.id.clone(),
+            item_id: Some(item.item_id.clone()),
+            kind: PilotFeedbackKind::Wrong,
+            text: "Wrong owner".into(),
+            evidence: None,
+            evidence_at_cutoff: PilotEvidenceAtCutoff::Unknown,
+            recorded_at: "2026-11-20T12:00:00Z".into(),
+            recorded_by: "user".into(),
+        };
+        state.pilot_feedback.insert(feedback.id.clone(), feedback);
+        let edits = vec![(before, after, "2026-11-20T12:00:00Z".into())];
+        assert_eq!(observed_wrong(&snapshot, &state, &edits, &[]).len(), 1);
+        assert!(
+            observed_wrong(
+                &snapshot,
+                &state,
+                &edits,
+                &[PilotItemAdjustment {
+                    item_id: item.item_id,
+                    wrong: false
+                }]
+            )
+            .is_empty()
         );
-        assert!(counted.is_empty());
     }
     #[test]
     fn learning_retains_zero_examples_and_deduplicates_and_adjusts_observations() {
