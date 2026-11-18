@@ -48,7 +48,7 @@ Feature: See what changed across my sources before my next meeting
     Then I can reveal both dated sources on its topic page
     And its New indicator clears on Today and Ledger without approving anything
     When I save the Ledger update, defer Harbor, and restart Topics
-    Then Today says I am caught up and Harbor is available under For later
+    Then Today shows no new changes in the analysed sources and Harbor is available under For later
     And refreshing the same material does not raise either update again
 
   Scenario: Find a quiet topic when I need the answer again

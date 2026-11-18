@@ -2,6 +2,10 @@
 
 Proposed for discussion and BDD sign-off. The existing [agreed plan](../../docs/plan.md) describes the single-root prototype. This proposal changes the boundary of a workspace. It builds on the [storage assessment](../../docs/persistence-assessment.md) and the [folder setup and review flow](../folder-setup/PLAN.md).
 
+## Pilot decision
+
+Start with the [Friday sync pilot](PILOT.md) in one existing workspace. Use the ordinary work-week sync to discover what Topics missed and measure the effort of correcting it. The two-folder registry below follows that experiment. The user endorsed the pilot direction on 2026-11-18. The revised [pilot scenarios](pilot.feature) are proposed for build sign-off.
+
 ## Who opens Topics, and why?
 
 You are about to meet the Ledger team. Since your last visit, twelve meeting notes repeated Friday’s rollout date and one engineering decision moved it to Tuesday. Remembering to search for “rollout” is exactly the work Topics should do for you. Success means you see the change when you open the app, can explain why it matters, and can find the dated decision behind it. A second user need arises during the meeting: capture a commitment in your own words and leave with a useful action. We propose two separately reviewable deliveries below.
@@ -10,7 +14,7 @@ You are about to meet the Ledger team. Since your last visit, twelve meeting not
 
 **Today is the landing screen.** After an authorized import, its “Since your last visit” section might contain one entry: **Ledger · Rollout moved from Friday to Tuesday**. Under it: “Engineering recorded a support handover as the reason. Earlier meeting notes still say Friday.” Select it to open Ledger at the change, with the two dated passages one disclosure away. If the evidence only disagrees, the heading says “Two rollout dates reported” and offers a single question. Ordinary repeats are silent. The proposal uses an in-app digest; desktop push notifications are outside this milestone.
 
-The topic page shows the current saved understanding and the proposed update together. Save the displayed change as a group, correct it, or leave it for later. A topic with an unread change has a **New** indicator wherever its briefing is opened. Reading the update clears that indicator on both Today and the topic. An unsaved update remains available on the topic. It never confirms the assertion. A deferred question stays in the topic’s open questions and a quiet “For later” list. A materially different update can bring that topic back to Today. A quiet day has a simple “You’re caught up” state. Search by topic name or alias from any screen to return to its briefing, linked people, decisions, subtopics and original evidence. This is also how you find something that hasn’t changed lately.
+The topic page shows the current saved understanding and the proposed update together. Save the displayed change as a group, correct it, or leave it for later. A topic with an unread change has a **New** indicator wherever its briefing is opened. Reading the update clears that indicator on both Today and the topic. An unsaved update remains available on the topic. It never confirms the assertion. A deferred question stays in the topic’s open questions and a quiet “For later” list. A materially different update can bring that topic back to Today. Opening Today triggers a local refresh. Show “No new changes in analysed sources” only when all selected inputs have been checked and processed. Otherwise show the affected source, its last successful check and whether it is checking, unavailable, failed, skipped or waiting for authorization. Offer one batch review when needed. Search by topic name or alias from any screen to return to its briefing, linked people, decisions, subtopics and original evidence. This is also how you find something that hasn’t changed lately.
 
 **Sources** is where you connect a folder, see its last refresh or inspect a problem. “Library” names the local home for authored notes, saved knowledge and source registrations. It needs no navigation tab or all-documents landing page. Topics are the things you follow across those sources. Public-facing copy can say “Where to save your notes” when a folder choice matters. A project’s briefing can include lore attributed to a person, a dated decision and its rationale, and a concern shared with another project. Attendance alone never implies agreement.
 
@@ -26,7 +30,7 @@ Use already permitted evidence for enrichment and show where it came from. Save 
 
 For a fresh library, keep authored Markdown and the existing app-owned `topics/` records together, with source registrations and versioned evidence sufficient to rebuild the derived index. Keep snapshots before writes and journalled undo. External sources are read-only. For an existing installation, offer the current root as the initial library home and preserve its record IDs, correction rules, history and citations in place. Existing source paths must resolve as before. Connecting a second source must never relocate those files or scan app-owned records as fresh evidence.
 
-## First milestone
+## Two-folder milestone after the pilot
 
 **Deliver one loop end to end.** Connect two local Markdown folders, see what the second contributes to an existing topic, save the change as a group, and retrieve the cited briefing through Today and in-app search. This gives us an acceptance test for each subsequent connector.
 
@@ -45,7 +49,7 @@ Prioritize the work systems for the evidence each can add. A **Confluence** deci
 
 ## How we will judge the benefit
 
-Proposed acceptance bars for sign-off. These are targets for the build.
+These are proposed regression and usability targets for the broader milestone. The pilot’s field evidence and decision rule are in [Friday sync pilot](PILOT.md).
 
 | Need | Evaluation through the product | Pass condition |
 |---|---|---|
