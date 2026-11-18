@@ -179,3 +179,36 @@ fn failed_batch_is_incomplete_while_other_completed_source_is_checked() {
             .is_none()
     );
 }
+
+#[test]
+fn briefing_token_is_stable_and_changes_with_the_visible_source_version() {
+    let mut f = Fixture::new();
+    f.write("project/meeting.md", "# Meeting\nA decision.\n");
+    let first = f.service.pilot_briefing(f.root_request()).unwrap();
+    let again = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(first.briefing_token, again.briefing_token);
+    f.write("project/meeting.md", "# Meeting\nA changed decision.\n");
+    let changed = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_ne!(first.briefing_token, changed.briefing_token);
+}
+
+#[test]
+fn approved_rules_without_later_observations_are_visible_until_undo() {
+    let mut f = Fixture::new();
+    f.single(1);
+    f.correct();
+    f.decide();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.rules.len(), 1);
+    assert!(briefing.occurrences.is_empty());
+    let operation = f.result.as_ref().unwrap().operations[0].id.clone();
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: operation,
+        })
+        .unwrap();
+    let undone = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(undone.rules.is_empty());
+    assert_ne!(briefing.briefing_token, undone.briefing_token);
+}
