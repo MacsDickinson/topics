@@ -186,6 +186,59 @@ fn feedback_is_journalled_deduplicated_and_keeps_its_snapshot() {
             .len(),
         2
     );
+    let week = PilotWeek {
+        week: "2026-11-20".into(),
+        project: "Fictional".into(),
+        phase: PilotPhase::Pilot,
+        snapshot_id: Some(snapshot.id.clone()),
+        source_count: 1,
+        decision_count: 1,
+        commitment_count: 0,
+        total_minutes: 10,
+        correction_minutes: 1,
+        useful_change: String::new(),
+        workload_comparison: PilotWorkloadComparison::Unknown,
+        useful_change_judgement: PilotUsefulChange::Unknown,
+        manual_commitments: 0,
+        item_adjustments: vec![],
+        material_judgements: vec![PilotMaterialJudgement {
+            id: "change".into(),
+            description: "decision".into(),
+            outcome: PilotMaterialOutcome::Omitted,
+            evidence_at_cutoff: PilotEvidenceAtCutoff::Unknown,
+            feedback_id: Some(first.id.clone()),
+        }],
+        rule_occurrences: vec![],
+        largest_cost_and_next_change: String::new(),
+    };
+    service
+        .pilot_week_save(PilotWeekSaveRequest {
+            root_id: root_id.clone(),
+            week,
+        })
+        .unwrap();
+    let mut classified = first.clone();
+    classified.evidence_at_cutoff = PilotEvidenceAtCutoff::Analysed;
+    service
+        .pilot_feedback_save(PilotFeedbackSaveRequest {
+            root_id: root_id.clone(),
+            feedback: classified,
+        })
+        .unwrap();
+    let review = service
+        .pilot_week_get(PilotWeekGetRequest {
+            root_id: root_id.clone(),
+            week: "2026-11-20".into(),
+            project: "Fictional".into(),
+        })
+        .unwrap();
+    assert_eq!(
+        (
+            review.measures.known_omissions,
+            review.measures.eligible_changes
+        ),
+        (1, 1)
+    );
     assert_eq!(
         service
             .pilot_snapshot_get(PilotSnapshotGetRequest {

@@ -155,6 +155,14 @@ fn measures(week: Option<&PilotWeek>, feedback: &BTreeMap<Id, PilotFeedback>) ->
         .collect();
     result
 }
+fn classified_week(mut week: PilotWeek, feedback: &BTreeMap<Id, PilotFeedback>) -> PilotWeek {
+    for item in &mut week.material_judgements {
+        if let Some(entry) = item.feedback_id.as_ref().and_then(|id| feedback.get(id)) {
+            item.evidence_at_cutoff = entry.evidence_at_cutoff;
+        }
+    }
+    week
+}
 fn comparisons(state: &State, project: &str, through: &str) -> PilotComparisons {
     use PilotComparisonStatus::{Inconclusive, Miss, Pass};
     let mut weeks: Vec<_> = state
@@ -243,7 +251,11 @@ impl WorkspaceService {
         self.with(&request.root_id, |ctx| {
             let id = week_id(&request.week, &request.project)?;
             let state = load(ctx)?;
-            let week = state.pilot_weeks.get(&id).cloned();
+            let week = state
+                .pilot_weeks
+                .get(&id)
+                .cloned()
+                .map(|week| classified_week(week, &state.pilot_feedback));
             let mut measures = measures(week.as_ref(), &state.pilot_feedback);
             add_observed_wrong(ctx, &state, week.as_ref(), &mut measures)?;
             let comparisons = comparisons(&state, &request.project, &request.week);
@@ -256,7 +268,7 @@ impl WorkspaceService {
     }
     pub fn pilot_week_save(&self, request: PilotWeekSaveRequest) -> WResult<PilotWeekResult> {
         self.with(&request.root_id, |ctx| {
-            let week = request.week;
+            let mut week = request.week;
             let id = week_id(&week.week, &week.project)?;
             if week.correction_minutes > week.total_minutes {
                 return Err(error(
@@ -294,6 +306,7 @@ impl WorkspaceService {
                     ));
                 }
             }
+            week = classified_week(week, &state.pilot_feedback);
             let mut referenced_feedback = BTreeSet::new();
             for judgement in &week.material_judgements {
                 if let Some(feedback_id) = &judgement.feedback_id {
