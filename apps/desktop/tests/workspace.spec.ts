@@ -49,13 +49,13 @@ async function finish(page: Page) {
 test('create a fresh root and explain an honest empty workspace', async ({
   page,
 }) => {
-  await workspaceFixture(page, { empty: true });
+  await workspaceFixture(page, { empty: true, inventoryEmpty: true });
   await page.getByLabel('Notes folder path').fill('/synthetic/new-notes');
   await page.getByLabel('Create a new notes folder').check();
   await page.getByRole('button', { name: 'Use notes folder' }).click();
   await expect(
     page.getByText(
-      'Add Markdown notes to this folder, then analyse a selection.',
+      'Add Markdown notes or use New topic for manual capture.',
     ),
   ).toBeVisible();
   expect(
@@ -171,13 +171,14 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
   await page.getByRole('button', { name: 'Topics', exact: true }).click();
   await expect(page.getByText('Tuesday', { exact: true })).toBeVisible();
+  await page.locator('.topic-detail').getByText('Sources (1)', { exact: true }).first().click();
   await expect(
-    page.getByText('Your correction', { exact: false }),
+    page.getByText('Your correction', { exact: false }).first(),
   ).toBeVisible();
   await expect(
     page.getByText('The launch is Tuesday; Monday was a mistake.', {
       exact: true,
-    }),
+    }).first(),
   ).toBeVisible();
   await page.getByText('Revision history (1)', { exact: true }).click();
   await expect(
@@ -284,9 +285,9 @@ test('missing runtime leaves topic browsing and manual proposal capture availabl
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'New topic', exact: true }),
+    page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }),
   ).toBeEnabled();
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await expect(page.getByLabel('Topic name', { exact: true })).toBeVisible();
 });
 
@@ -310,7 +311,10 @@ test('human source inventory includes local-only notes, reads inert text and per
   await page
     .getByRole('button', { name: 'Meetings/one.md', exact: true })
     .click();
-  await page.getByLabel('Source sensitivity').selectOption('local_only');
+  const sourceSensitivity = page.locator('select#source-sensitivity');
+  await expect(sourceSensitivity).toHaveAccessibleName('Source sensitivity');
+  await expect(sourceSensitivity).toHaveCount(1);
+  await sourceSensitivity.selectOption('local_only');
   await expect
     .poll(() => page.evaluate(() => (window as any).sourceSensitivity))
     .toBe('local_only');
@@ -329,7 +333,7 @@ test('manual fallback stages a proposal and still needs explicit human approval'
   page,
 }) => {
   await workspaceFixture(page, { unavailable: true });
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await page.getByLabel('Topic name', { exact: true }).fill('Quiet project');
   await page.getByRole('button', { name: 'Create proposal' }).click();
   await expect(page.getByLabel('Topic name', { exact: true })).toHaveValue(
@@ -416,6 +420,7 @@ test('late topic detail read after a root switch cannot reveal old-root evidence
   await expect(page.getByText('OLD ROOT SECRET', { exact: true })).toHaveCount(
     0,
   );
+  await page.getByRole('button', { name: 'Topics', exact: true }).click();
   await expect(
     page.getByRole('heading', { name: 'No accepted topics yet' }),
   ).toBeVisible();
@@ -501,7 +506,7 @@ test('an older list refresh cannot overwrite newer workspace data', async ({
     },
     { topic },
   );
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await page
     .getByLabel('Topic name', { exact: true })
     .fill('Fresh pending topic');
@@ -749,7 +754,7 @@ test('review F4 refresh of the same topic preserves chat draft and consent', asy
   await page
     .getByLabel('Allow these unknown-sensitivity notes for this run')
     .check();
-  await page.getByRole('button', { name: 'New topic', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
   await page.getByLabel('Topic name', { exact: true }).fill('Another topic');
   await page.getByRole('button', { name: 'Create proposal' }).click();
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
@@ -774,13 +779,13 @@ test('review F4 source inventory loading is distinct from an empty folder', asyn
     page.getByText('Loading source notes…', { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText('No Markdown notes found.', { exact: false }),
+    page.getByRole('heading', { name: 'No Markdown notes found' }),
   ).toHaveCount(0);
   await page.evaluate(() =>
     (window as any).defer.workspace_sources_list.resolve({ sources: [] }),
   );
   await expect(
-    page.getByText('No Markdown notes found.', { exact: false }),
+    page.getByRole('heading', { name: 'No Markdown notes found' }),
   ).toBeVisible();
 });
 

@@ -1,0 +1,170 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 1.01s
+     Running unittests src/lib.rs (/tmp/topics-setup-target/debug/deps/topics_setup-889fca13013928ef)
+
+running 3 tests
+test tests::host_scope_cannot_be_widened_and_human_decisions_are_not_model_tools ... ok
+test tests::pause_denies_real_prepared_publication_without_waiting_for_store_lock ... 
+running 1 test
+test tests::pause_denies_real_prepared_publication_without_waiting_for_store_lock ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 1.56s
+
+ok
+test tests::root_switch_denies_real_prepared_publication_and_clears_context ... 
+running 1 test
+test tests::root_switch_denies_real_prepared_publication_and_clears_context ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 1.49s
+
+ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.07s
+
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 19 tests
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... 
+running 1 test
+test ambiguity_stays_an_issue_and_model_success_has_no_approval_surface ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 2.75s
+
+ok
+test exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error ... 
+running 1 test
+test exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 2.81s
+
+ok
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... 
+running 1 test
+Synthetic coverage: SetupCoverage { selected: 6, processed: ["meetings/002.md", "meetings/003.md", "meetings/004.md", "meetings/005.md"], failed: ["profiles/000.md", "profiles/001.md"], outstanding: [], excluded: [Exclusion { path: "topics", reason: "Hidden/config folder or app-owned records" }], complete: false, model_calls: 3, transmission_authorizations: 1 }; batch outcomes: [(Failed, Some(ApiError { code: "runtime_unavailable", message: "Batch did not finish; retry these inputs or defer them", details: None }), []), (Completed, None, ["1b1b09d7-d953-5fe1-9ae8-b5faf1956941", "a21985bf-df38-5d47-a824-65b86bfe7bc4"]), (Completed, None, ["7b2b80be-71dc-5ea5-b301-cecfe1cde255", "9644b35d-4f85-583d-80c7-389832942f4d"])]
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 5.69s
+
+ok
+test graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it ... 
+running 1 test
+test graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 1.48s
+
+ok
+test historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting_truth ... 
+running 1 test
+test historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting_truth ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 4.03s
+
+ok
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... 
+running 1 test
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 22.22s
+
+ok
+test inventory_is_local_and_consent_starts_one_bounded_job ... 
+running 1 test
+test inventory_is_local_and_consent_starts_one_bounded_job ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 3.93s
+
+ok
+test multiple_tool_calls_validate_the_runtime_combined_buffer_once ... 
+running 1 test
+test multiple_tool_calls_validate_the_runtime_combined_buffer_once ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 1.46s
+
+ok
+test next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest ... 
+running 1 test
+test next_turn_receives_only_eligible_completed_draft_context_from_the_same_manifest ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 2.74s
+
+ok
+test optional_prior_context_cannot_crowd_out_deliverable_selected_sources ... 
+running 1 test
+test optional_prior_context_cannot_crowd_out_deliverable_selected_sources ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 17.34s
+
+ok
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 2.80s
+
+ok
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... 
+running 1 test
+test private_sources_and_unrelated_topic_inventory_never_reach_the_child ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 2.98s
+
+ok
+test renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints ... 
+running 1 test
+test renewed_manifest_consent_sends_only_outstanding_subset_and_preserves_original_checkpoints ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 4.07s
+
+ok
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... 
+running 1 test
+test restart_and_sqlite_rebuild_preserve_draft_edits_and_completed_batch_ids ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 5.35s
+
+ok
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... 
+running 1 test
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 1.44s
+
+ok
+test root_switch_clears_old_context_and_rejects_old_job_launches ... 
+running 1 test
+test root_switch_clears_old_context_and_rejects_old_job_launches ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 2.77s
+
+ok
+test scoped_accepted_correction_is_available_without_human_statement_text_and_cannot_be_revived ... 
+running 1 test
+test scoped_accepted_correction_is_available_without_human_statement_text_and_cannot_be_revived ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 3.14s
+
+ok
+test successful_turn_without_scoped_read_cannot_claim_source_coverage ... 
+running 1 test
+Synthetic coverage: SetupCoverage { selected: 2, processed: [], failed: ["profiles/000.md", "profiles/001.md"], outstanding: [], excluded: [Exclusion { path: "topics", reason: "Hidden/config folder or app-owned records" }], complete: false, model_calls: 1, transmission_authorizations: 1 }; batch outcomes: [(Failed, Some(ApiError { code: "runtime_unavailable", message: "Batch did not finish; retry these inputs or defer them", details: None }), [])]
+test successful_turn_without_scoped_read_cannot_claim_source_coverage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 1.46s
+
+ok
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... 
+running 1 test
+test unchanged_pause_resume_preserves_checkpoint_ids_and_does_not_resend_completed_sources ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 18 filtered out; finished in 5.26s
+
+ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 93.96s
+
+     Running unittests examples/render_fixture.rs (/tmp/topics-setup-target/debug/examples/render_fixture-e07ec210a861d65a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

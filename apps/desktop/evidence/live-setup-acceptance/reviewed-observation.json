@@ -1,0 +1,32 @@
+{
+  "job_id": "1b5b2b4d-ec8b-4b73-8046-f81a477ce5e8",
+  "status": "finished_with_gaps",
+  "batches": [
+    {
+      "batch_id": "9210e727-31fb-4308-83ff-5b9485473e88",
+      "scope_id": "05ce8fe5-9641-4d18-bee2-5ca173425321",
+      "run_id": "43f51738-8156-4d13-99cc-ca98a1df21d1",
+      "status": "failed",
+      "attempt": 1,
+      "diagnostic": {
+        "phase": "host",
+        "reason": "validation_denied"
+      },
+      "diagnostic_status": "known"
+    }
+  ],
+  "coverage": {
+    "complete": false,
+    "selected": 1,
+    "processed": 0,
+    "failed": 1,
+    "outstanding": 0,
+    "model_calls": 1,
+    "transmission_authorizations": 1
+  },
+  "graph": {
+    "canonical_ids": {},
+    "issues": [],
+    "items": []
+  }
+}

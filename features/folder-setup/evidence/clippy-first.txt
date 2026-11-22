@@ -1,0 +1,51 @@
+    Checking topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Checking topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-bdd)
+    Checking topics-cli v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-cli)
+error: unused variable: `w`
+   --> crates/topics-bdd/src/bin/setup-bdd.rs:603:12
+    |
+603 | fn step_37(w: &mut SetupWorld) {
+    |            ^ help: if this is intentional, prefix it with an underscore: `_w`
+    |
+    = note: `-D unused-variables` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_variables)]`
+
+error: unused variable: `w`
+   --> crates/topics-bdd/src/bin/setup-bdd.rs:607:12
+    |
+607 | fn step_38(w: &mut SetupWorld) {
+    |            ^ help: if this is intentional, prefix it with an underscore: `_w`
+
+error: unused variable: `w`
+   --> crates/topics-bdd/src/bin/setup-bdd.rs:611:12
+    |
+611 | fn step_39(w: &mut SetupWorld) {
+    |            ^ help: if this is intentional, prefix it with an underscore: `_w`
+
+error: unused variable: `w`
+   --> crates/topics-bdd/src/bin/setup-bdd.rs:615:12
+    |
+615 | fn step_40(w: &mut SetupWorld) {
+    |            ^ help: if this is intentional, prefix it with an underscore: `_w`
+
+error: unused variable: `w`
+   --> crates/topics-bdd/src/bin/setup-bdd.rs:619:12
+    |
+619 | fn step_41(w: &mut SetupWorld) {
+    |            ^ help: if this is intentional, prefix it with an underscore: `_w`
+
+error: unused variable: `w`
+   --> crates/topics-bdd/src/bin/setup-bdd.rs:623:12
+    |
+623 | fn step_42(w: &mut SetupWorld) {
+    |            ^ help: if this is intentional, prefix it with an underscore: `_w`
+
+error: unused variable: `w`
+    --> crates/topics-bdd/src/bin/setup-bdd.rs:1535:13
+     |
+1535 | fn step_122(w: &mut SetupWorld) {
+     |             ^ help: if this is intentional, prefix it with an underscore: `_w`
+
+error: could not compile `topics-bdd` (bin "setup-bdd") due to 7 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `topics-bdd` (bin "setup-bdd" test) due to 7 previous errors

@@ -12,7 +12,7 @@ The sidebar opens Topics, Search, Inbox, History and Sources. Choose or create a
 
 The runtime emits `workspace_run_event` with canonical root/run IDs, monotonic sequence and event; the shell forwards it without wrapping again. React discards wrong-root/run, duplicate, malformed, late and closed-run events, including events received before a start response. Root changes close the old event gate, cancel runtime and core capabilities, clear topic/proposal/consent state and reject stale reads. Cancellation errors remain retryable. The Rust lifecycle gate serializes start/cancel/root changes. App-level capabilities are revoked on every terminal path.
 
-The packaged desktop executable doubles as the scoped MCP proxy: exact `--topics-mcp-proxy` dispatch occurs before Tauri, application data or root discovery. Production never enables native test plugins or a fake provider. `TOPICS_CODEX_PATH` can select an absolute installed executable; Finder discovery checks only known executable metadata (`~/.local/bin/codex`, Homebrew paths), then PATH. Codex owns its own sign-in; Topics does not read credentials or implement login.
+The packaged desktop executable doubles as the scoped MCP proxy: exact `--topics-mcp-proxy` dispatch occurs before Tauri, application data or root discovery. Production never enables native test plugins or a fake provider. `TOPICS_CODEX_PATH` can select an absolute installed executable; Finder discovery checks only known executable metadata: on supported Macs, the exact retained standalone release for the pinned Codex version and host architecture, then `~/.local/bin/codex`, Homebrew paths, and PATH. Codex owns its own sign-in; Topics does not read credentials or implement login.
 
 ## Local development
 
@@ -29,9 +29,12 @@ Every app launch/test must use synthetic notes and an absolute isolated `TOPICS_
 ```sh
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native
 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native:workspace
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 npm run test:native:setup
 ```
 
 The first native suite retains Phase 0 real search/independent CLI root changes/watcher coverage. The workspace suite exercises fresh root creation, actual source preview/inspection/labels, unavailable runtime, manual proposal staging/review/approval, topic browsing and undo. Proxy entry and invalid app-data startup checks run alongside them. Embedded WebDriver does not implement the default action for option clicks; `tests/native/interaction.ts` performs DOM selection plus the change event while preserving React and every real IPC/service call.
+
+The setup suite uses a local scripted provider with the actual Rust runtime and WebView. It covers 100 synthetic notes, exact scope consent, bounded progress, group save, correction, context, restart/index rebuild, renewed consent and safe failure/retry. The source-byte guard excludes only the root's app-owned `topics/` directory; other source changes and symlinks still fail the check.
 
 Genuine installed-runtime testing is a separate explicit opt-in, authorized only for the fictional fixture:
 
@@ -42,5 +45,15 @@ npm run test:native:live
 ```
 
 Only an ephemeral wrapper delegates the unmodified installed runtime to its existing HOME/subscription. GUI, WebKit, notes and Topics app data remain synthetic. The harness never reads credentials/config or prints account metadata. It tests real discovery and correction, fresh-process restart and derived-index rebuild with stable accepted IDs and source-byte checks; timeouts are bounded. This opt-in incurs actual provider requests. It is never silently substituted with scripted model output.
+
+The separate genuine folder-setup journey requires the pinned Codex 0.166.0 and another explicit opt-in:
+
+```sh
+TOPICS_NATIVE_LIVE_SETUP=1 TOPICS_CODEX_PATH=/absolute/installed/codex \
+CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 \
+npm run test:native:setup:live
+```
+
+It uses fictional notes, exact consent, real model output, explicit baseline/correction approval and exact corrected-revision lineage through restart. Failures preserve only allowlisted local diagnostic categories and restricted synthetic state. The bounded genuine setup journey passes; this does not establish broad extraction quality or completion of the blocked required Claude review. See [current status](../../docs/folder-setup-progress.md).
 
 Browser transport fixtures are confined to tests and do not establish native/runtime readiness. RED, GREEN, selected screenshots and remaining limits are recorded in `evidence/workspace-progress.md` and adjacent logs. Root workspace/lockfile integration and cross-provider review remain coordinator-owned.

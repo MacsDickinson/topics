@@ -1,0 +1,30 @@
+Command: scripted_runtime setup_empty --test-threads=1 --nocapture
+Synthetic isolated CODEX_HOME; no personal config/provider calls.
+Before terminal branch implementation (default-false trait scaffold only).
+
+
+running 4 tests
+test setup_empty_default_host_keeps_existing_no_publication_behavior ... ok
+test setup_empty_failed_and_cancelled_turns_never_checkpoint ... ok
+test setup_empty_revocation_denies_prepared_checkpoint ... 
+thread 'setup_empty_revocation_denies_prepared_checkpoint' (6545548) panicked at crates/topics-runtime/tests/scripted_runtime.rs:680:54:
+empty checkpoint preparation must reach real fence: Disconnected
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test setup_empty_success_publishes_checkpoint_once_through_real_permit ... 
+thread 'setup_empty_success_publishes_checkpoint_once_through_real_permit' (6545725) panicked at crates/topics-runtime/tests/scripted_runtime.rs:660:5:
+assertion `left == right` failed: successful empty extraction must checkpoint
+  left: 0
+ right: 1
+FAILED
+
+failures:
+
+failures:
+    setup_empty_revocation_denies_prepared_checkpoint
+    setup_empty_success_publishes_checkpoint_once_through_real_permit
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 11 filtered out; finished in 6.73s
+
+
+Exit: 101

@@ -1,0 +1,32 @@
+warning: stripping debug info with `rust-objcopy` failed: signal: 6 (SIGABRT)
+  |
+  = note: dyld[66914]: Library not loaded: @rpath/libLLVM.dylib
+            Referenced from: <AC0D75A8-23BF-301F-B7CE-3E5CC0C1BC06> /Users/macs/.rustup/toolchains/1.98.1-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/rust-objcopy
+            Reason: tried: '/Users/macs/.rustup/toolchains/1.98.1-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file), '/Users/macs/.rustup/toolchains/1.98.1-aarch64-apple-darwin/lib/rustlib/aarch64-apple-darwin/bin/../lib/libLLVM.dylib' (no such file), '/tmp/topics-setup-desktop-target/debug/deps/libLLVM.dylib' (no such file), '/var/folders/st/h2tm_dzn503b_4ydthq9zw6r0000gn/T/topics-native-setup-bj6i5j/session-home/lib/libLLVM.dylib' (no such file), '/usr/local/lib/libLLVM.dylib' (no such file), '/usr/lib/libLLVM.dylib' (no such file, not in dyld cache)
+          
+
+
+Execution of 1 workers started at 2026-11-09T02:12:54.280Z
+
+[0-0] RUNNING in undefined - file:///tests/native/setup-reconsent.ts
+[0-0] PASSED in undefined - file:///tests/native/setup-reconsent.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 9c4bf039-5443-4540-8e74-97540077e0f1
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/setup-reconsent.ts
+[webkit 605.1.15 macos #0-0] Native setup reconsent
+[webkit 605.1.15 macos #0-0]    ✓ retains completed batches and requires an updated exact manifest before sending changed notes
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (9.2s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:10  
+
+npm notice
+npm notice New major version of npm available! 10.9.2 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice

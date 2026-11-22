@@ -1,0 +1,78 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test tests/folder-setup.spec.ts --grep draft map exposes|saved topic offers
+
+[WebServer] (node:71848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:71881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/folder-setup.spec.ts:41:1 › draft map exposes one exact starting-map receipt without record checkboxes (5.6s)
+(node:72132) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/folder-setup.spec.ts:51:1 › a saved topic offers contextual decisions and collapsed evidence (5.6s)
+
+
+  1) tests/folder-setup.spec.ts:41:1 › draft map exposes one exact starting-map receipt without record checkboxes 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: 'Review starting map' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: 'Review starting map' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Review starting map' })
+
+
+      42 |   await workspaceFixture(page);
+      43 |   await showDraft(page);
+    > 44 |   await expect(page.getByRole('button', { name: 'Review starting map' })).toBeVisible();
+         |                                                                           ^
+      45 |   await page.getByRole('button', { name: 'Review starting map' }).click();
+      46 |   await expect(page.getByRole('heading', { name: 'Save starting map' })).toBeVisible();
+      47 |   await expect(page.getByText('Needs your input', { exact: false }).first()).toBeVisible();
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:44:75
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-draft-map-exp-a825c-t-without-record-checkboxes/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-draft-map-exp-a825c-t-without-record-checkboxes/error-context.md
+
+  2) tests/folder-setup.spec.ts:51:1 › a saved topic offers contextual decisions and collapsed evidence 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('From your notes').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('From your notes').first() with timeout 5000ms
+      - waiting for getByText('From your notes').first()
+
+
+      55 |   await page.getByRole('button', { name: 'Topics', exact: true }).click();
+      56 |   await page.getByRole('button', { name: 'Ledger', exact: true }).click();
+    > 57 |   await expect(page.getByText('From your notes', { exact: false }).first()).toBeVisible();
+         |                                                                             ^
+      58 |   for (const name of ['Confirm', "That’s wrong", 'Add context', 'Not now']) {
+      59 |     await expect(page.getByRole('button', { name, exact: true }).first()).toBeVisible();
+      60 |   }
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:57:77
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-a-saved-topic-d593e-ions-and-collapsed-evidence/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-a-saved-topic-d593e-ions-and-collapsed-evidence/error-context.md
+
+  2 failed
+    tests/folder-setup.spec.ts:41:1 › draft map exposes one exact starting-map receipt without record checkboxes 
+    tests/folder-setup.spec.ts:51:1 › a saved topic offers contextual decisions and collapsed evidence 

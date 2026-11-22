@@ -1,0 +1,256 @@
+
+> @topics/desktop@0.1.0 test:native:workspace
+> node scripts/native-smoke.mjs --workspace
+
+✔ native WebKit is nonpersistent while production window config is unchanged (1.496542ms)
+✔ all app sessions receive an existing synthetic home and targeted fallback guard (2.1085ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 53.214292
+
+> @topics/desktop@0.1.0 tauri
+> tauri build --debug --no-bundle --features native-test --config src-tauri/tauri.native-test.conf.json
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> @topics/desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 46 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.43 kB │ gzip:  0.28 kB
+dist/assets/index-LNfaVoJq.css           18.18 kB │ gzip:  4.31 kB
+dist/assets/preload-helper-BXl3LOEh.js    1.11 kB │ gzip:  0.65 kB
+dist/assets/event-B64iG7Cv.js             1.41 kB │ gzip:  0.68 kB
+dist/assets/core-D9ZGnyhG.js              2.49 kB │ gzip:  1.01 kB
+dist/assets/index-BnhHPnAn.js            16.47 kB │ gzip:  4.63 kB
+dist/assets/index-Dxkp-30m.js           284.65 kB │ gzip: 87.03 kB
+✓ built in 635ms
+   Compiling serde_core v1.0.229
+   Compiling syn v3.0.9
+   Compiling objc2-exception-helper v0.1.1
+   Compiling smallvec v1.16.4
+   Compiling log v0.4.35
+   Compiling form_urlencoded v1.2.2
+   Compiling objc2 v0.6.5
+   Compiling http-body v1.1.0
+   Compiling tracing v0.1.44
+   Compiling httparse v1.10.1
+   Compiling tower-service v0.3.3
+   Compiling libsqlite3-sys v0.36.0
+   Compiling httpdate v1.0.3
+   Compiling tower-layer v0.3.3
+   Compiling atomic-waker v1.1.2
+   Compiling sync_wrapper v1.0.2
+   Compiling http-body-util v0.1.5
+   Compiling thiserror v1.0.69
+   Compiling ryu v1.0.23
+   Compiling axum-core v0.5.6
+   Compiling thiserror-impl v1.0.69
+   Compiling matchit v0.8.4
+   Compiling objc2-foundation v0.3.2
+   Compiling base64 v0.22.1
+   Compiling wry v0.57.1
+   Compiling block2 v0.6.2
+   Compiling objc2-javascript-core v0.3.2
+   Compiling bitflags v2.13.2
+   Compiling serde_json v1.0.154
+   Compiling uuid v1.29.0
+   Compiling indexmap v2.14.2
+   Compiling erased-serde v0.4.11
+   Compiling serde_spanned v1.1.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling cfb v0.14.0
+   Compiling toml v1.1.8+spec-1.1.0
+   Compiling serde-untagged v0.1.9
+   Compiling dispatch2 v0.3.1
+   Compiling synstructure v0.14.0
+   Compiling darling_core v0.24.1
+   Compiling core-graphics-types v0.2.0
+   Compiling infer v0.22.0
+   Compiling png v0.18.1
+   Compiling serde_derive_internals v0.30.0
+   Compiling rusqlite v0.38.0
+   Compiling rustix v1.1.6
+   Compiling objc2-core-text v0.3.2
+   Compiling objc2-core-video v0.3.2
+   Compiling objc2-core-graphics v0.3.2
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling thiserror-impl v2.0.21
+   Compiling cssparser-macros v0.7.1
+   Compiling tokio-macros v2.7.2
+   Compiling zerofrom v0.1.8
+   Compiling foreign-types-macros v0.2.4
+   Compiling cssparser v0.37.0
+   Compiling yoke v0.8.4
+   Compiling darling_macro v0.24.1
+   Compiling tokio v1.54.1
+   Compiling thiserror v2.0.21
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling selectors v0.38.0
+   Compiling darling v0.24.1
+   Compiling futures-macro v0.3.34
+   Compiling serde v1.0.229
+   Compiling serde_with_macros v3.24.0
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling icu_locale_core v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling dom_query v0.28.0
+   Compiling swift-rs v1.0.9
+   Compiling indexmap v1.9.3
+   Compiling cargo-platform v0.1.9
+   Compiling jsonptr v0.7.1
+   Compiling serde_with v3.24.0
+   Compiling cargo_metadata v0.19.2
+   Compiling icu_provider v2.4.0
+   Compiling json-patch v4.2.0
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling plist v1.10.3
+   Compiling cargo_toml v1.0.1
+   Compiling dpi v0.1.2
+   Compiling idna_adapter v1.2.2
+   Compiling objc2-security v0.3.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling futures-util v0.3.34
+   Compiling urlpattern v0.6.0
+   Compiling schemars v0.8.22
+   Compiling foreign-types v0.5.0
+   Compiling keyboard-types v0.8.3
+   Compiling tauri-utils v2.10.2
+   Compiling core-graphics v0.25.0
+   Compiling chrono v0.4.45
+   Compiling serialize-to-javascript v0.1.2
+   Compiling ref-cast-impl v1.0.27
+   Compiling serde_repr v0.1.21
+   Compiling schemars_derive v1.2.3
+   Compiling hyper v1.12.0
+   Compiling ref-cast v1.0.27
+   Compiling tokio-stream v0.1.19
+   Compiling futures-executor v0.3.34
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-desktop/crates/topics-core)
+   Compiling futures v0.3.34
+   Compiling tokio-util v0.7.20
+   Compiling rmcp-macros v3.8.0
+   Compiling hyper-util v0.1.21
+   Compiling tower v0.5.3
+   Compiling serde_urlencoded v0.7.1
+   Compiling serde_path_to_error v0.1.20
+   Compiling schemars v1.2.3
+   Compiling tempfile v3.27.0
+   Compiling axum v0.8.9
+   Compiling async-trait v0.1.92
+   Compiling rmcp v3.8.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-desktop/crates/topics-store)
+   Compiling objc2-cloud-kit v0.3.2
+   Compiling objc2-core-image v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-core-data v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling tauri-build v2.7.4
+   Compiling tauri-plugin v2.7.2
+   Compiling tauri-codegen v2.7.4
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-fs v2.7.1
+   Compiling tauri-macros v2.7.4
+   Compiling tauri-plugin-wdio-webdriver v1.5.1
+   Compiling tauri-plugin-wdio v1.5.1
+   Compiling tauri-plugin-dialog v2.8.4
+   Compiling topics-desktop v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/src-tauri)
+   Compiling topics-runtime v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-desktop/crates/topics-runtime)
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-desktop/crates/topics-setup)
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.2
+   Compiling window-vibrancy v0.8.1
+   Compiling muda v0.20.0
+   Compiling rfd v0.17.2
+   Compiling tauri-runtime v2.12.2
+   Compiling tauri-runtime-wry v2.12.3
+    Finished `dev` profile [unoptimized] target(s) in 55.32s
+       Built application at: /tmp/topics-setup-desktop-target/debug/topics-desktop
+✔ proxy dispatch exits before GUI, root discovery or personal configuration (765.092958ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 838.391916
+
+Execution of 1 workers started at 2026-11-09T01:30:52.253Z
+
+[0-0] RUNNING in undefined - file:///tests/native/workspace.ts
+[0-0] PASSED in undefined - file:///tests/native/workspace.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: a418f343-a192-462a-8553-2c1d499c1d85
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/workspace.ts
+[webkit 605.1.15 macos #0-0] Topic workspace native service journey
+[webkit 605.1.15 macos #0-0]    ✓ creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (1.5s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:02  
+
+
+Execution of 1 workers started at 2026-11-09T01:30:57.786Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: 3660f4ce-2154-41c1-bceb-8ad8a998fe0b
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (89ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+
+
+Execution of 1 workers started at 2026-11-09T01:31:01.256Z
+
+[0-0] RUNNING in undefined - file:///tests/native/startup.ts
+[0-0] PASSED in undefined - file:///tests/native/startup.ts
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[webkit 605.1.15 macos #0-0] Running: webkit (v605.1.15) on macos
+[webkit 605.1.15 macos #0-0] Session ID: c2c740ac-6baa-41af-9b02-884ff9c0a252
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] » tests/native/startup.ts
+[webkit 605.1.15 macos #0-0] invalid app-data startup configuration
+[webkit 605.1.15 macos #0-0]    ✓ keeps a usable window and presents the resolver error without fallback
+[webkit 605.1.15 macos #0-0]
+[webkit 605.1.15 macos #0-0] 1 passing (92ms)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:00  
+

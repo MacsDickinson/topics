@@ -1,0 +1,47 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts --grep batch failure explanations
+
+[WebServer] (node:27771) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:27800) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/folder-setup.spec.ts:521:1 › batch failure explanations allow only exact frozen reason pairs (5.6s)
+
+
+  1) tests/folder-setup.spec.ts:521:1 › batch failure explanations allow only exact frozen reason pairs
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByText('The model reported a failed turn.')
+    Expected: 1
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" getByText('The model reported a failed turn.') with timeout 5000ms
+      - waiting for getByText('The model reported a failed turn.')
+        14 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      571 |       (fn as Function)({ event: "setup_job_event", id: 2, payload });
+      572 |   });
+    > 573 |   await expect(page.getByText("The model reported a failed turn.")).toHaveCount(
+          |                                                                     ^
+      574 |     1,
+      575 |   );
+      576 |   await expect(
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:573:69
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-batch-failure-27ca5-y-exact-frozen-reason-pairs/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-batch-failure-27ca5-y-exact-frozen-reason-pairs/error-context.md
+
+  1 failed
+    tests/folder-setup.spec.ts:521:1 › batch failure explanations allow only exact frozen reason pairs

@@ -1,0 +1,26 @@
+{
+  "reference": "41ed1c085a45db3f1ea0a40ffff70784d1ae0a3c",
+  "checks": {
+    "FolderSetup.acceptJob": true,
+    "FolderSetup.invalidate": true,
+    "FolderSetup.action": true,
+    "FolderSetup.toggle": true,
+    "FolderSetup.preview": true,
+    "FolderSetup.start": true,
+    "FolderSetup.control": true,
+    "FolderSetup.previewChangedScope": true,
+    "FolderSetup.reconsent": true,
+    "FolderSetup.savePreview": true,
+    "FolderSetup.save": true,
+    "FolderSetup.effect0": true,
+    "FolderSetup.effect1": true,
+    "FolderSetup.allIpcCalls": true,
+    "ContextReview.act": true,
+    "ContextReview.confirm": true,
+    "ContextReview.preview": true,
+    "ContextReview.decide": true,
+    "ContextReview.effect0": true,
+    "ContextReview.allIpcCalls": true
+  },
+  "scope": "Historical pre-P1 checkpoint d4eec57; ContextReview state/effects intentionally repaired in 3a71a4d. See approval-repair.md; this is not current state-machine parity or safety acceptance."
+}

@@ -1,0 +1,141 @@
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-bdd)
+    Finished `dev` profile [unoptimized] target(s) in 2.91s
+     Running `/tmp/topics-setup-core-target/debug/workspace-bdd`
+Feature: Select notes and discover reviewable knowledge
+  Scenario: Preview a bounded selection before analysis
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given dated notes "Meetings/one.md" on "2026-11-01" and "Meetings/two.md" on "2026-11-03"
+   ✔  And an undated note "Meetings/undated.md"
+   ✔  When I preview folder "Meetings" for dates "2026-11-01" through "2026-11-02"
+   ✔  Then the preview includes "Meetings/one.md" and excludes "Meetings/two.md" and "Meetings/undated.md"
+   ✔  And no note bytes have been sent to a model
+  Scenario: Explicit confirmation allows unknown but never local-only notes
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given "Meetings/one.md" is unknown and "Meetings/private.md" is local-only
+   ✔  When I preview both files and confirm unknown sources for this run
+   ✔  Then the model can receive "Meetings/one.md"
+   ✔  And all model tools deny "Meetings/private.md" and its derived topic context
+  Scenario: Changed selection must be previewed again
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given I preview "Meetings/one.md"
+   ✔  When another program changes "Meetings/one.md" before analysis starts
+   ✔  Then analysis fails with "stale_scope"
+   ✔  And no note bytes are sent to a model
+  Scenario: Discovery yields cited proposals without accepting knowledge
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a selected synthetic meeting says "Alex leads Ledger"
+   ✔  And the scripted model proposes person "Alex", project "Ledger" and a cited "leads" connection
+   ✔  When analysis completes successfully
+   ✔  Then the proposals show the passage and its source locator
+   ✔  And no topic, claim or connection is accepted
+   ✔  And the meeting bytes are unchanged
+  Scenario: Same-name people stay unresolved
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given two accepted people named "Joe" have different IDs
+   ✔  And a selected meeting mentions "Joe" without distinguishing them
+   ✔  When the scripted model proposes an identity for that mention
+   ✔  Then the review shows both candidates as unresolved
+   ✔  And no connection to either person is accepted
+  Scenario: Repeated analysis does not duplicate accepted facts
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a cited claim from "Meetings/one.md" was accepted
+   ✔  When the same unchanged meeting produces the same claim in a later analysis
+   ✔  Then the existing decision is shown as a duplicate
+   ✔  And there is still one accepted claim
+Feature: Recover durable knowledge and preserve concurrent edits
+  Scenario: Rebuild accepted knowledge from Markdown
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given an accepted topic, claim, connection and correction rule
+   ✔  When the derived database is deleted and the app restarts
+   ✔  Then the same stable IDs, current claim, history and citation are recovered
+  Scenario: Conflict preserves external and proposed bytes
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending update with an expected record hash
+   ✔  When another program changes that record before approval
+   ✔  Then approval reports a conflict and preserves the external bytes and proposed bytes
+   ✔  And no dependent record becomes visible
+  Scenario: Recover an interrupted multi-file operation
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given approval of a topic and dependent claim is interrupted after the first file
+   ✔  When the app restarts
+   ✔  Then recovery completes the operation if remaining expected hashes match
+   ✔  And the topic and claim become visible together
+  Scenario: Recovery preserves conflicting changes
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given approval is interrupted after its first file
+   ✔  And another program changes a remaining target
+   ✔  When the app restarts
+   ✔  Then recovery reports a conflict and preserves old, staged and current versions
+   ✔  And incomplete records are not visible as accepted
+  Scenario: Undo creation and update with dependency checks
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a topic was created and a later claim depends on it
+   ✔  When I undo the topic creation
+   ✔  Then undo is refused with the dependent claim identified
+   ✔  When I undo the claim and then undo the topic creation
+   ✔  Then both are absent from current knowledge and remain visible in history
+  Scenario: Switching roots isolates records and pending proposals
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given root "A" has an accepted topic and pending proposal
+   ✔  When I switch to root "B"
+   ✔  Then neither root A's topic nor its proposal appears
+   ✔  And an old root A approval request is rejected
+Feature: Review knowledge and correct it through topic chat
+  Scenario: Edit and approve a cited proposal
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending claim says "Ledger launch is Friday" with a meeting citation
+   ✔  When I edit the claim to "Ledger launch is Monday" and approve it
+   ✔  Then the topic shows the accepted Monday claim with its citation and uncertainty
+   ✔  And the source meeting bytes are unchanged
+  Scenario: Reject a proposal
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending claim says "Ledger is cancelled"
+   ✔  When I reject the proposal
+   ✔  Then no accepted claim says "Ledger is cancelled"
+   ✔  And the proposal is marked rejected
+  Scenario: A connection cannot outlive an omitted proposed topic
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a proposal contains a new person and a connection to that person
+   ✔  When I approve only the connection
+   ✔  Then approval fails with a dependency error
+   ✔  And neither record is accepted
+  Scenario: Correction supersedes the old claim and scopes a future rule
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given an accepted claim says person "Alex" uses "he/him" with a transcript citation
+   ✔  And topic chat proposes "they/them" and a rule scoped to Alex's pronouns
+   ✔  When I approve the correction
+   ✔  Then Alex's current claim says "they/them" and cites my persisted chat statement
+   ✔  And the prior claim is superseded but visible in history
+   ✔  When the same transcript is analyzed again and the app restarts
+   ✔  Then "he/him" is not restored as current knowledge
+   ✔  And the rule does not change another person's pronouns
+   ✔  And the transcript bytes are unchanged
+  Scenario: Stale evidence prevents approval
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a pending claim cites a passage in "Meetings/one.md"
+   ✔  When another program changes that passage before I approve it
+   ✔  Then approval fails with "stale_evidence"
+   ✔  And the proposed claim is not accepted
+  Scenario: Competing corrections are not silently merged
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given two corrections supersede the same accepted claim revision
+   ✔  When the first correction is approved and the second is approved from its stale view
+   ✔  Then the second approval reports a conflict
+   ✔  And neither correction silently overwrites the other
+Feature: Keep model access scoped and failures non-mutating
+  Scenario: Tool boundary rejects unselected and local-only sources
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given the run is authorized only for "Meetings/one.md"
+   ✔  And "Meetings/private.md" is local-only
+   ✔  When the model requests "Meetings/private.md" or an unselected source by ID
+   ✔  Then the tool returns no source content or derived private context
+  Scenario: Malformed model output is rejected
+   ✔> Given a synthetic notes root with absolute isolated application data
+   ✔  Given a model run returns a proposal with an invalid source locator
+   ✔  When the run completes
+   ✔  Then the proposal is rejected with an actionable error
+   ✔  And no accepted record or source file changes
+[Summary]
+4 features
+20 scenarios (20 passed)
+110 steps (110 passed)

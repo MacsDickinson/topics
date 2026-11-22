@@ -1,0 +1,38 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 1.07s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it ... 
+running 1 test
+Synthetic coverage: SetupCoverage { selected: 2, processed: ["profiles/000.md", "profiles/001.md"], failed: [], outstanding: [], excluded: [Exclusion { path: "topics", reason: "Hidden/config folder or app-owned records" }], complete: false, model_calls: 1, transmission_authorizations: 1 }; batch outcomes: [(Completed, None, ["f4bae87d-fe00-531c-80c7-222497d92d4d", "de7162d7-d14b-5dc2-98dc-7dce91547a4c"])]
+
+thread 'graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it' (6807763) panicked at crates/topics-setup/tests/protocol.rs:1177:13:
+assertion failed: done.coverage.complete
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it ... FAILED
+
+failures:
+
+failures:
+    graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 16 filtered out; finished in 1.73s
+
+FAILED
+
+failures:
+
+---- graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it stdout ----
+
+thread 'graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it' (6807760) panicked at crates/topics-setup/tests/protocol.rs:35:13:
+synthetic protocol child failed: graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 16 filtered out; finished in 1.75s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`

@@ -1,0 +1,619 @@
+#[path = "support/setup.rs"]
+mod support;
+use support::*;
+use topics_core::*;
+
+#[test]
+fn unanalysed_local_source_is_pending_and_never_claims_a_success() {
+    let mut f = Fixture::new();
+    f.write("project/meeting.md", "# Synthetic meeting\nA decision.\n");
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.sources.len(), 1);
+    assert_eq!(briefing.sources[0].status, PilotSourceStatus::Pending);
+    assert_eq!(briefing.sources[0].last_success_at, None);
+    assert!(briefing.items.is_empty());
+}
+
+#[test]
+fn successful_version_stays_historical_when_source_changes_or_disappears() {
+    let mut f = Fixture::new();
+    f.prepare_default(1);
+    f.finish();
+    let initial = f.service.pilot_briefing(f.root_request()).unwrap();
+    let source = &initial.sources[0];
+    assert_eq!(source.status, PilotSourceStatus::Checked);
+    assert!(source.last_success_at.is_some());
+    assert_eq!(source.analysed_hash, source.current_hash);
+    let path = source.path.clone();
+    let old_hash = source.analysed_hash.clone();
+    let old_time = source.last_success_at.clone();
+    std::fs::write(
+        f.root.join(&path),
+        "# Synthetic revision\nA different decision.\n",
+    )
+    .unwrap();
+    let changed = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(changed.sources[0].status, PilotSourceStatus::Pending);
+    assert_eq!(changed.sources[0].analysed_hash, old_hash);
+    assert_eq!(changed.sources[0].last_success_at, old_time);
+    std::fs::remove_file(f.root.join(&path)).unwrap();
+    let missing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(missing.sources[0].status, PilotSourceStatus::Unavailable);
+    assert_eq!(missing.sources[0].analysed_hash, old_hash);
+}
+
+#[test]
+fn unavailable_root_is_reported_at_briefing_boundary() {
+    let mut f = Fixture::new();
+    f.prepare_default(1);
+    f.finish();
+    std::fs::rename(&f.root, f.temp.path().join("offline")).unwrap();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.sources[0].status, PilotSourceStatus::Unavailable);
+    assert!(briefing.sources[0].last_success_at.is_some());
+}
+
+#[test]
+fn approved_rule_applies_only_to_later_independent_source_and_undo_stops_it() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let topic = f.topics[0].clone();
+    let preview = f
+        .service
+        .setup_correction_preview(SetupCorrectionPreviewRequest {
+            root_id: f.root_id.clone(),
+            topic_id: topic.id.clone(),
+            revision_ids: vec![f.claims[0].revision_id.clone()],
+            predicate: "pronouns".into(),
+            replacement: "they/them".into(),
+            statement: "Alex uses they/them".into(),
+            rule_scope: RuleScope {
+                source_paths: vec![],
+                context: Some("Transcript".into()),
+            },
+        })
+        .unwrap();
+    f.receipt = Some(preview.receipt);
+    f.decide();
+    let operation = f.result.as_ref().unwrap().operations[0].id.clone();
+    // A later edit of the original source is not an independent occurrence.
+    f.write(
+        "meeting.md",
+        "# Transcript\nAlex uses he/him, with an edit.\n",
+    );
+    f.preview(1);
+    f.authorize();
+    let cap = f.start();
+    let old_source = f.read(&cap)[0].citation.clone();
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "he/him", &old_source),
+        }],
+    );
+    assert!(
+        f.service
+            .pilot_briefing(f.root_request())
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| i.rule_id.is_none())
+    );
+    f.write("later.md", "# Transcript\nAlex uses he/him.\n");
+    f.preview(2);
+    f.authorize();
+    let cap = f.start();
+    let refs = f.read(&cap);
+    let source = &refs
+        .iter()
+        .find(|s| s.summary.path == "later.md")
+        .unwrap()
+        .citation;
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "he/him", source),
+        }],
+    );
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.occurrences.len(), 1);
+    assert_eq!(briefing.occurrences[0].rule_id, preview.rule.id);
+    assert!(!briefing.occurrences[0].recurred);
+    let repeat = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.occurrences, repeat.occurrences);
+    let corrected: Vec<_> = briefing
+        .items
+        .iter()
+        .filter(|i| i.rule_id.is_some())
+        .collect();
+    assert_eq!(corrected.len(), 1);
+    assert_eq!(corrected[0].value, "they/them");
+    assert_eq!(corrected[0].sources[0].path, "later.md");
+    let original_observation = briefing.occurrences[0].clone();
+    f.write(
+        "later.md",
+        "# Transcript\nAlex uses he/him, edited later.\n",
+    );
+    f.preview(2);
+    f.authorize();
+    let cap = f.start();
+    let source = f
+        .read(&cap)
+        .into_iter()
+        .find(|s| s.summary.path == "later.md")
+        .unwrap()
+        .citation;
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "they/them", &source),
+        }],
+    );
+    let replayed = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(replayed.occurrences, vec![original_observation]);
+    assert_eq!(
+        replayed
+            .items
+            .iter()
+            .filter(|item| item.topic_id == topic.id
+                && item.sources.iter().any(|s| s.path == "later.md"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        replayed
+            .items
+            .iter()
+            .filter(|item| item.rule_id.is_some())
+            .count(),
+        1
+    );
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: operation,
+        })
+        .unwrap();
+    assert!(
+        f.service
+            .pilot_briefing(f.root_request())
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| i.rule_id.is_none())
+    );
+}
+
+#[test]
+fn failed_batch_is_incomplete_while_other_completed_source_is_checked() {
+    let mut f = Fixture::new();
+    f.prepare_default(2);
+    f.finish_one(false);
+    let cap = f.start();
+    f.service
+        .setup_batch_fail(SetupBatchFailRequest {
+            capability: cap,
+            error: ApiError::new("synthetic", "synthetic"),
+        })
+        .unwrap();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(
+        briefing
+            .sources
+            .iter()
+            .filter(|s| s.status == PilotSourceStatus::Checked)
+            .count(),
+        1
+    );
+    assert_eq!(
+        briefing
+            .sources
+            .iter()
+            .filter(|s| s.status == PilotSourceStatus::Partial)
+            .count(),
+        1
+    );
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .find(|s| s.status == PilotSourceStatus::Partial)
+            .unwrap()
+            .last_success_at
+            .is_none()
+    );
+}
+
+#[test]
+fn a_displayed_briefing_remains_savable_only_while_its_contents_match() {
+    let mut f = Fixture::new();
+    f.write("project/meeting.md", "# Meeting\nA decision.\n");
+    let first = f.service.pilot_briefing(f.root_request()).unwrap();
+    let again = f.service.pilot_briefing(f.root_request()).unwrap();
+    let capture = |token| PilotSnapshotCreateRequest {
+        root_id: first.root_id.clone(),
+        briefing_token: token,
+    };
+    let saved = f
+        .service
+        .pilot_snapshot_create(capture(first.briefing_token.clone()))
+        .unwrap();
+    assert_eq!(saved.briefing, first);
+    f.write("project/meeting.md", "# Meeting\nA changed decision.\n");
+    let error = f
+        .service
+        .pilot_snapshot_create(capture(again.briefing_token))
+        .unwrap_err();
+    assert_eq!(error.code, "stale_scope");
+}
+
+#[test]
+fn approved_rules_without_later_observations_are_visible_until_undo() {
+    let mut f = Fixture::new();
+    f.single(1);
+    f.correct();
+    f.decide();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.rules.len(), 1);
+    assert!(briefing.occurrences.is_empty());
+    let operation = f.result.as_ref().unwrap().operations[0].id.clone();
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: operation,
+        })
+        .unwrap();
+    let undone = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(undone.rules.is_empty());
+    assert_ne!(briefing.briefing_token, undone.briefing_token);
+}
+
+#[test]
+fn analysis_after_preview_but_before_approval_is_not_a_later_occurrence() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let topic = f.topics[0].clone();
+    let preview = f
+        .service
+        .setup_correction_preview(SetupCorrectionPreviewRequest {
+            root_id: f.root_id.clone(),
+            topic_id: topic.id.clone(),
+            revision_ids: vec![f.claims[0].revision_id.clone()],
+            predicate: "pronouns".into(),
+            replacement: "they/them".into(),
+            statement: "Alex uses they/them".into(),
+            rule_scope: RuleScope {
+                source_paths: vec![],
+                context: None,
+            },
+        })
+        .unwrap();
+    f.receipt = Some(preview.receipt);
+    f.write(
+        "before-approval.md",
+        "# Transcript\nAlex uses he/him again.\n",
+    );
+    f.preview(2);
+    f.authorize();
+    let cap = f.start();
+    let source = f
+        .read(&cap)
+        .into_iter()
+        .find(|s| s.summary.path == "before-approval.md")
+        .unwrap()
+        .citation;
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "he/him", &source),
+        }],
+    );
+    f.decide();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert_eq!(briefing.rules.len(), 1);
+    assert!(briefing.occurrences.is_empty());
+}
+
+#[test]
+fn rule_scope_and_independence_must_match_the_same_citation() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let topic = f.topics[0].clone();
+    let preview = f
+        .service
+        .setup_correction_preview(SetupCorrectionPreviewRequest {
+            root_id: f.root_id.clone(),
+            topic_id: topic.id.clone(),
+            revision_ids: vec![f.claims[0].revision_id.clone()],
+            predicate: "pronouns".into(),
+            replacement: "they/them".into(),
+            statement: "Alex uses they/them".into(),
+            rule_scope: RuleScope {
+                source_paths: vec!["in.md".into()],
+                context: Some("MARKER".into()),
+            },
+        })
+        .unwrap();
+    f.receipt = Some(preview.receipt);
+    f.decide();
+    f.write("in.md", "# Transcript\nAlex uses he/him.\n");
+    f.write("out.md", "# Transcript\nMARKER Alex uses he/him.\n");
+    f.preview(3);
+    f.authorize();
+    let cap = f.start();
+    let sources = f.read(&cap);
+    let inside = &sources
+        .iter()
+        .find(|s| s.summary.path == "in.md")
+        .unwrap()
+        .citation;
+    let outside = &sources
+        .iter()
+        .find(|s| s.summary.path == "out.md")
+        .unwrap()
+        .citation;
+    let mut candidate = claim(&topic, "pronouns", "he/him", inside);
+    candidate.sources.push(Evidence::Passage {
+        source: outside.clone(),
+    });
+    f.publish(cap, vec![Candidate::Claim { claim: candidate }]);
+    assert!(
+        f.service
+            .pilot_briefing(f.root_request())
+            .unwrap()
+            .occurrences
+            .is_empty()
+    );
+}
+
+#[test]
+fn a_meeting_briefing_keeps_changes_across_analyses_until_the_next_snapshot() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let keep = |f: &Fixture| {
+        let view = f.service.pilot_briefing(f.root_request()).unwrap();
+        f.service
+            .pilot_snapshot_create(PilotSnapshotCreateRequest {
+                root_id: f.root_id.clone(),
+                briefing_token: view.briefing_token,
+            })
+            .unwrap()
+    };
+    let baseline = keep(&f);
+    assert!(!baseline.briefing.items.is_empty());
+    for (path, decision) in [
+        ("monday.md", "Book the room"),
+        ("thursday.md", "Invite the team"),
+    ] {
+        f.write(path, &format!("# Minutes\n{decision}.\n"));
+        f.preview(8);
+        f.authorize();
+        let cap = f.start();
+        let source = f
+            .read(&cap)
+            .into_iter()
+            .find(|s| s.summary.path == path)
+            .unwrap();
+        let update = claim(&f.topics[0], "decision", decision, &source.citation);
+        f.publish(cap, vec![Candidate::Claim { claim: update }]);
+        if path == "monday.md" {
+            let tuesday = f.service.pilot_briefing(f.root_request()).unwrap();
+            let evidence = f
+                .service
+                .pilot_feedback_snapshot_create(PilotSnapshotCreateRequest {
+                    root_id: f.root_id.clone(),
+                    briefing_token: tuesday.briefing_token,
+                })
+                .unwrap();
+            assert!(
+                evidence
+                    .briefing
+                    .items
+                    .iter()
+                    .any(|item| item.value == decision)
+            );
+        }
+    }
+    let friday = keep(&f);
+    let mut decisions: Vec<_> = friday
+        .briefing
+        .items
+        .iter()
+        .map(|i| i.value.as_str())
+        .collect();
+    decisions.sort();
+    assert_eq!(decisions, ["Book the room", "Invite the team"]);
+    assert!(
+        f.service
+            .pilot_briefing(f.root_request())
+            .unwrap()
+            .items
+            .is_empty()
+    );
+}
+
+#[test]
+fn skipped_older_source_keeps_success_but_contributes_no_current_card() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let older = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(!older.items.is_empty());
+    let historical = older
+        .sources
+        .iter()
+        .find(|s| s.path == "meeting.md")
+        .unwrap()
+        .last_success_at
+        .clone();
+    f.write("selected.md", "# Meeting\nA new decision.\n");
+    f.preview(2);
+    let mut spec = f.manifest.as_ref().unwrap().spec.clone();
+    spec.files = vec!["selected.md".into()];
+    let original = f.manifest.as_ref().unwrap();
+    f.manifest = Some(
+        f.service
+            .setup_manifest_preview(SetupManifestPreviewRequest {
+                root_id: f.root_id.clone(),
+                spec,
+                roles: vec![],
+                limits: original.limits.clone(),
+                runtime: original.runtime.clone(),
+            })
+            .unwrap(),
+    );
+    f.authorize();
+    let cap = f.start();
+    f.read(&cap);
+    f.publish(
+        cap,
+        vec![Candidate::Topic {
+            topic: topic("New project", TopicKind::Project),
+        }],
+    );
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    let old = briefing
+        .sources
+        .iter()
+        .find(|s| s.path == "meeting.md")
+        .unwrap();
+    assert_eq!(old.status, PilotSourceStatus::Skipped);
+    assert_eq!(old.last_success_at, historical);
+    assert!(
+        briefing
+            .items
+            .iter()
+            .all(|item| item.sources.iter().all(|s| s.path != "meeting.md"))
+    );
+}
+
+#[test]
+fn repeated_accepted_assertion_does_not_reappear_as_a_new_change() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let topic = f.topics[0].clone();
+    f.write("later.md", "# Transcript\nAlex still uses he/him.\n");
+    f.preview(2);
+    f.authorize();
+    let cap = f.start();
+    let source = f
+        .read(&cap)
+        .into_iter()
+        .find(|s| s.summary.path == "later.md")
+        .unwrap()
+        .citation;
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "he/him", &source),
+        }],
+    );
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(
+        !briefing
+            .items
+            .iter()
+            .any(|item| item.topic_id == topic.id && item.predicate == "pronouns")
+    );
+}
+
+#[test]
+fn damaged_checkpoint_preserves_healthy_evidence_and_signals_incomplete_history() {
+    let mut f = Fixture::new();
+    f.prepare_default(1);
+    f.finish();
+    let jobs = walkdir::WalkDir::new(&f.app)
+        .into_iter()
+        .filter_map(Result::ok)
+        .find(|entry| entry.file_type().is_dir() && entry.file_name() == "jobs")
+        .unwrap()
+        .into_path();
+    std::fs::write(jobs.join(format!("{}.json", id())), b"{broken").unwrap();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .any(|source| source.status == PilotSourceStatus::Checked)
+    );
+    assert!(briefing.history_incomplete);
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .all(|source| source.path != "Analysis history incomplete")
+    );
+}
+
+#[test]
+fn legacy_completed_checkpoint_reports_unknown_analysis_history() {
+    let mut f = Fixture::new();
+    f.prepare_default(1);
+    f.finish();
+    let checkpoint = walkdir::WalkDir::new(&f.app)
+        .into_iter()
+        .filter_map(Result::ok)
+        .find(|entry| {
+            entry
+                .path()
+                .parent()
+                .is_some_and(|p| p.file_name().is_some_and(|name| name == "jobs"))
+                && entry.path().extension().is_some_and(|ext| ext == "json")
+        })
+        .unwrap()
+        .into_path();
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&checkpoint).unwrap()).unwrap();
+    value.as_object_mut().unwrap().remove("pilot_runs");
+    std::fs::write(checkpoint, serde_json::to_vec(&value).unwrap()).unwrap();
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(briefing.history_incomplete);
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .all(|source| source.path != "Analysis history incomplete")
+    );
+    assert!(
+        briefing
+            .sources
+            .iter()
+            .all(|source| source.last_success_at.is_none())
+    );
+    assert!(briefing.sources.iter().any(
+        |source| source.path.starts_with("odd/") && source.status == PilotSourceStatus::Partial
+    ));
+}
+
+#[test]
+fn newly_changed_assertion_is_displayed_with_its_current_citation() {
+    let mut f = Fixture::new();
+    f.single(1);
+    let topic = f.topics[0].clone();
+    f.write("later.md", "# Transcript\nAlex now uses they/them.\n");
+    f.preview(2);
+    f.authorize();
+    let cap = f.start();
+    let source = f
+        .read(&cap)
+        .into_iter()
+        .find(|s| s.summary.path == "later.md")
+        .unwrap()
+        .citation;
+    f.publish(
+        cap,
+        vec![Candidate::Claim {
+            claim: claim(&topic, "pronouns", "they/them", &source),
+        }],
+    );
+    let briefing = f.service.pilot_briefing(f.root_request()).unwrap();
+    assert!(briefing.items.iter().any(|item| item.topic_id == topic.id
+        && item.predicate == "pronouns"
+        && item.value == "they/them"
+        && item.sources.iter().any(|source| source.path == "later.md")));
+    assert!(
+        !briefing
+            .items
+            .iter()
+            .any(|item| item.topic_id == topic.id && item.value == "he/him")
+    );
+}

@@ -81,6 +81,7 @@ fn main() {
         .plugin(tauri_plugin_wdio::init())
         .plugin(tauri_plugin_wdio_webdriver::init());
     builder
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Keep resolver failures in managed state so the window remains usable.
             // A search presents the original error; never fall back to personal data.
@@ -96,6 +97,7 @@ fn main() {
             search_notes,
             workspace_root_get,
             workspace_root_set,
+            workspace_choose_root,
             workspace_scope_preview,
             workspace_sensitivity_set,
             workspace_analysis_start,
@@ -105,13 +107,41 @@ fn main() {
             workspace_topics_list,
             workspace_topic_get,
             workspace_statement_get,
+            workspace_user_statement,
             workspace_chat_start,
             workspace_history_list,
             workspace_undo,
             workspace_runtime_status,
             workspace_manual_propose,
             workspace_sources_list,
-            workspace_source_get
+            workspace_source_get,
+            pilot_briefing,
+            pilot_snapshot_create,
+            pilot_feedback_snapshot_create,
+            pilot_snapshot_list,
+            pilot_snapshot_get,
+            pilot_feedback_list,
+            pilot_feedback_save,
+            pilot_week_get,
+            pilot_week_save,
+            setup_inventory,
+            setup_manifest_preview,
+            setup_job_get,
+            setup_job_create,
+            setup_job_start,
+            setup_job_watch,
+            setup_job_control,
+            setup_jobs_list,
+            setup_draft_edit,
+            setup_draft_disposition,
+            setup_save_preview,
+            setup_job_reconsent,
+            setup_connection_confirm_preview,
+            setup_context_add,
+            setup_confirm_preview,
+            setup_correction_preview,
+            setup_decide,
+            setup_topic_review
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Topics desktop");

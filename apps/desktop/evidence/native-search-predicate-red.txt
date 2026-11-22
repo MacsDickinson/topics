@@ -1,0 +1,38 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/native-search-predicate.spec.ts
+
+[WebServer] (node:50504) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:50507) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/native-search-predicate.spec.ts:4:1 › no-matches heading and unrelated results do not satisfy watcher convergence (296ms)
+
+
+  1) tests/native-search-predicate.spec.ts:4:1 › no-matches heading and unrelated results do not satisfy watcher convergence
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+       5 |   await page.setContent('<section aria-label="Search results"><div class="empty-state"><h2>Try another word or phrase</h2></div><ul class="result-list"></ul></section>');
+       6 |   expect(await page.locator('h2').count()).toBe(1); // Old predicate returns early here.
+    >  7 |   expect(await page.evaluate(hasConvergedResult)).toBe(false);
+         |                                                   ^
+       8 |   await page.setContent('<ul class="result-list"><li class="search-result"><article><h2>Converged ledger</h2><p class="path">wrong.md</p></article></li></ul>');
+       9 |   expect(await page.evaluate(hasConvergedResult)).toBe(false);
+      10 |   await page.setContent('<ul class="result-list"><li class="search-result"><article><h2>Wrong title</h2><p class="path">new.md</p></article></li></ul>');
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/native-search-predicate.spec.ts:7:51
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/native-search-predicate-no-58b7f-satisfy-watcher-convergence/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/native-search-predicate-no-58b7f-satisfy-watcher-convergence/error-context.md
+
+  1 failed
+    tests/native-search-predicate.spec.ts:4:1 › no-matches heading and unrelated results do not satisfy watcher convergence

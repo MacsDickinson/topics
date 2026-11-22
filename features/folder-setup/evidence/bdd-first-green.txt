@@ -1,0 +1,184 @@
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+   Compiling topics-bdd v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-bdd)
+    Finished `dev` profile [unoptimized] target(s) in 3.37s
+     Running `/tmp/topics-setup-core-target/debug/setup-bdd`
+Feature: Resume setup and preserve review decisions safely
+  Scenario: Cancellation and restart retain completed draft work
+   ✔> Given synthetic notes and isolated absolute application data
+   ✔  Given a setup job has completed one batch and has a second model turn running
+   ✔  When I cancel the job and restart the app
+synthetic corpus=100 documents; batches/model calls=5; transmission consents=1; save actions=1
+   ✔  Then the completed draft batch and my saved draft edits are available
+   ✔  And the cancelled turn's buffered candidates are absent
+   ✔  And resuming processes only the still-authorized outstanding inputs
+   ✔  And no draft has become accepted knowledge without my approval
+  Scenario: Failed inputs do not masquerade as complete folder coverage
+   ✔> Given synthetic notes and isolated absolute application data
+   ✔  Given one authorized batch fails while other batches finish
+   ✔  When I open the resulting map
+   ✔  Then successfully analysed topics remain browsable
+   ✘  And coverage lists the failed, excluded and outstanding files separately
+      Step failed:
+      Defined: Users/macs/orca/workspaces/topics/topics-setup-core/features/folder-setup/continuity.feature:17:5
+      Matched: crates/topics-bdd/src/bin/setup-bdd.rs:345:1
+      Step panicked. Captured output: assertion failed: self.job().coverage.excluded.iter().any(|e| e.path == "topics")
+  Scenario: A stale receipt cannot save or confirm changed knowledge
+   ✔> Given synthetic notes and isolated absolute application data
+   ✔  Given I have previewed an exact group save or confirmation receipt
+   ✔  When a referenced source, dependency or claim revision changes
+   ✔  Then the old decision fails with an actionable conflict
+   ✔  And a refreshed receipt shows the changed scope before I can approve it
+   ✔  And unrelated deferred groups are preserved
+  Scenario: Index rebuild preserves imported and personally confirmed distinctions
+   ✔> Given synthetic notes and isolated absolute application data
+   ✔  Given I saved a starting map and personally corrected one fact
+   ✔  When the app restarts and its disposable SQLite index is rebuilt
+   ✔  Then the same topic IDs, graph connections, citations and review decisions return
+   ✔  And the corrected assertion remains confirmed with its original statement
+   ✔  And other saved imports remain "From your notes"
+   ✔  And the setup checkpoint is not lost with the search database
+  Scenario: Undo preserves independent later work
+   ✔> Given synthetic notes and isolated absolute application data
+   ✔  Given I saved a starting-map group and later accepted independent work
+   ✔  When I request undo of that group
+   ✔  Then the app checks dependencies and preserves unrelated later work
+   ✔  And a dependent later decision is surfaced instead of silently removed
+   ✔  And original note bytes and operation history are preserved
+  Scenario: Folder scale does not turn setup into a record checklist
+   ✔> Given synthetic notes and isolated absolute application data
+   ✔  Given at least one hundred synthetic documents spanning several bounded model batches
+   ✔  And the documents produce several topics plus some deferred issues
+   ✔  When the unchanged authorized job builds a map
+   ✔  Then one transmission authorization covers that exact job manifest
+   ✔  And one explicit save action can keep its eligible starting map
+   ✔  And no required per-document or per-fact confirmation blocks using the map
+   ✔  And recorded coverage and call counts account for every selected document
+Feature: Save and correct understanding without reviewing every record
+  Scenario: Save the eligible starting map with one explicit approval
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given the draft has sourced unambiguous topics, statements and explicit relationships
+   ✘  And it also has contradictory, ambiguous, unsupported and inferred items
+      Step failed:
+      Defined: Users/macs/orca/workspaces/topics/topics-setup-core/features/folder-setup/review.feature:7:5
+      Matched: crates/topics-bdd/src/bin/setup-bdd.rs:225:1
+      Step panicked. Captured output: called `Result::unwrap()` on an `Err` value: ApiError { code: "invalid_input", message: "Claims require a predicate, value and provenance", details: None }
+  Scenario: Saving a topic group preserves deferred material
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given the draft has eligible groups for Ledger and Harbour
+   ✔  When I save the Ledger group and choose "Not now" for Harbour
+   ✔  Then Ledger becomes available in the saved map
+   ✔  And Harbour remains resumable in the draft rather than rejected
+   ✔  And neither Harbour nor its facts are falsely shown as reviewed
+  Scenario: A group save handles visible dependencies
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given a Ledger relationship needs a new unambiguous person topic called "Alex"
+   ✔  And the draft has unrelated claims about Alex
+   ✔  When I preview saving the Ledger relationship
+   ✔  Then the receipt visibly includes the required Alex endpoint topic
+   ✔  And it does not include the unrelated Alex claims
+   ✔  When the endpoint is ambiguous instead
+   ✔  Then that relationship is deferred without blocking unrelated Ledger facts
+  Scenario: Confirming a section does not confirm unseen topic facts
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given a saved topic has a displayed section containing three sourced statements
+   ✔  And other facts exist outside that section
+   ✔  When I explicitly confirm the enumerated three statements
+   ✔  Then those exact revisions are labelled "Confirmed by you"
+   ✔  And the other facts remain "From your notes"
+   ✔  And the decision retains the statement IDs and evidence that I saw
+  Scenario: Correct a fact in its topic without editing storage records
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given a saved Alex topic reports "he/him" from a transcript
+   ✔  When I choose "That's wrong" and enter "Alex uses they/them"
+   ✔  Then I see a proposed before and after with the future rule's exact scope
+   ✔  When I approve the displayed correction
+   ✔  Then the topic shows the corrected assertion attributed to my exact statement
+   ✔  And unrelated facts are not marked confirmed
+   ✔  And the prior assertion and original transcript remain available as evidence
+   ✔  And no original source note is rewritten
+  Scenario: Several occurrences of a problem create one review question
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given five notes ambiguously refer to "Joe" in the same proposed relationship
+   ✔  When I open "Needs your input"
+   ✔  Then I see one identity question with its five source occurrences
+   ✔  And I can defer it without blocking unrelated saved topics
+   ✔  And no uncertain identity is silently merged
+  Scenario: One correction can cover a clearly previewed matching set
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given multiple assertions unambiguously repeat the same wrong pronouns for Alex
+   ✔  And another person has the same first name
+   ✔  When I correct Alex and inspect the affected assertions and rule scope
+   ✔  And I approve that displayed set once
+   ✔  Then only those unambiguously matching assertions are corrected
+   ✔  And ambiguous and unrelated people are excluded
+   ✘  And later analysis cannot revive the suppressed assertion for Alex
+      Step failed:
+      Defined: Users/macs/orca/workspaces/topics/topics-setup-core/features/folder-setup/review.feature:63:5
+      Matched: crates/topics-bdd/src/bin/setup-bdd.rs:313:1
+      Step panicked. Captured output: assertion failed: staged.candidates.is_empty()
+  Scenario: New evidence shows a topic diff without overriding confirmed understanding
+   ✔> Given a synthetic draft topic map and isolated absolute application data
+   ✔  Given I confirmed Ledger's launch date as Monday
+   ✔  When a newly authorized transcript reports Friday
+   ✔  Then Ledger shows a proposed change with the new citation and prior understanding
+   ✔  And the confirmed Monday assertion is not silently replaced
+   ✔  And repeated unchanged evidence does not create another question or duplicate fact
+Feature: Build a starting topic map when connecting a notes folder
+  Scenario: Connecting a new folder starts local setup without transmission
+   ✔> Given a synthetic notes folder and isolated absolute application data
+   ✔  Given the folder contains profiles, projects, meetings, logs and unclassified Markdown
+   ✔  When I connect the folder for the first time
+   ✘  Then setup shows suggested editable folder roles, document counts, dates and exclusions
+      Step failed:
+      Defined: Users/macs/orca/workspaces/topics/topics-setup-core/features/folder-setup/setup.feature:8:5
+      Matched: crates/topics-bdd/src/bin/setup-bdd.rs:141:1
+      Step panicked. Captured output: assertion failed: inv.folders.iter().any(|f| f.dated > 0)
+  Scenario: Empty and returning folders have useful entry points
+   ✔> Given a synthetic notes folder and isolated absolute application data
+   ✔  Given I connect an empty folder
+   ✔  Then I can add notes or capture a topic without using a model
+   ✔  When I reconnect a folder with an existing saved topic map
+   ✔  Then its map opens with an option to resume or update setup
+   ✔  And its accepted knowledge is not imported again
+  Scenario: One consent covers an exact unchanged job manifest
+   ✔> Given a synthetic notes folder and isolated absolute application data
+   ✔  Given I have previewed an eligible selection spanning several analysis batches
+   ✔  And private and app-owned files are visibly excluded
+   ✔  When I choose "Build starting map" and authorize the displayed manifest
+   ✔  Then each batch can read only its capability-bound subset of that manifest
+   ✔  And the unchanged job does not require consent for every document or batch
+   ✔  And no model receives local-only bytes, paths, labels or derived private context
+   ✔  And no durable cloud permission is inferred from that consent
+  Scenario: Changed inputs require renewed consent only for the changed scope
+   ✔> Given a synthetic notes folder and isolated absolute application data
+   ✔  Given a setup job has completed one batch and has another batch waiting
+   ✔  When a waiting source changes and a new source is added to the folder
+   ✔  Then the changed source is not sent under its old consent
+   ✔  And the new source is not silently added to the job
+   ✔  And the changed selection and exclusions can be previewed for renewed consent
+   ✔  And unaffected completed draft results remain available
+  Scenario: Batches build one sourced graph instead of independent topic lists
+   ✔> Given a synthetic notes folder and isolated absolute application data
+   ✔  Given synthetic notes repeat "Alex leads Ledger" across several batches
+   ✔  And one repeated account is a copy of an earlier summary
+   ✔  When the authorized setup job finishes
+   ✔  Then its draft has one unambiguously identified Alex, one Ledger and one sourced leads relationship
+   ✔  And all distinct citations remain inspectable
+   ✔  And the copied summary is not presented as independent confirmation
+   ✔  And none of the draft records has been accepted automatically
+  Scenario: Ambiguous identities and historic disagreement remain visible
+   ✔> Given a synthetic notes folder and isolated absolute application data
+   ✔  Given the notes mention two different people named "Joe"
+   ✔  And historic and recent accounts disagree about who leads Ledger
+   ✔  When the authorized setup job builds its draft graph
+   ✔  Then the ambiguous Joe relationship is not attached to either person as a fact
+   ✔  And the competing leadership accounts retain their dates and citations
+   ✔  And recency or model confidence alone does not select the accepted account
+[Summary]
+3 features
+20 scenarios (16 passed, 4 failed)
+132 steps (128 passed, 4 failed)
+
+thread 'main' (6575569) panicked at /Users/macs/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/cucumber-0.23.0/src/cucumber.rs:1243:13:
+4 steps failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

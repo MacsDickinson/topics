@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { parseLines } from './Scope';
-import { Evidence, SourceEvidence } from './Evidence';
-import type { Candidate, Endpoint, Proposal, Topic } from './workspace-types';
+import { Badge, Button, Field, Icon, PageHeader } from "./ui";
+import { useState } from "react";
+import { parseLines } from "./Scope";
+import { Evidence, SourceEvidence } from "./Evidence";
+import type { Candidate, Endpoint, Proposal, Topic } from "./workspace-types";
 
 export function endpointLabel(endpoint: Endpoint, topics: Topic[]) {
-  return endpoint.kind === 'topic'
+  return endpoint.kind === "topic"
     ? topics.find((t) => t.id === endpoint.id)?.name || `Topic ${endpoint.id}`
-    : endpoint.kind === 'claim'
+    : endpoint.kind === "claim"
       ? `Claim ${endpoint.id}`
       : `${endpoint.source_id} (bytes ${endpoint.locator.start_byte}–${endpoint.locator.end_byte})`;
 }
@@ -26,14 +27,14 @@ export function ProposalEditor({
   );
   const [listDrafts, setListDrafts] = useState(() =>
     proposal.candidates.map((c) => ({
-      aliases: c.kind === 'topic' ? c.topic.aliases.join(', ') : '',
+      aliases: c.kind === "topic" ? c.topic.aliases.join(", ") : "",
       paths:
-        c.kind === 'correction' ? c.rule.scope.source_paths.join('\n') : '',
+        c.kind === "correction" ? c.rule.scope.source_paths.join("\n") : "",
     })),
   );
   const updateList = (
     index: number,
-    field: 'aliases' | 'paths',
+    field: "aliases" | "paths",
     value: string,
   ) =>
     setListDrafts((list) =>
@@ -45,18 +46,18 @@ export function ProposalEditor({
     candidates
       .map(
         (c, i): Candidate =>
-          c.kind === 'topic'
+          c.kind === "topic"
             ? {
                 ...c,
                 topic: {
                   ...c.topic,
                   aliases: listDrafts[i].aliases
-                    .split(',')
+                    .split(",")
                     .map((s) => s.trim())
                     .filter(Boolean),
                 },
               }
-            : c.kind === 'correction'
+            : c.kind === "correction"
               ? {
                   ...c,
                   rule: {
@@ -71,16 +72,16 @@ export function ProposalEditor({
       )
       .filter((_, i) => included[i]);
   const [included, setIncluded] = useState(
-    proposal.candidates.map((c) => c.kind !== 'unresolved_identity'),
+    proposal.candidates.map((c) => c.kind !== "unresolved_identity"),
   );
-  const pending = proposal.status === 'pending';
+  const pending = proposal.status === "pending";
   const knownTopics = [
     ...topics,
-    ...candidates.flatMap((c) => (c.kind === 'topic' ? [c.topic] : [])),
+    ...candidates.flatMap((c) => (c.kind === "topic" ? [c.topic] : [])),
   ];
   const update = (index: number, candidate: Candidate) =>
     setCandidates((list) => list.map((c, i) => (index === i ? candidate : c)));
-  if (proposal.status === 'accepted' && proposal.candidates.length === 0)
+  if (proposal.status === "accepted" && proposal.candidates.length === 0)
     return (
       <article className="proposal">
         <h2>No new changes</h2>
@@ -93,30 +94,48 @@ export function ProposalEditor({
     );
   return (
     <article className="proposal">
-      <header className="proposal-heading">
-        <div>
-          <h2>
-            {proposal.origin.kind === 'chat'
-              ? 'Proposed correction'
-              : proposal.origin.kind === 'manual'
-                ? 'Your topic proposal'
-                : 'Proposed understanding'}
-          </h2>
-          <p className="muted">
-            {new Date(proposal.created_at).toLocaleString()} ·{' '}
-            {proposal.candidates.length} changes
-          </p>
-        </div>
-        <span className={`badge ${proposal.status}`}>
-          {proposal.status === 'pending'
-            ? 'Needs review'
-            : proposal.status === 'accepted'
-              ? 'Accepted'
-              : proposal.status === 'rejected'
-                ? 'Rejected'
-                : 'Conflict'}
-        </span>
-      </header>
+      <PageHeader
+        level={2}
+        className="proposal-heading"
+        title={
+          proposal.origin.kind === "chat"
+            ? "Proposed correction"
+            : proposal.origin.kind === "manual"
+              ? "Your topic proposal"
+              : "Proposed understanding"
+        }
+        description={
+          <>
+            <time dateTime={proposal.created_at}>
+              {new Date(proposal.created_at).toLocaleString()}
+            </time>
+            <span className="proposal-count">
+              {proposal.candidates.length} changes
+            </span>
+          </>
+        }
+        actions={
+          <Badge
+            tone={
+              proposal.status === "pending"
+                ? "warning"
+                : proposal.status === "accepted"
+                  ? "success"
+                  : proposal.status === "conflict"
+                    ? "danger"
+                    : "neutral"
+            }
+          >
+            {proposal.status === "pending"
+              ? "Needs review"
+              : proposal.status === "accepted"
+                ? "Accepted"
+                : proposal.status === "rejected"
+                  ? "Rejected"
+                  : "Conflict"}
+          </Badge>
+        }
+      />
       <p className="muted">
         Review the evidence and uncertainty. Select related changes together;
         omitted changes are rejected when you approve.
@@ -125,10 +144,34 @@ export function ProposalEditor({
         <legend className="sr-only">Proposed changes</legend>
         {candidates.map((candidate, index) => (
           <section key={index} className="candidate">
+            <div className="candidate-heading">
+              <Icon
+                name={
+                  candidate.kind === "topic"
+                    ? candidate.topic.topic_kind
+                    : candidate.kind === "connection"
+                      ? "thread"
+                      : candidate.kind === "unresolved_identity"
+                        ? "person"
+                        : "quote"
+                }
+              />
+              <h3>
+                {candidate.kind === "topic"
+                  ? "Topic identity"
+                  : candidate.kind === "connection"
+                    ? "Relationship"
+                    : candidate.kind === "correction"
+                      ? "Correction and future rule"
+                      : candidate.kind === "unresolved_identity"
+                        ? "Unresolved mention"
+                        : "Proposed statement"}
+              </h3>
+            </div>
             <label className="check include">
               <input
                 type="checkbox"
-                aria-label={`Include ${candidate.kind === 'correction' ? 'correction and future rule' : candidate.kind === 'unresolved_identity' ? 'unresolved mention' : candidate.kind}: ${candidate.kind === 'topic' ? candidate.topic.name : candidate.kind === 'claim' || candidate.kind === 'correction' ? `${knownTopics.find((t) => t.id === candidate.claim.subject_id)?.name || 'Topic'} ${candidate.claim.predicate}: ${candidate.claim.value}` : candidate.kind === 'connection' ? `${endpointLabel(candidate.connection.from, knownTopics)} ${candidate.connection.relation} ${endpointLabel(candidate.connection.to, knownTopics)}` : candidate.name} (change ${index + 1})`}
+                aria-label={`Include ${candidate.kind === "correction" ? "correction and future rule" : candidate.kind === "unresolved_identity" ? "unresolved mention" : candidate.kind}: ${candidate.kind === "topic" ? candidate.topic.name : candidate.kind === "claim" || candidate.kind === "correction" ? `${knownTopics.find((t) => t.id === candidate.claim.subject_id)?.name || "Topic"} ${candidate.claim.predicate}: ${candidate.claim.value}` : candidate.kind === "connection" ? `${endpointLabel(candidate.connection.from, knownTopics)} ${candidate.connection.relation} ${endpointLabel(candidate.connection.to, knownTopics)}` : candidate.name} (change ${index + 1})`}
                 checked={included[index]}
                 onChange={(e) =>
                   setIncluded((list) =>
@@ -136,18 +179,20 @@ export function ProposalEditor({
                   )
                 }
               />
-              Include{' '}
-              {candidate.kind === 'unresolved_identity'
-                ? 'unresolved mention'
-                : candidate.kind === 'correction'
-                  ? 'correction and future rule'
+              Include{" "}
+              {candidate.kind === "unresolved_identity"
+                ? "unresolved mention"
+                : candidate.kind === "correction"
+                  ? "correction and future rule"
                   : candidate.kind}
             </label>
-            {candidate.kind === 'topic' && (
+            {candidate.kind === "topic" && (
               <>
                 <div className="form-grid">
-                  <label>
-                    Topic name
+                  <Field
+                    id={`${proposal.id}-${index}-topic-name`}
+                    label="Topic name"
+                  >
                     <input
                       aria-label="Topic name"
                       value={candidate.topic.name}
@@ -158,9 +203,11 @@ export function ProposalEditor({
                         })
                       }
                     />
-                  </label>
-                  <label>
-                    Topic kind
+                  </Field>
+                  <Field
+                    id={`${proposal.id}-${index}-topic-kind`}
+                    label="Topic kind"
+                  >
                     <select
                       value={candidate.topic.topic_kind}
                       onChange={(e) =>
@@ -168,7 +215,7 @@ export function ProposalEditor({
                           ...candidate,
                           topic: {
                             ...candidate.topic,
-                            topic_kind: e.target.value as Topic['topic_kind'],
+                            topic_kind: e.target.value as Topic["topic_kind"],
                           },
                         })
                       }
@@ -177,19 +224,20 @@ export function ProposalEditor({
                       <option value="project">Project</option>
                       <option value="thread">Thread</option>
                     </select>
-                  </label>
+                  </Field>
                 </div>
-                <label>
-                  Aliases
+                <Field id={`${proposal.id}-${index}-aliases`} label="Aliases">
                   <input
                     value={listDrafts[index].aliases}
                     onChange={(e) =>
-                      updateList(index, 'aliases', e.target.value)
+                      updateList(index, "aliases", e.target.value)
                     }
                   />
-                </label>
-                <label>
-                  Topic sensitivity
+                </Field>
+                <Field
+                  id={`${proposal.id}-${index}-topic-sensitivity`}
+                  label="Topic sensitivity"
+                >
                   <select
                     value={candidate.topic.sensitivity}
                     onChange={(e) =>
@@ -197,7 +245,7 @@ export function ProposalEditor({
                         ...candidate,
                         topic: {
                           ...candidate.topic,
-                          sensitivity: e.target.value as Topic['sensitivity'],
+                          sensitivity: e.target.value as Topic["sensitivity"],
                         },
                       })
                     }
@@ -206,16 +254,16 @@ export function ProposalEditor({
                     <option value="cloud_allowed">Cloud allowed</option>
                     <option value="local_only">Local-only</option>
                   </select>
-                </label>
+                </Field>
               </>
             )}
-            {(candidate.kind === 'claim' ||
-              candidate.kind === 'correction') && (
+            {(candidate.kind === "claim" ||
+              candidate.kind === "correction") && (
               <>
                 {(() => {
                   const original = proposal.candidates[index];
-                  return (original.kind === 'claim' ||
-                    original.kind === 'correction') &&
+                  return (original.kind === "claim" ||
+                    original.kind === "correction") &&
                     (original.claim.value !== candidate.claim.value ||
                       original.claim.predicate !== candidate.claim.predicate ||
                       original.claim.uncertainty !==
@@ -225,22 +273,24 @@ export function ProposalEditor({
                 })()}
                 <p className="subject">
                   {knownTopics.find((t) => t.id === candidate.claim.subject_id)
-                    ?.name || 'Topic'}{' '}
-                  {candidate.kind === 'correction' && (
+                    ?.name || "Topic"}{" "}
+                  {candidate.kind === "correction" && (
                     <span className="badge">
                       Supersedes earlier understanding
                     </span>
                   )}
                 </p>
-                {candidate.kind === 'correction' && (
+                {candidate.kind === "correction" && (
                   <div className="diff-old">
                     <span className="muted">Earlier value</span>
                     <p>{candidate.rule.match_value}</p>
                   </div>
                 )}
                 <div className="form-grid">
-                  <label>
-                    Claim property
+                  <Field
+                    id={`${proposal.id}-${index}-claim-property`}
+                    label="Claim property"
+                  >
                     <input
                       value={candidate.claim.predicate}
                       onChange={(e) =>
@@ -250,7 +300,7 @@ export function ProposalEditor({
                             ...candidate.claim,
                             predicate: e.target.value,
                           },
-                          ...(candidate.kind === 'correction'
+                          ...(candidate.kind === "correction"
                             ? {
                                 rule: {
                                   ...candidate.rule,
@@ -261,11 +311,11 @@ export function ProposalEditor({
                         })
                       }
                     />
-                  </label>
+                  </Field>
                   <label>
-                    {candidate.kind === 'correction'
-                      ? 'New value'
-                      : 'Claim value'}
+                    {candidate.kind === "correction"
+                      ? "New value"
+                      : "Claim value"}
                     <input
                       aria-label="Claim value"
                       value={candidate.claim.value}
@@ -273,7 +323,7 @@ export function ProposalEditor({
                         update(index, {
                           ...candidate,
                           claim: { ...candidate.claim, value: e.target.value },
-                          ...(candidate.kind === 'correction'
+                          ...(candidate.kind === "correction"
                             ? {
                                 rule: {
                                   ...candidate.rule,
@@ -286,11 +336,13 @@ export function ProposalEditor({
                     />
                   </label>
                 </div>
-                <label>
-                  Uncertainty
+                <Field
+                  id={`${proposal.id}-${index}-uncertainty`}
+                  label="Uncertainty"
+                >
                   <textarea
                     rows={2}
-                    value={candidate.claim.uncertainty || ''}
+                    value={candidate.claim.uncertainty || ""}
                     onChange={(e) =>
                       update(index, {
                         ...candidate,
@@ -301,13 +353,15 @@ export function ProposalEditor({
                       })
                     }
                   />
-                </label>
-                {candidate.kind === 'correction' && (
+                </Field>
+                {candidate.kind === "correction" && (
                   <>
-                    <label>
-                      Reason and context
+                    <Field
+                      id={`${proposal.id}-${index}-reason-and-context`}
+                      label="Reason and context"
+                    >
                       <textarea
-                        value={candidate.rule.scope.context || ''}
+                        value={candidate.rule.scope.context || ""}
                         onChange={(e) =>
                           update(index, {
                             ...candidate,
@@ -321,19 +375,21 @@ export function ProposalEditor({
                           })
                         }
                       />
-                    </label>
-                    <label>
-                      Apply future rule to these source paths
+                    </Field>
+                    <Field
+                      id={`${proposal.id}-${index}-apply-future-rule-to-these-source-paths`}
+                      label="Apply future rule to these source paths"
+                    >
                       <textarea
                         placeholder="Empty means eligible sources for this topic and property"
                         value={listDrafts[index].paths}
                         onChange={(e) =>
-                          updateList(index, 'paths', e.target.value)
+                          updateList(index, "paths", e.target.value)
                         }
                       />
-                    </label>
+                    </Field>
                     <p className="muted">
-                      The rule applies only to this topic’s{' '}
+                      The rule applies only to this topic’s{" "}
                       {candidate.rule.predicate}. Future replacements still need
                       review.
                     </p>
@@ -345,14 +401,16 @@ export function ProposalEditor({
                 />
               </>
             )}
-            {candidate.kind === 'connection' && (
+            {candidate.kind === "connection" && (
               <>
                 <p>
-                  {endpointLabel(candidate.connection.from, knownTopics)} →{' '}
+                  {endpointLabel(candidate.connection.from, knownTopics)} →{" "}
                   {endpointLabel(candidate.connection.to, knownTopics)}
                 </p>
-                <label>
-                  Relationship
+                <Field
+                  id={`${proposal.id}-${index}-relationship`}
+                  label="Relationship"
+                >
                   <input
                     value={candidate.connection.relation}
                     onChange={(e) =>
@@ -365,11 +423,13 @@ export function ProposalEditor({
                       })
                     }
                   />
-                </label>
-                <label>
-                  Uncertainty
+                </Field>
+                <Field
+                  id={`${proposal.id}-${index}-uncertainty`}
+                  label="Uncertainty"
+                >
                   <textarea
-                    value={candidate.connection.uncertainty || ''}
+                    value={candidate.connection.uncertainty || ""}
                     onChange={(e) =>
                       update(index, {
                         ...candidate,
@@ -380,13 +440,13 @@ export function ProposalEditor({
                       })
                     }
                   />
-                </label>
+                </Field>
                 {candidate.connection.sources.map((s, i) => (
                   <SourceEvidence source={s} key={i} />
                 ))}
               </>
             )}
-            {candidate.kind === 'unresolved_identity' && (
+            {candidate.kind === "unresolved_identity" && (
               <>
                 <h3>Who is “{candidate.name}”?</h3>
                 <p>
@@ -397,7 +457,7 @@ export function ProposalEditor({
                   {candidate.candidates.map((id) => (
                     <li key={id}>
                       {knownTopics.find((t) => t.id === id)?.name ||
-                        'Unknown person'}{' '}
+                        "Unknown person"}{" "}
                       <span className="path">{id}</span>
                     </li>
                   ))}
@@ -411,17 +471,21 @@ export function ProposalEditor({
         ))}
       </fieldset>
       {pending && (
-        <footer className="actions">
-          <button
-            className="primary"
+        <footer className="review-footer">
+          <Button
+            variant="primary"
             disabled={busy || !included.some(Boolean)}
             onClick={() => void decide(approvalCandidates())}
           >
             Approve selected changes
-          </button>
-          <button disabled={busy} onClick={() => void decide(null)}>
+          </Button>
+          <Button
+            disabled={busy}
+            variant="danger"
+            onClick={() => void decide(null)}
+          >
             Reject proposal
-          </button>
+          </Button>
         </footer>
       )}
       {!pending && (

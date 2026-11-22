@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 describe('Native accepted correction after process restart', () => {
   it('recovers the same topic, current correction and source history from real services', async () => {
     // Trigger a real disposable-index rebuild before reading authoritative records.
+    await $('h1=Today').waitForDisplayed();
+    await $('button[aria-label="Search"]').click();
     await $('input[type="search"]').waitForDisplayed(); await $('input[type="search"]').setValue('Alex');
     await expect($('h2=Synthetic project meeting')).toBeDisplayed();
     await $('button[aria-label="Topics"]').click();

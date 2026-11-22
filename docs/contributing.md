@@ -1,5 +1,7 @@
 # Contributing
 
+For UI work, follow the [design system](design-system.md), including its same-change requirement for missing tokens, components, states and patterns.
+
 ## Crates and dependency direction
 
 - `topics-core`: foundation document/search values plus canonical workspace wire values and deterministic UUID/date/candidate validation. It has no filesystem, SQL, UI or network behavior.
@@ -93,6 +95,8 @@ Citations validate source ID, root-relative path, full-document SHA-256, UTF-8 b
 A correction cites its persisted user statement, supersedes the old revision, and records a deterministic topic/predicate/source-scoped suppression rule. Old transcript assertions remain in history; a rule suppresses false candidates but never accepts a replacement. Editing a pending assertion during human approval adds a persisted user-edit statement to its evidence in the same operation, retaining the original transcript only as context. Source/topic sensitivity is durable; latest same-path labels dominate older hashes and local-only evidence taints derived topics, including connection-only evidence. Selected paths resolve actual filesystem identities before policy, so APFS case aliases cannot bypass labels or the reserved app directory. Same-content relocation/copy retains restrictive or unresolved sensitivity until explicit review; this is bounded hash matching, not universal recognition of rewritten copies. Human consent is bound to path, content hash and operation sequence: an older destination label cannot release moved private bytes, and a decision about a stale source ID cannot grant access to the new occupant. A fresh human review of the current mapping can release its exact bytes. Source consent cannot override a private derived topic: topic taint is checked before source review, and preview visibly excludes the affected source while retaining unrelated eligible sources. Releasing that topic requires its explicit human declassification as well. Only root `topics/` is reserved; nested source directories such as `Projects/topics/` remain eligible. Model-supplied CloudAllowed becomes Unknown; explicit human sensitivity decisions grant access. Unknown confirmation remains per run and cannot lift local-only or damaged mappings.
 
 The synthetic-only `topics-store/test-support` feature exposes a deterministic interruption seam used by BDD; normal application callers do not need it. Core validation runs are documented in `features/topic-workspace/evidence-core-green.md`; desktop and runtime-only scenarios require their owning streams' evidence.
+
+When running the store integration tests without the BDD workspace member, enable that feature explicitly: `cargo test -p topics-store --features test-support`. For a combined runtime/setup/store run, use `cargo test -p topics-runtime -p topics-setup -p topics-store --features topics-store/test-support`. The full workspace check enables it through the BDD dependency.
 
 ## Reviewed model publication and evidence boundaries
 

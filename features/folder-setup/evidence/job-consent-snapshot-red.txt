@@ -1,0 +1,39 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 0.84s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6685056) panicked at crates/topics-setup/tests/protocol.rs:409:13:
+assertion `left == right` failed: a persisted consent conflict must reach async subscribers even when control returns Err
+  left: Paused
+ right: NeedsConsent
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... FAILED
+
+failures:
+
+failures:
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.78s
+
+FAILED
+
+failures:
+
+---- pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs stdout ----
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6685054) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.80s
+
+error: test failed, to rerun pass `-p topics-setup --test protocol`

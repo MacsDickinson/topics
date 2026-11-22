@@ -7,17 +7,26 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tauri::Emitter;
+use tauri_plugin_dialog::DialogExt;
+use topics_core::pilot_briefing::PilotBriefing;
+use topics_core::pilot_review::*;
+use topics_core::setup::*;
 use topics_core::workspace::*;
 use topics_runtime::{CommitPermit, HostTools, RunRequest, Runtime, RuntimeConfig};
+use topics_setup::SetupCoordinator;
 use topics_store::WorkspaceService;
+
+type SetupWatch = Option<(String, String, tauri::async_runtime::JoinHandle<()>)>;
 
 #[derive(Clone)]
 pub struct WorkspaceState {
     app_data: Result<PathBuf, String>,
-    service: Arc<Mutex<Option<WorkspaceService>>>,
+    service: Arc<Mutex<Option<Arc<Mutex<WorkspaceService>>>>>,
+    setup: Arc<Mutex<Option<SetupCoordinator>>>,
     runtime: Result<Arc<Runtime>, String>,
     lifecycle: Arc<Mutex<()>>,
     active: Arc<Mutex<Vec<(String, String)>>>,
+    setup_watch: Arc<Mutex<SetupWatch>>,
 }
 impl WorkspaceState {
     pub fn new(app_data: Result<PathBuf, String>) -> Self {
@@ -36,9 +45,11 @@ impl WorkspaceState {
         Self {
             app_data,
             service: Arc::new(Mutex::new(None)),
+            setup: Arc::new(Mutex::new(None)),
             runtime,
             lifecycle: Arc::new(Mutex::new(())),
             active: Arc::new(Mutex::new(Vec::new())),
+            setup_watch: Arc::new(Mutex::new(None)),
         }
     }
     fn runtime(&self) -> WorkspaceResult<&Runtime> {
@@ -53,18 +64,55 @@ impl WorkspaceState {
             .as_ref()
             .map_err(|message| ApiError::new("invalid_input", message))
     }
+    fn service(&self) -> WorkspaceResult<Arc<Mutex<WorkspaceService>>> {
+        let app_data = self.ready()?;
+        let mut slot = self.service.lock().map_err(|_| {
+            ApiError::new("internal", "Workspace service unavailable. Restart Topics.")
+        })?;
+        if slot.is_none() {
+            *slot = Some(Arc::new(Mutex::new(WorkspaceService::open(app_data)?)));
+        }
+        Ok(slot.as_ref().expect("workspace initialized").clone())
+    }
     fn with<T>(
         &self,
         call: impl FnOnce(&mut WorkspaceService) -> WorkspaceResult<T>,
     ) -> WorkspaceResult<T> {
-        let app_data = self.ready()?;
-        let mut service = self.service.lock().map_err(|_| {
+        let service = self.service()?;
+        let mut service = service.lock().map_err(|_| {
             ApiError::new("internal", "Workspace service unavailable. Restart Topics.")
         })?;
-        if service.is_none() {
-            *service = Some(WorkspaceService::open(app_data)?);
+        call(&mut service)
+    }
+    fn coordinator(&self) -> WorkspaceResult<SetupCoordinator> {
+        let mut slot = self
+            .setup
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup service unavailable."))?;
+        if slot.is_none() {
+            let runtime = self
+                .runtime
+                .as_ref()
+                .map_err(|message| ApiError::new("runtime_unavailable", message))?
+                .clone();
+            *slot = Some(SetupCoordinator::new(
+                self.service()?,
+                runtime,
+                self.lifecycle.clone(),
+            ));
         }
-        call(service.as_mut().expect("workspace initialized"))
+        Ok(slot.as_ref().expect("setup initialized").clone())
+    }
+    fn stop_setup_watch(&self) -> WorkspaceResult<()> {
+        if let Some((_, _, handle)) = self
+            .setup_watch
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup watch unavailable."))?
+            .take()
+        {
+            handle.abort();
+        }
+        Ok(())
     }
     fn cancel_all(&self) -> WorkspaceResult<()> {
         let active = self
@@ -123,6 +171,55 @@ macro_rules! service_command {
     };
 }
 service_command!(workspace_root_get, RootGetRequest, RootGetResult, root_get);
+service_command!(pilot_briefing, RootRequest, PilotBriefing, pilot_briefing);
+service_command!(
+    pilot_snapshot_create,
+    PilotSnapshotCreateRequest,
+    PilotSnapshot,
+    pilot_snapshot_create
+);
+service_command!(
+    pilot_feedback_snapshot_create,
+    PilotSnapshotCreateRequest,
+    PilotSnapshot,
+    pilot_feedback_snapshot_create
+);
+service_command!(
+    pilot_snapshot_list,
+    RootRequest,
+    Vec<PilotSnapshot>,
+    pilot_snapshot_list
+);
+service_command!(
+    pilot_snapshot_get,
+    PilotSnapshotGetRequest,
+    PilotSnapshot,
+    pilot_snapshot_get
+);
+service_command!(
+    pilot_feedback_list,
+    PilotSnapshotGetRequest,
+    Vec<PilotFeedback>,
+    pilot_feedback_list
+);
+service_command!(
+    pilot_feedback_save,
+    PilotFeedbackSaveRequest,
+    PilotFeedback,
+    pilot_feedback_save
+);
+service_command!(
+    pilot_week_get,
+    PilotWeekGetRequest,
+    PilotWeekResult,
+    pilot_week_get
+);
+service_command!(
+    pilot_week_save,
+    PilotWeekSaveRequest,
+    PilotWeekResult,
+    pilot_week_save
+);
 service_command!(
     workspace_scope_preview,
     ScopePreviewRequest,
@@ -155,6 +252,12 @@ service_command!(
 );
 service_command!(workspace_topic_get, TopicGetRequest, TopicView, topic_get);
 service_command!(
+    workspace_user_statement,
+    UserStatementRequest,
+    UserStatement,
+    user_statement
+);
+service_command!(
     workspace_statement_get,
     StatementGetRequest,
     UserStatement,
@@ -186,6 +289,166 @@ service_command!(
     source_get
 );
 
+// Setup commands expose the canonical service contract directly. Batch capabilities
+// and publication stay behind the job coordinator, never the webview.
+service_command!(
+    setup_inventory,
+    SetupInventoryRequest,
+    SetupInventory,
+    setup_inventory
+);
+service_command!(
+    setup_manifest_preview,
+    SetupManifestPreviewRequest,
+    SetupManifest,
+    setup_manifest_preview
+);
+service_command!(setup_job_get, SetupJobRequest, SetupJob, setup_job_get);
+service_command!(setup_jobs_list, RootRequest, Vec<SetupJob>, setup_jobs_list);
+service_command!(
+    setup_draft_edit,
+    SetupDraftEditRequest,
+    SetupJob,
+    setup_draft_edit
+);
+service_command!(
+    setup_draft_disposition,
+    SetupDraftDispositionRequest,
+    SetupJob,
+    setup_draft_disposition
+);
+service_command!(
+    setup_job_reconsent,
+    SetupJobReconsentRequest,
+    SetupJob,
+    setup_job_reconsent
+);
+service_command!(
+    setup_connection_confirm_preview,
+    SetupConnectionConfirmPreviewRequest,
+    SetupReceipt,
+    setup_connection_confirm_preview
+);
+service_command!(
+    setup_context_add,
+    UserStatementRequest,
+    UserStatement,
+    setup_context_add
+);
+service_command!(
+    setup_save_preview,
+    SetupSavePreviewRequest,
+    SetupReceipt,
+    setup_save_preview
+);
+service_command!(
+    setup_confirm_preview,
+    SetupConfirmPreviewRequest,
+    SetupReceipt,
+    setup_confirm_preview
+);
+service_command!(
+    setup_correction_preview,
+    SetupCorrectionPreviewRequest,
+    SetupCorrectionPreview,
+    setup_correction_preview
+);
+service_command!(
+    setup_decide,
+    SetupDecisionRequest,
+    SetupDecisionResult,
+    setup_decide
+);
+service_command!(
+    setup_topic_review,
+    TopicGetRequest,
+    SetupTopicReview,
+    setup_topic_review
+);
+
+#[tauri::command]
+pub async fn setup_job_watch(
+    request: Option<Value>,
+    state: tauri::State<'_, WorkspaceState>,
+    app: tauri::AppHandle,
+) -> WorkspaceResult<SetupJob> {
+    let request: SetupJobRequest = decode_request(request)?;
+    blocking(state.inner().clone(), move |state| {
+        let _gate = state
+            .lifecycle
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
+        let coordinator = state.coordinator()?;
+        let mut receiver = coordinator.subscribe();
+        let initial = coordinator.get(request.clone())?;
+        state.stop_setup_watch()?;
+        let root_id = request.root_id.clone();
+        let job_id = request.job_id.clone();
+        let handle = tauri::async_runtime::spawn(async move {
+            while receiver.changed().await.is_ok() {
+                let snapshot = receiver.borrow_and_update().clone();
+                if let Some(snapshot) =
+                    snapshot.filter(|job| job.root_id == root_id && job.job_id == job_id)
+                {
+                    let _ = app.emit("setup_job_event", snapshot);
+                }
+            }
+        });
+        *state
+            .setup_watch
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup watch unavailable."))? =
+            Some((request.root_id, request.job_id, handle));
+        Ok(initial)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn setup_job_start(
+    request: Option<Value>,
+    state: tauri::State<'_, WorkspaceState>,
+) -> WorkspaceResult<SetupJob> {
+    let request: SetupJobRequest = decode_request(request)?;
+    blocking(state.inner().clone(), move |state| {
+        state.coordinator()?.start(request)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn setup_job_control(
+    request: Option<Value>,
+    state: tauri::State<'_, WorkspaceState>,
+) -> WorkspaceResult<SetupJob> {
+    let request: SetupJobControlRequest = decode_request(request)?;
+    blocking(state.inner().clone(), move |state| {
+        state.coordinator()?.control(request)
+    })
+    .await
+}
+service_command!(
+    setup_job_create,
+    SetupJobCreateRequest,
+    SetupJob,
+    setup_job_create
+);
+
+#[tauri::command]
+pub async fn workspace_choose_root(app: tauri::AppHandle) -> WorkspaceResult<Option<String>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .blocking_pick_folder()
+            .map(|folder| {
+                folder
+                    .into_path()
+                    .map_err(|_| ApiError::new("invalid_input", "Choose a local notes folder."))
+                    .map(|path| path.to_string_lossy().into_owned())
+            })
+            .transpose()
+    })
+    .await
+    .map_err(|_| ApiError::new("internal", "Folder chooser stopped unexpectedly."))?
+}
 #[tauri::command]
 pub async fn workspace_root_set(
     request: Option<Value>,
@@ -198,6 +461,15 @@ pub async fn workspace_root_set(
             .lock()
             .map_err(|_| ApiError::new("internal", "Run state unavailable."))?;
         state.cancel_all()?;
+        state.stop_setup_watch()?;
+        let coordinator = state
+            .setup
+            .lock()
+            .map_err(|_| ApiError::new("internal", "Setup service unavailable."))?
+            .clone();
+        if let Some(coordinator) = coordinator {
+            coordinator.cancel_active()?;
+        }
         state.with(|service| service.root_set(request))
     })
     .await
@@ -628,6 +900,27 @@ mod tests {
             "invalid_input"
         );
         assert!(decode_request::<RootGetRequest>(Some(json!({}))).is_ok());
+    }
+    #[test]
+    fn setup_commands_decode_the_canonical_contract_before_service_access() {
+        assert!(
+            decode_request::<SetupInventoryRequest>(Some(json!({
+                "root_id": "synthetic-root", "roles": []
+            })))
+            .is_ok()
+        );
+        for request in [
+            json!({"root_id": "synthetic-root"}),
+            json!({"root_id": "synthetic-root", "roles": [], "extra": true}),
+            json!({"root_id": "synthetic-root", "roles": [{"path": "x", "role": "invented"}]}),
+        ] {
+            assert_eq!(
+                decode_request::<SetupInventoryRequest>(Some(request))
+                    .unwrap_err()
+                    .code,
+                "invalid_input"
+            );
+        }
     }
     #[test]
     fn publication_denial_cannot_leave_a_pending_proposal_visible() {

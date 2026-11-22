@@ -1,7 +1,11 @@
 //! Authoritative Markdown knowledge service. No provider access or model approval surface.
 mod persistence;
+mod pilot_briefing;
+mod pilot_review;
+mod pilot_views;
 mod proposals;
 mod scopes;
+mod setup;
 use super::TopicsService;
 use persistence::*;
 use scopes::validate_source;
@@ -44,6 +48,7 @@ struct Context {
     root_id: Id,
     partition: PathBuf,
     interrupt_after: Option<usize>,
+    instance_id: Id,
 }
 #[derive(Serialize, Deserialize)]
 struct RootEpoch {
@@ -56,6 +61,8 @@ struct RootEpoch {
 pub struct WorkspaceService {
     base: TopicsService,
     fault: std::sync::Mutex<Option<usize>>,
+    instance_id: Id,
+    pilot_views: pilot_views::IssuedViews,
 }
 impl WorkspaceService {
     /// Human-only persisted correction/edit evidence retrieval; never a model tool.
@@ -80,6 +87,8 @@ impl WorkspaceService {
         Ok(Self {
             base: TopicsService::open(app_data).map_err(internal)?,
             fault: std::sync::Mutex::new(None),
+            instance_id: new_id(),
+            pilot_views: Default::default(),
         })
     }
     fn context(&self, expected: Option<&str>) -> WResult<Context> {
@@ -120,6 +129,7 @@ impl WorkspaceService {
         Ok(Context {
             root,
             root_id: epoch.root_id,
+            instance_id: self.instance_id.clone(),
             partition,
             interrupt_after: self.fault.lock().map_err(internal)?.take(),
         })
@@ -132,13 +142,25 @@ impl WorkspaceService {
     }
     pub fn root_get(&self, _request: RootGetRequest) -> WResult<RootGetResult> {
         let _guard = self.base.lock().map_err(internal)?;
-        if self
-            .base
-            .configured_root()
-            .map_err(|_| error("no_root", "Choose an available notes root"))?
-            .is_none()
-        {
-            return Ok(RootGetResult { root: None });
+        match self.base.configured_root() {
+            Ok(None) => return Ok(RootGetResult { root: None }),
+            Ok(Some(_)) => {}
+            Err(_) => {
+                // Today can report a disconnected volume using its last identity.
+                // Writes still require an available, validated root through with().
+                let config: crate::Config = read_json(&self.base.app_data.join("config.json"))?;
+                let epoch: RootEpoch = read_json(&self.base.app_data.join("workspace-root.json"))?;
+                let path = Path::new(&epoch.path);
+                if config.notes_root.as_deref() == Some(path) && fs::read_dir(path).is_err() {
+                    return Ok(RootGetResult {
+                        root: Some(RootRef {
+                            root_id: epoch.root_id,
+                            path: epoch.path,
+                        }),
+                    });
+                }
+                return Err(error("no_root", "Choose an available notes root"));
+            }
         }
         let ctx = self.context(None)?;
         recover(&ctx)?;

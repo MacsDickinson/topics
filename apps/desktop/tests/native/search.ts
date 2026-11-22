@@ -1,12 +1,14 @@
 import { browser, $, $$, expect } from '@wdio/globals';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { hasConvergedResult } from './search-predicate.mjs';
 
 describe('Phase 0 real macOS app, real Rust store', () => {
   it('searches synthetic notes through IPC and shows No matches', async () => {
     const search = await $('input[type="search"]');
-    await search.waitForDisplayed();
+    await $('h1=Today').waitForDisplayed();
     await browser.keys(['Meta', 'k']);
+    await search.waitForDisplayed();
     await expect(search).toBeFocused();
     await search.setValue('ledger');
     await expect($('h2')).toHaveText('Ledger migration');
@@ -60,7 +62,7 @@ describe('running app and independent CLI coherence', () => {
           await browser.waitUntil(
             async () => (await $('[role="status"]').getText()) !== 'Searching…',
           );
-          return await $('h2').isExisting();
+          return await browser.execute(hasConvergedResult);
         },
         {
           timeout: 5000,
@@ -68,7 +70,8 @@ describe('running app and independent CLI coherence', () => {
           timeoutMsg: 'External edit did not converge through real desktop IPC',
         },
       );
-      await expect($('h2')).toHaveText('Converged ledger');
+      await expect($('.result-list .search-result h2')).toHaveText('Converged ledger');
+      await expect($('.result-list .search-result .path')).toHaveText('new.md');
       await browser.saveScreenshot(resolve('evidence/native-watcher-edit.png'));
     } finally {
       writeFileSync(note, original);

@@ -1,0 +1,16 @@
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 2.17s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test successful_turn_without_scoped_read_cannot_claim_source_coverage ... 
+running 1 test
+Synthetic coverage: SetupCoverage { selected: 2, processed: [], failed: ["profiles/000.md", "profiles/001.md"], outstanding: [], excluded: [Exclusion { path: "topics", reason: "Hidden/config folder or app-owned records" }], complete: false, model_calls: 1, transmission_authorizations: 1 }; batch outcomes: [(Failed, Some(ApiError { code: "runtime_unavailable", message: "Batch did not finish; retry these inputs or defer them", details: None }), [])]
+test successful_turn_without_scoped_read_cannot_claim_source_coverage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 1.58s
+
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 1.59s
+

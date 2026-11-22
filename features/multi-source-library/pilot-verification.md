@@ -1,0 +1,25 @@
+# Friday pilot verification
+
+The service tests create fictional Markdown and isolated application data. The browser tests exercise the interface with mocked IPC. The native tests launch the macOS WebKit app and use the Rust service across process restarts.
+
+| Friday question | What the tests establish |
+|---|---|
+| Can I tell how much evidence Topics checked? | The [briefing fixtures](../../crates/topics-store/tests/pilot_briefing.rs) exercise checked, changed, missing, failed and excluded sources. They preserve the last analysed version and time. An unreadable checkpoint leaves healthy evidence visible and marks the history incomplete. The [view tests](../../crates/topics-store/tests/pilot_snapshot_view.rs) include reopening an offline root. |
+| What could I actually see before the meeting? | Multiple analyses between kept briefings contribute their still-current, in-scope changes. A repeated assertion is suppressed. A stale display cannot silently become the meeting record. The [meeting journey](../../crates/topics-store/tests/pilot_review_journey.rs) edits the source after capture and reopens the original briefing. |
+| Was the miss catchable? | In that journey two surfaced material changes and one omitted decision with analysed evidence produce **1 known omission / 3 eligible changes**. The decision first learned on Friday and a missed personal commitment are counted separately. The [desktop scenarios](../../apps/desktop/tests/pilot.spec.ts) exercise one-click material choices and reporting a miss on an empty Today. |
+| Will rewording a correction inflate my error count? | The [journal tests](../../crates/topics-store/tests/pilot_review.rs) verify attribution, deduplication, reconstruction from Markdown, undo and separation of feedback from approval. Editing a claim can suggest an error. The user can adjust the tally when the edit reflects a real-world change. |
+| Can a correction help with the next meeting? | The [learning journey](../../crates/topics-store/tests/pilot_learning_journey.rs) approves a scoped correction, analyses a later independent note, and checks its new citation and the weekly result of one eligible occurrence and zero recurrences. Undo changes future behaviour and preserves the recorded briefing. Separate briefing tests cover unrelated passages, replay and an analysis performed between preview and approval. |
+| Is missing measurement visible? | The journal tests distinguish zero from blank, reject contradictory links, resolve project names across case and spacing, and exercise baseline, comparable pilot weeks and an extension. [Draft tally tests](../../crates/topics-store/src/workspace/pilot_review.rs) cover four distinct synthetic dispositions. The released pilot measures missed personal commitments and displays draft quality as unavailable because it has no automatic draft producer. |
+| Can I come back to my Friday review? | The [native meeting](../../apps/desktop/tests/native/friday-pilot.ts) and [restart](../../apps/desktop/tests/native/friday-restart.ts) journeys use the actual command bridge to report a miss, retrieve it after restarting Topics and reopen a partially completed weekly review. |
+
+## Integrated build
+
+The production source is `d04e37a7976984379743815fb921c7d1d17ed5d5`. On Apple silicon, the repository's core check passed, including 26 focused pilot service tests and all three Rust BDD runners. Workspace Clippy passed with warnings denied, and all 13 desktop Rust tests passed. All 153 Playwright tests passed. The native search, workspace, setup, oversized-note and scripted setup rehearsal suites also passed. The real macOS workspace journey saved a miss, retrieved it after restarting the app and reopened a partially completed scorecard.
+
+The production app was built from a clean detached checkout. The arm64 ZIP was extracted, the ad-hoc signature validated, and the packaged executable compared with the original. Launching the extracted release with fresh application data produced its 1180 × 800 macOS window. The packaged executable also passed the isolated proxy startup test. ZIP SHA-256 is `5a2ff8c247b4cfed55a809a5385bf5b7fc382737a155c9b049877b91058d1d63`.
+
+GitHub declined to provision both runners because of the account billing or spending limit. The recorded passes above were obtained on this Mac. [Core workflow](https://github.com/MacsDickinson/topics/actions/runs/44276082191) · [Desktop workflow](https://github.com/MacsDickinson/topics/actions/runs/44276080284)
+
+## Field evidence
+
+Only the person attending the sync can establish which decisions mattered, what was missed and how long preparation took. Use the same project for one baseline and two comparable pilot weeks. Record the source, decision and commitment counts, total preparation minutes (including correction time), and correction minutes separately. Enter zero when observed and leave unknowns blank. The [pilot decision rule](PILOT.md) specifies when to extend the trial. The work Mac holds the completed scorecards.

@@ -30,6 +30,7 @@ test.beforeEach(async ({ page }) => {
     };
   });
   await page.goto('/');
+  await page.getByRole('button', {name: 'Search', exact: true}).click();
 });
 
 test('late responses cannot replace newer results or cleared input', async ({

@@ -1,0 +1,46 @@
+Command: cargo test -p topics-setup --test protocol budget --offline -- --test-threads=1
+   Compiling libsqlite3-sys v0.36.0
+   Compiling rusqlite v0.38.0
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-store)
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 5.03s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 2 tests
+test exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error ... 
+running 1 test
+test exhausted_reviewed_attempt_budget_returns_an_actionable_resume_error ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.74s
+
+ok
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... 
+running 1 test
+test reviewed_retry_budget_keeps_each_attempt_to_one_runtime_turn ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 1.45s
+
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 4.23s
+
+
+Exit: 0
+
+Command: cargo test -p topics-setup --test protocol pause_reopen_and_changed --offline -- --test-threads=1
+    Finished `test` profile [unoptimized] target(s) in 0.14s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.76s
+
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 2.77s
+
+
+Exit: 0

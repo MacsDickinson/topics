@@ -2,8 +2,6 @@ import {
   mkdtempSync,
   mkdirSync,
   writeFileSync,
-  readFileSync,
-  readdirSync,
   rmSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -13,7 +11,7 @@ import {
   assertNoTopicsFallback,
 } from './native-environment.mjs';
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { sourceSnapshot } from './native-source-snapshot.mjs';
 
 if (process.platform !== 'darwin')
   throw new Error('This smoke test requires a real macOS app session.');
@@ -40,29 +38,14 @@ writeFileSync(
   join(newNotes, 'new.md'),
   '# New ledger migration\n\nNewRoot ledger content.\n',
 );
-const newBefore = JSON.stringify(snapshot(newNotes));
+const newBefore = JSON.stringify(sourceSnapshot(newNotes));
 const note = join(notes, 'memory/projects/ledger-migration.md');
 mkdirSync(join(notes, 'memory/projects'), { recursive: true });
 writeFileSync(
   note,
   '# Ledger migration\n\nThe ledger migration is ready for review.\n',
 );
-function snapshot(root) {
-  return readdirSync(root, { withFileTypes: true })
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((entry) => {
-      const path = join(root, entry.name);
-      if (entry.isSymbolicLink())
-        throw new Error('Unexpected symlink in synthetic notes');
-      return [
-        entry.name,
-        entry.isDirectory()
-          ? snapshot(path)
-          : createHash('sha256').update(readFileSync(path)).digest('hex'),
-      ];
-    });
-}
-const before = JSON.stringify(snapshot(notes));
+const before = JSON.stringify(sourceSnapshot(notes));
 for (const file of workspace
   ? ['native-workspace.png', 'native-workspace-empty.png']
   : [
@@ -99,7 +82,7 @@ function run(command, args, cwd = desktop) {
     throw new Error(`${command} exited ${result.status}`);
 }
 try {
-  run('node', ['--test', 'scripts/native-environment.test.mjs']);
+  run('node', ['--test', 'scripts/native-environment.test.mjs', 'scripts/native-source-snapshot.test.mjs']);
   if (!workspace)
     run(
       'cargo',
@@ -120,9 +103,13 @@ try {
   ]);
   run('node', ['--test', 'scripts/native-proxy.test.mjs']);
   if (!startupOnly) run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts']);
-  if (JSON.stringify(snapshot(newNotes)) !== newBefore)
+  if (workspace && !startupOnly) {
+    run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts', '--spec', './tests/native/friday-pilot.ts']);
+    run('npm', ['exec', '--', 'wdio', 'run', 'wdio.conf.ts', '--spec', './tests/native/friday-restart.ts']);
+  }
+  if (JSON.stringify(sourceSnapshot(newNotes)) !== newBefore)
     throw new Error('Native smoke modified synthetic new-root notes');
-  if (JSON.stringify(snapshot(notes)) !== before)
+  if (JSON.stringify(sourceSnapshot(notes)) !== before)
     throw new Error('Native smoke modified the synthetic source note');
   for (const invalid of [
     '',

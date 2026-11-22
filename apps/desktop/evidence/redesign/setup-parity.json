@@ -1,0 +1,17 @@
+{
+  "reference": "91bce2b3996324b355617960ff756becb32862c8",
+  "checks": {
+    "acceptJob": true,
+    "start": true,
+    "control": true,
+    "save": true,
+    "action": true,
+    "invalidate": true,
+    "preview": true,
+    "savePreview": true,
+    "toggle": true,
+    "inventoryEffect": true,
+    "jobWatchEffect": true,
+    "pathTreeLogic": true
+  }
+}

@@ -1,0 +1,39 @@
+   Compiling syn v3.0.9
+   Compiling memchr v2.8.3
+   Compiling rustix v1.1.6
+   Compiling serde_json v1.0.154
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling tempfile v3.27.0
+   Compiling thiserror v2.0.21
+   Compiling serde v1.0.229
+   Compiling topics-core v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-core)
+   Compiling topics-store v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-core/crates/topics-store)
+    Finished `test` profile [unoptimized] target(s) in 7.20s
+     Running tests/setup_service.rs (/tmp/topics-setup-core-target/debug/deps/setup_service-228bc6443596a6b1)
+
+running 6 tests
+test revoked_publisher_cannot_attach_draft_or_reuse_attempt ... ok
+test inventory_excludes_hidden_symlinks_and_private_manifest_metadata ... ok
+test current_root_and_scope_provenance_are_not_rebased ... ok
+test stale_source_invalidates_receipt_and_preserves_draft ... FAILED
+test explicit_correction_survives_app_cache_loss_and_keeps_exact_statement ... ok
+test exact_manifest_multibatch_dedupe_save_confirm_rebuild ... ok
+
+failures:
+
+---- stale_source_invalidates_receipt_and_preserves_draft stdout ----
+
+thread 'stale_source_invalidates_receipt_and_preserves_draft' (6564702) panicked at crates/topics-store/tests/setup_service.rs:12:459:
+assertion `left == right` failed
+  left: "stale_evidence"
+ right: "conflict"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    stale_source_invalidates_receipt_and_preserves_draft
+
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.15s
+
+error: test failed, to rerun pass `-p topics-store --test setup_service`

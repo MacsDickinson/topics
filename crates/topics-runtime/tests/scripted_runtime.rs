@@ -70,8 +70,11 @@ for line in sys.stdin:
   def toolcall(call,tool,args):
    emit({{'id':call,'method':'item/tool/call','params':{{'threadId':thread,'turnId':turn,'callId':str(call),'namespace':'topics','tool':tool,'arguments':args}}}})
    reply=json.loads(sys.stdin.readline());assert reply['id']==call;return reply
-  reply=toolcall(10000,'propose_changes',{{'candidates':[{{'kind':'topic','topic':{{'id':'10000000-0000-4000-8000-000000000001','topic_kind':'person','name':'Synthetic Alex','aliases':[],'sensitivity':'cloud_allowed'}}}}]}});assert reply['result']['success']
+  if not mode.startswith('empty'):
+   reply=toolcall(10000,'propose_changes',{{'candidates':[{{'kind':'topic','topic':{{'id':'10000000-0000-4000-8000-000000000001','topic_kind':'person','name':'Synthetic Alex','aliases':[],'sensitivity':'cloud_allowed'}}}}]}});assert reply['result']['success']
   emit({{'method':'item/agentMessage/delta','params':{{'threadId':thread,'turnId':turn,'itemId':'message','delta':'buffered'}}}})
+  if mode in ['empty_complete','empty_failed']:
+   emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':'completed' if mode=='empty_complete' else 'failed'}}}}}});continue
   if mode=='invalid_after_buffer':
    assert 'error' in toolcall(10001,'read_file',{{'path':'private.md'}})
    emit({{'method':'turn/completed','params':{{'threadId':thread,'turn':{{'id':turn,'status':'completed'}}}}}});continue
@@ -195,6 +198,20 @@ fn malformed_unknown_status_failed_exit_wrong_turn_discard_buffered_candidates()
             matches!(terminal.event, RunEvent::Error { .. }),
             "{mode}: {terminal:?}"
         );
+        if let RunEvent::Error { error } = &terminal.event {
+            assert_eq!(
+                error.details,
+                Some(match mode {
+                    "failed" => json!({"phase":"turn", "reason":"model_terminal_failed"}),
+                    "invalid_after_buffer" =>
+                        json!({"phase":"callback", "reason":"authorization_denied"}),
+                    "malformed" => json!({"phase":"transport", "reason":"protocol_denied"}),
+                    "exit" => json!({"phase":"transport", "reason":"transport_failed"}),
+                    _ => json!({"phase":"execution", "reason":"validation_denied"}),
+                }),
+                "local enforcement stage, not a provider/root-cause guess: {mode}"
+            );
+        }
         assert_eq!(*host.stages.lock().unwrap(), 0, "{mode}");
         assert!(rx.recv_timeout(Duration::from_millis(30)).is_err());
     }
@@ -474,6 +491,12 @@ fn review_cancel_and_timeout_revoke_late_prepared_publication() {
         } else {
             matches!(terminal.event, RunEvent::Error { .. })
         });
+        if let RunEvent::Error { error } = terminal.event {
+            assert_eq!(
+                error.details,
+                Some(json!({"phase":"publication", "reason":"preparation_deadline"}))
+            );
+        }
         assert_eq!(*base.stages.lock().unwrap(), 0);
         release_tx.send(()).unwrap();
         assert!(done_rx.recv_timeout(Duration::from_secs(1)).unwrap());
@@ -595,4 +618,296 @@ fn review_child_environment_allowlist() {
     );
     assert!(!temp.path().join("trace").exists());
     assert!(!temp.path().join("keys").exists());
+}
+
+/// Setup opts in because even an empty extraction needs a durable checkpoint.
+struct EmptyCheckpointHost {
+    base: Arc<Host>,
+    entered: Option<mpsc::Sender<()>>,
+    release: Mutex<Option<mpsc::Receiver<()>>>,
+    finished: Option<mpsc::Sender<bool>>,
+}
+impl HostTools for EmptyCheckpointHost {
+    fn call(&self, tool: &str, args: Value) -> WorkspaceResult<Value> {
+        self.base.call(tool, args)
+    }
+    fn requires_empty_commit(&self) -> bool {
+        true
+    }
+    fn commit_candidates(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> WorkspaceResult<()> {
+        assert!(
+            candidates.is_empty(),
+            "empty turn cannot fabricate proposals"
+        );
+        if let Some(entered) = &self.entered {
+            entered.send(()).unwrap();
+        }
+        if let Some(release) = self.release.lock().unwrap().take() {
+            release.recv_timeout(Duration::from_secs(10)).unwrap();
+        }
+        let result = self.base.commit_candidates(candidates, permit);
+        if let Some(finished) = &self.finished {
+            let _ = finished.send(result.is_err());
+        }
+        result
+    }
+}
+fn empty_host(base: Arc<Host>) -> Arc<EmptyCheckpointHost> {
+    Arc::new(EmptyCheckpointHost {
+        base,
+        entered: None,
+        release: Mutex::new(None),
+        finished: None,
+    })
+}
+struct SpoofedPublicationHost;
+impl HostTools for SpoofedPublicationHost {
+    fn call(&self, _: &str, _: Value) -> WorkspaceResult<Value> {
+        panic!("empty synthetic turn must not call tools")
+    }
+    fn requires_empty_commit(&self) -> bool {
+        true
+    }
+    fn commit_candidates(&self, _: Vec<Candidate>, _: CommitPermit) -> WorkspaceResult<()> {
+        let mut error = ApiError::new("arbitrary_host_error", "PRIVATE_SYNTHETIC_ERROR");
+        error.details = Some(json!({"phase":"preflight", "reason":"version_check_failed"}));
+        Err(error)
+    }
+}
+#[test]
+fn arbitrary_host_valid_pair_cannot_spoof_runtime_publication_origin() {
+    let (_temp, rt, request, _) = fixture("empty_complete");
+    let source = request.notes_root.join("source.md");
+    let before = std::fs::read(&source).unwrap();
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request,
+        Arc::new(SpoofedPublicationHost),
+        Arc::new(move |event| {
+            let _ = tx.send(event);
+        }),
+    )
+    .unwrap();
+    loop {
+        match rx.recv_timeout(Duration::from_secs(15)).unwrap().event {
+            RunEvent::TextDelta { .. } => {}
+            RunEvent::Error { error } => {
+                assert_eq!(
+                    error.details,
+                    Some(json!({"phase":"publication", "reason":"preparation_failed"}))
+                );
+                break;
+            }
+            event => panic!("failed host may not publish or complete: {event:?}"),
+        }
+    }
+    assert_eq!(std::fs::read(source).unwrap(), before);
+    assert!(rx.recv_timeout(Duration::from_millis(30)).is_err());
+}
+struct LateScopeSignalHost {
+    base: Arc<Host>,
+    publish_first: bool,
+    entered: mpsc::Sender<()>,
+    release: Mutex<mpsc::Receiver<()>>,
+    finished: mpsc::Sender<()>,
+}
+impl HostTools for LateScopeSignalHost {
+    fn call(&self, tool: &str, args: Value) -> WorkspaceResult<Value> {
+        self.base.call(tool, args)
+    }
+    fn requires_empty_commit(&self) -> bool {
+        true
+    }
+    fn commit_candidates(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> WorkspaceResult<()> {
+        self.base.commit_candidates(candidates, permit)
+    }
+    fn commit_candidates_diagnosed(
+        &self,
+        candidates: Vec<Candidate>,
+        permit: CommitPermit,
+    ) -> Result<(), topics_runtime::HostCommitError> {
+        if self.publish_first {
+            self.commit_candidates(candidates, permit)
+                .map_err(topics_runtime::HostCommitError::Failed)?;
+        }
+        self.entered.send(()).unwrap();
+        self.release
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap();
+        let _ = self.finished.send(());
+        Err(topics_runtime::HostCommitError::ScopeNotRead)
+    }
+}
+#[test]
+fn typed_host_signal_cannot_override_cancelled_or_published_permit_outcomes() {
+    for publish_first in [false, true] {
+        let (_temp, rt, request, base) = fixture("empty_complete");
+        let source = request.notes_root.join("source.md");
+        let before = std::fs::read(&source).unwrap();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let (finished_tx, finished_rx) = mpsc::channel();
+        let host = Arc::new(LateScopeSignalHost {
+            base: base.clone(),
+            publish_first,
+            entered: entered_tx,
+            release: Mutex::new(release_rx),
+            finished: finished_tx,
+        });
+        let (tx, rx) = mpsc::channel();
+        rt.analysis_start(
+            request.clone(),
+            host,
+            Arc::new(move |event| {
+                let _ = tx.send(event);
+            }),
+        )
+        .unwrap();
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+            RunEvent::TextDelta { .. }
+        ));
+        entered_rx.recv_timeout(Duration::from_secs(10)).unwrap();
+        assert_eq!(rt.cancel(&request.root_id, &request.run_id), !publish_first);
+        let mut publications = 0;
+        loop {
+            match rx.recv_timeout(Duration::from_secs(5)).unwrap().event {
+                RunEvent::Proposal { .. } if publish_first => publications += 1,
+                RunEvent::Completed if publish_first => break,
+                RunEvent::Cancelled if !publish_first => break,
+                event => panic!("diagnostic signal changed permit outcome: {event:?}"),
+            }
+        }
+        release_tx.send(()).unwrap();
+        finished_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert!(rx.recv_timeout(Duration::from_millis(50)).is_err());
+        assert_eq!(publications, usize::from(publish_first));
+        assert_eq!(*base.stages.lock().unwrap(), usize::from(publish_first));
+        assert_eq!(std::fs::read(source).unwrap(), before);
+    }
+}
+#[test]
+fn setup_empty_success_publishes_checkpoint_once_through_real_permit() {
+    let (_temp, rt, request, base) = fixture("empty_complete");
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request,
+        empty_host(base.clone()),
+        Arc::new(move |e| {
+            let _ = tx.send(e);
+        }),
+    )
+    .unwrap();
+    let mut publications = 0;
+    loop {
+        match rx.recv_timeout(Duration::from_secs(15)).unwrap().event {
+            RunEvent::Proposal { .. } => publications += 1,
+            RunEvent::Completed => break,
+            RunEvent::Error { error } => panic!("empty setup success failed: {error}"),
+            _ => {}
+        }
+    }
+    assert_eq!(
+        *base.stages.lock().unwrap(),
+        1,
+        "successful empty extraction must checkpoint"
+    );
+    assert_eq!(publications, 1);
+    assert_eq!(*base.calls.lock().unwrap(), 0);
+}
+#[test]
+fn setup_empty_revocation_denies_prepared_checkpoint() {
+    let (_temp, rt, request, base) = fixture("empty_complete");
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (release_tx, release_rx) = mpsc::channel();
+    let (finished_tx, finished_rx) = mpsc::channel();
+    let host = Arc::new(EmptyCheckpointHost {
+        base: base.clone(),
+        entered: Some(entered_tx),
+        release: Mutex::new(Some(release_rx)),
+        finished: Some(finished_tx),
+    });
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request.clone(),
+        host,
+        Arc::new(move |e| {
+            let _ = tx.send(e);
+        }),
+    )
+    .unwrap();
+    entered_rx
+        .recv_timeout(Duration::from_secs(15))
+        .expect("empty checkpoint preparation must reach real fence");
+    assert!(rt.cancel(&request.root_id, &request.run_id));
+    release_tx.send(()).unwrap();
+    assert!(finished_rx.recv_timeout(Duration::from_secs(2)).unwrap());
+    loop {
+        match rx.recv_timeout(Duration::from_secs(5)).unwrap().event {
+            RunEvent::Cancelled => break,
+            RunEvent::TextDelta { .. } => {}
+            event => panic!("revoked empty completion emitted {event:?}"),
+        }
+    }
+    assert_eq!(*base.stages.lock().unwrap(), 0);
+}
+#[test]
+fn setup_empty_failed_and_cancelled_turns_never_checkpoint() {
+    for mode in ["empty_failed", "empty_cancel"] {
+        let (_temp, rt, request, base) = fixture(mode);
+        let (tx, rx) = mpsc::channel();
+        rt.analysis_start(
+            request.clone(),
+            empty_host(base.clone()),
+            Arc::new(move |e| {
+                let _ = tx.send(e);
+            }),
+        )
+        .unwrap();
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_secs(15)).unwrap().event,
+            RunEvent::TextDelta { .. }
+        ));
+        if mode == "empty_cancel" {
+            assert!(rt.cancel(&request.root_id, &request.run_id));
+        }
+        let event = rx.recv_timeout(Duration::from_secs(10)).unwrap().event;
+        assert!(if mode == "empty_cancel" {
+            matches!(event, RunEvent::Cancelled)
+        } else {
+            matches!(event, RunEvent::Error { .. })
+        });
+        assert_eq!(*base.stages.lock().unwrap(), 0);
+    }
+}
+#[test]
+fn setup_empty_default_host_keeps_existing_no_publication_behavior() {
+    let (_temp, rt, request, base) = fixture("empty_complete");
+    let (tx, rx) = mpsc::channel();
+    rt.analysis_start(
+        request,
+        base.clone(),
+        Arc::new(move |e| {
+            let _ = tx.send(e);
+        }),
+    )
+    .unwrap();
+    loop {
+        match rx.recv_timeout(Duration::from_secs(15)).unwrap().event {
+            RunEvent::Completed => break,
+            RunEvent::TextDelta { .. } => {}
+            event => panic!("default empty behavior changed: {event:?}"),
+        }
+    }
+    assert_eq!(*base.stages.lock().unwrap(), 0);
 }

@@ -1,0 +1,36 @@
+Command: cargo test -p topics-setup --test protocol scoped_accepted_correction --offline -- --test-threads=1
+   Compiling topics-setup v0.1.0 (/Users/macs/orca/workspaces/topics/topics-setup-jobs/crates/topics-setup)
+    Finished `test` profile [unoptimized] target(s) in 2.01s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test scoped_accepted_correction_is_available_without_human_statement_text_and_cannot_be_revived ... 
+running 1 test
+test scoped_accepted_correction_is_available_without_human_statement_text_and_cannot_be_revived ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 3.17s
+
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 3.18s
+
+
+Exit: 0
+
+Command: cargo test -p topics-setup --test protocol historic_reference --offline -- --test-threads=1
+    Finished `test` profile [unoptimized] target(s) in 0.11s
+     Running tests/protocol.rs (/tmp/topics-setup-target/debug/deps/protocol-fd154aa93f04349c)
+
+running 1 test
+test historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting_truth ... 
+running 1 test
+test historic_reference_and_recent_meeting_accounts_retain_dates_without_selecting_truth ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 3.90s
+
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 3.91s
+
+
+Exit: 0

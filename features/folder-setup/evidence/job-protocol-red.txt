@@ -1,0 +1,106 @@
+Command: protocol --test-threads=1 (topics-setup integration binary)
+Canonical contract bfe9f65; real service stubs and real facade stub.
+Behavioral RED: manifest/inventory not_implemented, not compiler or runner failure.
+Orchestrator-specific RED will be repeated against runnable core before facade behavior.
+
+
+running 4 tests
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... 
+running 1 test
+
+thread 'failed_turn_preserves_other_batches_and_retry_does_not_duplicate' (6568915) panicked at crates/topics-setup/tests/protocol.rs:139:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test failed_turn_preserves_other_batches_and_retry_does_not_duplicate ... FAILED
+
+failures:
+
+failures:
+    failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.03s
+
+FAILED
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... 
+running 1 test
+
+thread 'hundred_documents_use_exact_multiple_scopes_and_one_draft_graph' (6568918) panicked at crates/topics-setup/tests/protocol.rs:139:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test hundred_documents_use_exact_multiple_scopes_and_one_draft_graph ... FAILED
+
+failures:
+
+failures:
+    hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.03s
+
+FAILED
+test inventory_is_local_and_consent_starts_one_bounded_job ... 
+running 1 test
+
+thread 'inventory_is_local_and_consent_starts_one_bounded_job' (6568922) panicked at crates/topics-setup/tests/protocol.rs:199:18:
+called `Result::unwrap()` on an `Err` value: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test inventory_is_local_and_consent_starts_one_bounded_job ... FAILED
+
+failures:
+
+failures:
+    inventory_is_local_and_consent_starts_one_bounded_job
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.02s
+
+FAILED
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... 
+running 1 test
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6568925) panicked at crates/topics-setup/tests/protocol.rs:139:14:
+reviewed manifest must be available without transmitting: ApiError { code: "not_implemented", message: "Folder setup implementation pending", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs ... FAILED
+
+failures:
+
+failures:
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.02s
+
+FAILED
+
+failures:
+
+---- failed_turn_preserves_other_batches_and_retry_does_not_duplicate stdout ----
+
+thread 'failed_turn_preserves_other_batches_and_retry_does_not_duplicate' (6568913) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- hundred_documents_use_exact_multiple_scopes_and_one_draft_graph stdout ----
+
+thread 'hundred_documents_use_exact_multiple_scopes_and_one_draft_graph' (6568916) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+
+---- inventory_is_local_and_consent_starts_one_bounded_job stdout ----
+
+thread 'inventory_is_local_and_consent_starts_one_bounded_job' (6568920) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: inventory_is_local_and_consent_starts_one_bounded_job
+
+---- pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs stdout ----
+
+thread 'pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs' (6568923) panicked at crates/topics-setup/tests/protocol.rs:33:13:
+synthetic protocol child failed: pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+
+failures:
+    failed_turn_preserves_other_batches_and_retry_does_not_duplicate
+    hundred_documents_use_exact_multiple_scopes_and_one_draft_graph
+    inventory_is_local_and_consent_starts_one_bounded_job
+    pause_reopen_and_changed_waiting_manifest_never_retransmit_completed_inputs
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+
+Exit: 101

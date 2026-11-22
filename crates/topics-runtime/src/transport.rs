@@ -1,5 +1,7 @@
 //! Bounded NDJSON process transport; no jsonrpc field on the app-server wire.
+use crate::diagnostics::RuntimeResult;
 use crate::{
+    diagnostics::Failure,
     error,
     protocol::{MAX_FRAME, MAX_OUTPUT},
 };
@@ -9,7 +11,6 @@ use tokio::{
     io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{Child, ChildStdin, ChildStdout, Command},
 };
-use topics_core::workspace::WorkspaceResult;
 
 pub async fn read_frame<R: AsyncBufRead + Unpin>(
     reader: &mut R,
@@ -58,7 +59,7 @@ pub(crate) struct Process {
     pub callbacks_allowed: bool,
 }
 impl Process {
-    pub fn spawn(mut command: Command) -> WorkspaceResult<Self> {
+    pub fn spawn(mut command: Command) -> RuntimeResult<Self> {
         command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -67,7 +68,7 @@ impl Process {
         #[cfg(unix)]
         command.process_group(0);
         let mut child = command.spawn().map_err(|_| {
-            error(
+            Failure::Transport.error(
                 "runtime_unavailable",
                 "Cannot start pinned Codex; configure codex-cli 0.166.0",
             )
@@ -102,34 +103,41 @@ impl Process {
             callbacks_allowed: false,
         })
     }
-    pub async fn send(&mut self, value: Value) -> WorkspaceResult<()> {
+    pub async fn send(&mut self, value: Value) -> RuntimeResult<()> {
         let mut frame = serde_json::to_vec(&value)
             .map_err(|_| error("internal", "Cannot encode runtime frame"))?;
         if frame.len() > MAX_FRAME {
-            return Err(error("invalid_input", "Runtime request exceeds bounds"));
+            return Err(error("invalid_input", "Runtime request exceeds bounds").into());
         }
         frame.push(b'\n');
         self.input
             .write_all(&frame)
             .await
-            .map_err(|_| error("runtime_unavailable", "Codex disconnected"))
+            .map_err(|_| Failure::Transport.error("runtime_unavailable", "Codex disconnected"))
     }
-    pub async fn next(&mut self) -> WorkspaceResult<Value> {
+    pub async fn next(&mut self) -> RuntimeResult<Value> {
+        self.next_inner()
+            .await
+            .map_err(|e| Failure::Protocol.tag(e))
+    }
+    async fn next_inner(&mut self) -> RuntimeResult<Value> {
         let frame = tokio::time::timeout(
             Duration::from_secs(40),
             read_frame(&mut self.output, MAX_FRAME),
         )
         .await
-        .map_err(|_| error("runtime_unavailable", "Codex response timed out"))?
         .map_err(|_| {
-            error(
+            Failure::ReadDeadline.error("runtime_unavailable", "Codex response timed out")
+        })?
+        .map_err(|_| {
+            Failure::Transport.error(
                 "runtime_unavailable",
                 "Codex exited or returned an oversized frame",
             )
         })?;
         self.bytes += frame.len();
         if self.bytes > MAX_OUTPUT {
-            return Err(error("runtime_unavailable", "Codex output exceeded bounds"));
+            return Err(error("runtime_unavailable", "Codex output exceeded bounds").into());
         }
         let value: Value = serde_json::from_slice(&frame).map_err(|_| {
             error(
@@ -138,10 +146,7 @@ impl Process {
             )
         })?;
         if !value.is_object() || value.get("jsonrpc").is_some() {
-            return Err(error(
-                "runtime_unavailable",
-                "Codex protocol schema mismatch",
-            ));
+            return Err(error("runtime_unavailable", "Codex protocol schema mismatch").into());
         }
         if value.get("id").is_some() && value.get("method").is_some() {
             if self.callbacks_allowed
@@ -156,11 +161,17 @@ impl Process {
             return Err(error(
                 "forbidden",
                 "Codex requested an unauthorized approval or capability",
-            ));
+            )
+            .into());
         }
         Ok(value)
     }
-    pub async fn request(&mut self, method: &str, params: Value) -> WorkspaceResult<Value> {
+    pub async fn request(&mut self, method: &str, params: Value) -> RuntimeResult<Value> {
+        self.request_inner(method, params)
+            .await
+            .map_err(|e| Failure::Protocol.tag(e))
+    }
+    async fn request_inner(&mut self, method: &str, params: Value) -> RuntimeResult<Value> {
         let id = self.next;
         self.next += 1;
         self.send(json!({"id":id,"method":method,"params":params}))
@@ -169,7 +180,7 @@ impl Process {
             let frame = self.next().await?;
             if frame.get("method").is_some() && frame.get("id").is_some() {
                 if self.queued.len() >= 256 {
-                    return Err(error("runtime_unavailable", "Excessive callback queue"));
+                    return Err(error("runtime_unavailable", "Excessive callback queue").into());
                 }
                 self.queued.push_back(frame);
                 continue;
@@ -179,27 +190,25 @@ impl Process {
                     return Err(error(
                         "runtime_unavailable",
                         "Codex rejected the pinned protocol request",
-                    ));
+                    )
+                    .into());
                 }
                 return frame
                     .get("result")
                     .cloned()
-                    .ok_or_else(|| error("runtime_unavailable", "Missing Codex result"));
+                    .ok_or_else(|| error("runtime_unavailable", "Missing Codex result").into());
             }
             if frame.get("id").is_some() {
-                return Err(error("runtime_unavailable", "Unknown Codex response ID"));
+                return Err(error("runtime_unavailable", "Unknown Codex response ID").into());
             }
             crate::check_notification(&frame)?;
             if self.queued.len() >= 256 {
-                return Err(error(
-                    "runtime_unavailable",
-                    "Excessive Codex notifications",
-                ));
+                return Err(error("runtime_unavailable", "Excessive Codex notifications").into());
             }
             self.queued.push_back(frame);
         }
     }
-    pub async fn initialize(&mut self) -> WorkspaceResult<()> {
+    pub async fn initialize(&mut self) -> RuntimeResult<()> {
         self.request("initialize",json!({"clientInfo":{"name":"topics","version":"0.1.0"},"capabilities":{"experimentalApi":true}})).await?;
         self.send(json!({"method":"initialized","params":{}})).await
     }
@@ -292,6 +301,16 @@ mod tests {
             "import sys,json\nr=json.loads(sys.stdin.readline());sys.stderr.write('x'*1000000);sys.stderr.flush();print(json.dumps({'id':r['id'],'result':{}}))",
         );
         assert!(p.request("x", json!({})).await.is_ok());
+        p.stop().await;
+    }
+    #[tokio::test]
+    async fn actual_read_deadline_is_local_and_process_is_reaped() {
+        let mut p = fake("import time\ntime.sleep(50)");
+        let failure = p.next().await.unwrap_err();
+        assert_eq!(
+            topics_core::ApiError::from(failure).details,
+            Some(Failure::ReadDeadline.details())
+        );
         p.stop().await;
     }
     #[tokio::test]

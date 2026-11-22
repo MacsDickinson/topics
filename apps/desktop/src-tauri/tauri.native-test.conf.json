@@ -11,7 +11,8 @@
           "permissions": [
             "core:default",
             "wdio:default",
-            "wdio-webdriver:default"
+            "wdio-webdriver:default",
+            "core:window:allow-start-dragging"
           ]
         }
       ]
@@ -24,7 +25,10 @@
         "height": 800,
         "minWidth": 560,
         "minHeight": 420,
-        "incognito": true
+        "incognito": true,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ]
   }

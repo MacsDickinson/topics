@@ -1,0 +1,21 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts
+
+[WebServer] (node:97753) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:97755) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/folder-setup.spec.ts:4:1 › connecting a new folder opens local inventory before analysis (511ms)
+  ✓  2 tests/folder-setup.spec.ts:24:1 › setup offers tree selection and an exact manifest before building (474ms)
+  ✓  3 tests/folder-setup.spec.ts:42:1 › topic map offers graph and list navigation (461ms)
+  ✓  4 tests/folder-setup.spec.ts:71:1 › draft map exposes one exact starting-map receipt without record checkboxes (362ms)
+  ✓  5 tests/folder-setup.spec.ts:81:1 › a saved topic offers contextual decisions and collapsed evidence (524ms)
+  ✓  6 tests/folder-setup.spec.ts:95:1 › folder chooser cancellation preserves the path and selection waits for explicit use (241ms)
+  ✓  7 tests/folder-setup.spec.ts:107:1 › context is saved as the exact user statement without correction or confirmation (548ms)
+  ✓  8 tests/folder-setup.spec.ts:120:1 › confirmation previews only the enumerated visible revisions (517ms)
+
+  8 passed (4.6s)

@@ -1,0 +1,86 @@
+[
+  {
+    "kind": "topic",
+    "topic": {
+      "aliases": [],
+      "id": "25986df1-4587-4ad5-a15f-746783322e25",
+      "name": "Alex A42",
+      "sensitivity": "unknown",
+      "topic_kind": "person"
+    }
+  },
+  {
+    "kind": "topic",
+    "topic": {
+      "aliases": [],
+      "id": "7f2bb88c-5a0f-4853-890a-43c509dfc37d",
+      "name": "Ledger",
+      "sensitivity": "unknown",
+      "topic_kind": "project"
+    }
+  },
+  {
+    "claim": {
+      "id": "fbc42d51-5045-42b0-b0d0-9e6dbcd76a56",
+      "predicate": "uses_pronouns",
+      "recorded_at": "2026-11-09",
+      "revision_id": "e7b82ca9-1993-439f-8ee6-26f12af29349",
+      "sources": [
+        {
+          "kind": "passage",
+          "source": {
+            "document_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+            "excerpt": "# Synthetic Alex A42\n\nAlex A42 is a person. Alex A42 uses he/him pronouns. Alex A42 leads the Ledger project.\n",
+            "locator": {
+              "end_byte": 110,
+              "heading": null,
+              "start_byte": 0
+            },
+            "passage_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+            "path": "profiles/alex.md",
+            "source_id": "897beb53-40f8-5828-8694-32ba8ed2b8de"
+          }
+        }
+      ],
+      "subject_id": "25986df1-4587-4ad5-a15f-746783322e25",
+      "supersedes": [],
+      "uncertainty": null,
+      "valid_from": null,
+      "valid_to": null,
+      "value": "he/him"
+    },
+    "kind": "claim"
+  },
+  {
+    "connection": {
+      "from": {
+        "id": "25986df1-4587-4ad5-a15f-746783322e25",
+        "kind": "topic"
+      },
+      "id": "b2337c89-2537-4bc0-8957-d5fed7984563",
+      "relation": "leads",
+      "sources": [
+        {
+          "document_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+          "excerpt": "# Synthetic Alex A42\n\nAlex A42 is a person. Alex A42 uses he/him pronouns. Alex A42 leads the Ledger project.\n",
+          "locator": {
+            "end_byte": 110,
+            "heading": null,
+            "start_byte": 0
+          },
+          "passage_hash": "4243c2bfdfd37862a5ac55a01da0c6cc0f745e753d094dfa335b35a4c240c367",
+          "path": "profiles/alex.md",
+          "source_id": "897beb53-40f8-5828-8694-32ba8ed2b8de"
+        }
+      ],
+      "to": {
+        "id": "7f2bb88c-5a0f-4853-890a-43c509dfc37d",
+        "kind": "topic"
+      },
+      "uncertainty": null,
+      "valid_from": null,
+      "valid_to": null
+    },
+    "kind": "connection"
+  }
+]

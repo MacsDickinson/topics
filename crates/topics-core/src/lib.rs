@@ -27,6 +27,7 @@ pub struct SearchResult {
     /// FTS5 excerpt. Match spans use <mark> tags; render as text unless safely sanitized.
     pub snippet: String,
 }
+#[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct IndexReport {
     pub document_count: usize,
@@ -40,3 +41,11 @@ mod workspace_validation;
 pub use workspace_validation::{
     validate_candidate_shapes, validate_date_range, validate_workspace_id,
 };
+
+pub mod setup;
+pub use setup::*;
+
+pub mod pilot_review;
+pub use pilot_review::*;
+pub mod pilot_briefing;
+pub use pilot_briefing::*;

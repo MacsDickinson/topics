@@ -1,0 +1,38 @@
+
+> @topics/desktop@0.1.0 test
+> playwright test --workers=1 tests/folder-setup.spec.ts --grep manifest request and reviewed budget
+
+[WebServer] (node:72609) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:72611) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/folder-setup.spec.ts:502:1 › manifest request and reviewed budget reserve room for evidence and context (609ms)
+
+
+  1) tests/folder-setup.spec.ts:502:1 › manifest request and reviewed budget reserve room for evidence and context 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 65536
+    Received: 262144
+
+      512 |       ).args.request,
+      513 |   );
+    > 514 |   expect(request.limits.max_bytes_per_batch).toBe(65536);
+          |                                              ^
+      515 |   await expect(page.getByText(/64 KiB of notes per batch/)).toBeVisible();
+      516 |   await expect(
+      517 |     page.getByText(/space reserved for citations and context/i),
+        at /Users/macs/orca/workspaces/topics/topics-setup-desktop/apps/desktop/tests/folder-setup.spec.ts:514:46
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/folder-setup-manifest-requ-92e87-om-for-evidence-and-context/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/folder-setup-manifest-requ-92e87-om-for-evidence-and-context/error-context.md
+
+  1 failed
+    tests/folder-setup.spec.ts:502:1 › manifest request and reviewed budget reserve room for evidence and context 

@@ -241,7 +241,7 @@ fn source_policy(state: &State, path: &str, h: &str) -> Sensitivity {
     }
     review.map(|(label, _)| *label).unwrap_or(own)
 }
-fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
+pub(super) fn source_sensitivity(state: &State, path: &str, h: &str) -> Sensitivity {
     let own = source_policy(state, path, h);
     if own == Sensitivity::LocalOnly {
         return own;
@@ -749,6 +749,17 @@ impl WorkspaceService {
 // make the transcript value human-authored. Authority comes from the durable
 // before/after decision, not the mere presence of a statement ID on a claim.
 fn human_value_supported(state: &State, claim: &Claim) -> bool {
+    if state.reviews.values().any(|review| {
+        review.record_id == claim.revision_id && review.state == ReviewState::ConfirmedByYou
+            && state.receipts.values().any(|decision| {
+                review.receipt_id.as_ref() == Some(&decision.receipt.receipt_id)
+                    && decision.saved_ids.contains(&claim.revision_id)
+                    && (decision.receipt.kind == SetupDecisionKind::Confirm
+                        && decision.receipt.revisions.contains(claim)
+                        || decision.receipt.candidates.iter().any(|candidate| matches!(candidate,
+                            Candidate::Claim{claim:confirmed} | Candidate::Correction{claim:confirmed,..} if confirmed == claim)))
+            })
+    }) { return true; }
     // Metadata revisions may preserve earlier value authority, but never cross
     // a value/identity change to revive authority for an old transcript value.
     // A visited set bounds both cycles and total queued history to 100 records.
@@ -780,7 +791,7 @@ fn human_value_supported(state: &State, claim: &Claim) -> bool {
     }
     false
 }
-fn direct_human_value_supported(state: &State, claim: &Claim) -> bool {
+pub(super) fn direct_human_value_supported(state: &State, claim: &Claim) -> bool {
     claim.sources.iter().any(|e| {
         let Evidence::UserStatement { statement_id } = e else { return false; };
         if state.statements.get(statement_id).is_none_or(|s| s.topic_id != claim.subject_id) { return false; }
@@ -950,7 +961,7 @@ impl WorkspaceService {
     }
 }
 
-fn source_identity(ctx: &Context, state: &State, path: &str, h: &str) -> Id {
+pub(super) fn source_identity(ctx: &Context, state: &State, path: &str, h: &str) -> Id {
     if let Some(source) = state
         .sources
         .values()

@@ -1,6 +1,6 @@
 //! Bounded authenticated connections to the parent-hosted official MCP SDK.
 //! Identity and scope belong to this instance, never tools/call arguments.
-use crate::{HostTools, RunState, protocol::MAX_FRAME};
+use crate::{HostTools, RunState, diagnostics::Failure, protocol::MAX_FRAME};
 use rmcp::{ErrorData, RoleServer, ServerHandler, ServiceExt, model::*, service::RequestContext};
 use serde_json::{Value, json};
 use std::{
@@ -59,18 +59,31 @@ impl SessionGate {
         tool: &str,
         args: &Value,
     ) -> Result<(), String> {
-        self.authenticate(session, token)?;
-        let obj = args.as_object().ok_or("invalid_input")?;
+        self.authorize_checked(session, token, tool, args)
+            .map_err(|(_, message)| message)
+    }
+    fn authorize_checked(
+        &self,
+        session: &str,
+        token: &str,
+        tool: &str,
+        args: &Value,
+    ) -> Result<(), (Failure, String)> {
+        self.authenticate(session, token)
+            .map_err(|e| (Failure::Callback, e))?;
+        let obj = args
+            .as_object()
+            .ok_or((Failure::Callback, "invalid_input".into()))?;
         if args.to_string().len() > MAX_FRAME / 2 {
-            return Err("request_too_large".into());
+            return Err((Failure::Callback, "request_too_large".into()));
         }
         match tool {
             "scope_sources" if obj.len() == 1 && args["scope_id"] == self.scope => Ok(()),
             "propose_changes" if obj.len() == 1 => {
-                parse_candidates(args)?;
+                parse_candidates(args).map_err(|e| (Failure::Schema, e))?;
                 Ok(())
             }
-            _ => Err("forbidden".into()),
+            _ => Err((Failure::Callback, "forbidden".into())),
         }
     }
 }
@@ -268,6 +281,10 @@ pub(crate) fn poison(state: &Arc<Mutex<RunState>>) {
         state.pending.clear();
     }
 }
+fn poison_callback(state: &Arc<Mutex<RunState>>) {
+    Failure::Callback.record(state);
+    poison(state);
+}
 /// Definitions are fixed; neither host nor model can add another tool surface.
 pub fn tools() -> Vec<Tool> {
     let mut definitions=vec![
@@ -314,32 +331,37 @@ impl ServerHandler for TopicsMcp {
         let result = async {
             let args = Value::Object(request.arguments.unwrap_or_default());
             let denied = || ErrorData::invalid_params("Tool request denied", None);
+            let denied_at = |failure: Failure| {
+                failure.record(&self.state);
+                denied()
+            };
             {
-                let gate = self.gate.lock().map_err(|_| denied())?;
-                gate.authorize(&gate.session, &gate.token, &request.name, &args)
-                    .map_err(|_| denied())?;
+                let gate = self.gate.lock().map_err(|_| denied_at(Failure::Callback))?;
+                gate.authorize_checked(&gate.session, &gate.token, &request.name, &args)
+                    .map_err(|(failure, _)| denied_at(failure))?;
                 let mut state = self.state.lock().map_err(|_| denied())?;
                 if state.cancelled || state.terminal || state.failed || state.calls >= 64 {
+                    Failure::Callback.record_locked(&mut state);
                     return Err(denied());
                 }
                 state.calls += 1;
             }
             static HOST_CALLS:std::sync::OnceLock<Arc<tokio::sync::Semaphore>>=std::sync::OnceLock::new();
-            let permit=HOST_CALLS.get_or_init(||Arc::new(tokio::sync::Semaphore::new(8))).clone().try_acquire_owned().map_err(|_|denied())?;
+            let permit=HOST_CALLS.get_or_init(||Arc::new(tokio::sync::Semaphore::new(8))).clone().try_acquire_owned().map_err(|_|denied_at(Failure::Host))?;
             let host = self.host.clone();
             let name = request.name.to_string();
-            let input=if request.name=="propose_changes"{let mut combined=self.state.lock().map_err(|_|denied())?.pending.clone();combined.extend(parse_candidates(&args).map_err(|_|denied())?);let input=json!({"candidates":combined});parse_candidates(&input).map_err(|_|denied())?;input}else{args.clone()};
+            let input=if request.name=="propose_changes"{let mut combined=self.state.lock().map_err(|_|denied())?.pending.clone();combined.extend(parse_candidates(&args).map_err(|_|denied_at(Failure::Schema))?);let input=json!({"candidates":combined});parse_candidates(&input).map_err(|_|denied_at(Failure::Schema))?;input}else{args.clone()};
             let response_future=tokio::time::timeout(
                 Duration::from_secs(5),
                 tokio::task::spawn_blocking(move || {let _permit=permit;host.call(&name,input)}),
             )
             ;
             let mut response=tokio::select!{_=context.ct.cancelled()=>{return Err(denied());},response=response_future=>response}
-            .map_err(|_| denied())?
-            .map_err(|_| denied())?
-            .map_err(|_| denied())?;
+            .map_err(|_| denied_at(Failure::HostDeadline))?
+            .map_err(|_| denied_at(Failure::Host))?
+            .map_err(|_| denied_at(Failure::HostValidation))?;
             if request.name == "scope_sources" {
-                let object = response.as_object_mut().ok_or_else(denied)?;
+                let object = response.as_object_mut().ok_or_else(|| denied_at(Failure::Host))?;
                 object.insert(
                     "candidate_schema".into(),
                     serde_json::from_str(include_str!("candidate.schema.json")).unwrap(),
@@ -347,18 +369,23 @@ impl ServerHandler for TopicsMcp {
             }
             let mut state = self.state.lock().map_err(|_| denied())?;
             if state.cancelled || state.terminal || state.failed || context.ct.is_cancelled() {
+                Failure::Callback.record_locked(&mut state);
                 return Err(denied());
             }
             if response.to_string().len() > MAX_FRAME / 2 {
+                Failure::Host.record_locked(&mut state);
                 return Err(denied());
             }
             if request.name == "propose_changes" {
-                let candidates = parse_candidates(&args).map_err(|_| denied())?;
+                let candidates = parse_candidates(&args).map_err(|_| {
+                    Failure::Schema.record_locked(&mut state); denied()
+                })?;
                 if state.pending.len() + candidates.len() > 64 {
+                    Failure::Schema.record_locked(&mut state);
                     return Err(denied());
                 }
                 let mut combined=state.pending.clone();combined.extend(candidates.clone());
-                parse_candidates(&json!({"candidates":combined})).map_err(|_|denied())?;
+                parse_candidates(&json!({"candidates":combined})).map_err(|_|{Failure::Schema.record_locked(&mut state);denied()})?;
                 state.pending.extend(candidates);
                 Ok(CallToolResult::success(vec![ContentBlock::text(
                     "Validated and buffered for review after successful completion",
@@ -477,7 +504,7 @@ impl Bridge {
                                     Ok(frame) => frame,
                                     Err(e) => {
                                         if e.kind() != std::io::ErrorKind::UnexpectedEof {
-                                            poison(&state);
+                                            poison_callback(&state);
                                         }
                                         return;
                                     }
@@ -489,7 +516,7 @@ impl Bridge {
                                     .and_then(|value| {
                                         let next = validate_mcp_frame(&value, phase).ok()?;
                                         if value["method"] == "notifications/cancelled" {
-                                            poison(&state);
+                                            poison_callback(&state);
                                         }
                                         phase = next;
                                         let mut frame = serde_json::to_vec(&value).ok()?;
@@ -499,7 +526,7 @@ impl Bridge {
                             let Some(frame) =
                                 normalized.filter(|_| bytes <= crate::protocol::MAX_OUTPUT)
                             else {
-                                poison(&state);
+                                poison_callback(&state);
                                 return;
                             };
                             if peer_write.write_all(&frame).await.is_err() {
@@ -518,7 +545,7 @@ impl Bridge {
                                 };
                             bytes += frame.len();
                             if bytes > crate::protocol::MAX_OUTPUT {
-                                poison(&state);
+                                poison_callback(&state);
                                 return;
                             }
                             if write.write_all(&frame).await.is_err() {
@@ -600,6 +627,7 @@ mod tests {
             seq: 0,
             terminal_emitted: false,
             failed: false,
+            failure: None,
             commit: None,
             publication_emitted: false,
         }))
@@ -640,6 +668,99 @@ mod tests {
             .await
             .unwrap();
         stream
+    }
+    struct DiagnosticHost {
+        slow: bool,
+    }
+    impl HostTools for DiagnosticHost {
+        fn call(&self, tool: &str, _: Value) -> WorkspaceResult<Value> {
+            if tool == "scope_sources" {
+                if self.slow {
+                    std::thread::sleep(Duration::from_secs(6));
+                }
+                return Err(crate::error(
+                    "PRIVATE_ERROR_SENTINEL",
+                    "PRIVATE_ERROR_SENTINEL",
+                ));
+            }
+            Ok(json!({"validated":true}))
+        }
+        fn commit_candidates(
+            &self,
+            _: Vec<Candidate>,
+            _: crate::CommitPermit,
+        ) -> WorkspaceResult<()> {
+            panic!("MCP must never publish")
+        }
+    }
+    #[tokio::test]
+    async fn candidate_schema_and_host_denials_keep_distinct_first_origin_but_same_generic_wire_error()
+     {
+        for (tool, args, expected) in [
+            (
+                "propose_changes",
+                json!({"candidates":[{"private":"PRIVATE_ERROR_SENTINEL"}]}),
+                Failure::Schema,
+            ),
+            (
+                "scope_sources",
+                json!({"scope_id":"scope"}),
+                Failure::HostValidation,
+            ),
+        ] {
+            let state = state();
+            let bridge = Bridge::start(
+                "session",
+                "scope",
+                Arc::new(DiagnosticHost { slow: false }),
+                state.clone(),
+            )
+            .await
+            .unwrap();
+            let mut stream = initialized(&bridge).await;
+            // Prove earlier validation is buffered and discarded on either failure.
+            let result=send(&mut stream,json!({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"propose_changes","arguments":{"candidates":[{"kind":"topic","topic":{"id":"10000000-0000-4000-8000-000000000001","topic_kind":"person","name":"Synthetic","aliases":[],"sensitivity":"unknown"}}]}}})).await;
+            assert!(result.get("error").is_none());
+            assert_eq!(state.lock().unwrap().pending.len(), 1);
+            let response=send(&mut stream,json!({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":tool,"arguments":args}})).await;
+            assert_eq!(response["error"]["message"], "Tool request denied");
+            assert!(response["error"].get("data").is_none());
+            assert!(!response.to_string().contains("PRIVATE_ERROR_SENTINEL"));
+            assert!(!response.to_string().contains("reason"));
+            assert!(state.lock().unwrap().pending.is_empty());
+            assert_eq!(state.lock().unwrap().failure, Some(expected));
+            // A second callback is denied because the run is poisoned, but must
+            // not replace schema/host origin with that downstream denial.
+            let _=send(&mut stream,json!({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"scope_sources","arguments":{"scope_id":"scope"}}})).await;
+            assert_eq!(state.lock().unwrap().failure, Some(expected));
+            bridge.close().await;
+        }
+    }
+    #[tokio::test]
+    async fn actual_host_deadline_keeps_origin_before_sdk_normalization_without_publication() {
+        let state = state();
+        let bridge = Bridge::start(
+            "session",
+            "scope",
+            Arc::new(DiagnosticHost { slow: true }),
+            state.clone(),
+        )
+        .await
+        .unwrap();
+        let client = crate::mcp_client::McpClient::connect(&bridge)
+            .await
+            .unwrap();
+        let error = tokio::time::timeout(
+            Duration::from_secs(8),
+            client.call("scope_sources", json!({"scope_id":"scope"})),
+        )
+        .await
+        .unwrap()
+        .unwrap_err();
+        assert_eq!(state.lock().unwrap().failure, Some(Failure::HostDeadline));
+        assert!(state.lock().unwrap().pending.is_empty());
+        assert!(!error.message.contains("PRIVATE_ERROR_SENTINEL"));
+        bridge.close().await;
     }
     #[tokio::test]
     async fn sdk_negotiation_fixed_inventory_and_unselected_private_error_denial() {

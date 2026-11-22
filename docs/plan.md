@@ -77,11 +77,12 @@ Meeting files are never rewritten. Corrections apply on read and in generated pa
 
 ## BDD process (each feature)
 
-1. I draft the feature plan and Gherkin scenarios with synthetic data.
+1. Start the plan with who is doing the work, what triggers it, what is hard today, and the outcome that would make it worthwhile. Walk through their actual journey from entry screen to result, including what happens when evidence is missing or the user defers a decision. Explain the benefit in terms the user can observe.
+   For each promised benefit, name its scenario or evaluation, fixture, pass condition and what would count as a miss. Use Gherkin for observable behavior. For relevance, extraction quality or usability, add a representative task or labelled evaluation with a threshold agreed before the build. Distinguish what works today from what is proposed. Write scenarios in the user's vocabulary and make milestone boundaries explicit.
 2. **You sign off** the plan and scenarios.
 3. A worker writes failing scenarios, records the failing evidence, then writes the code through core services (the UI calls the same services).
 4. A reviewer from the other provider checks it (Claude reviews Codex, Codex reviews Claude).
-5. I show you passing results and UI evidence.
+5. Run the journey through the normal product entry point. Record observed results against each benefit, including misses and any untested assumptions. If tests pass but the journey misses its benefit, revise the design or implementation, add the missed example, and repeat the evaluation. Show the user that evidence before marking the feature complete. A material change to the agreed benefit or acceptance bar goes back for sign-off.
 
 CI: `cargo fmt`, `clippy -D warnings`, `cargo test`, cucumber with `fail_on_skipped`, then UI smoke tests. One local check script is also called by CI. Tests never touch your live notes. Build work uses Orca teams with one worker per independent workstream and cross-provider review.
 
