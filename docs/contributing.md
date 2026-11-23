@@ -2,6 +2,8 @@
 
 For UI work, follow the [design system](design-system.md), including its same-change requirement for missing tokens, components, states and patterns.
 
+Update the [docs site](site/README.md) alongside behavior and architecture changes. The Docs workflow builds and checks relative links on pull requests. Qualifying runs on `main` publish the validated files to GitHub Pages and to the generated `gh-pages` branch.
+
 ## Crates and dependency direction
 
 - `topics-core`: foundation document/search values plus canonical workspace wire values and deterministic UUID/date/candidate validation. It has no filesystem, SQL, UI or network behavior.

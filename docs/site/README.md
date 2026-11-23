@@ -61,6 +61,21 @@ python3 docs/site/check-links.py docs/site
 
 ## Deployment
 
-`.github/workflows/docs.yml` runs the build and link check on pull requests, and deploys `_site/` to the `gh-pages` branch on pushes to `main` (or manual dispatch from `main`). Set Settings → Pages → Source: "Deploy from a branch", `gh-pages` / root once.
+`.github/workflows/docs.yml` builds, stamps and validates `_site/` for matching pull requests and retains it as the `docs-site` artifact. Pushes to `main` that change `docs/**`, `README.md` or the workflow, and manual runs on `main`, also publish.
 
-GitHub does not start a branch Pages build for pushes made with the workflow's `GITHUB_TOKEN`, so the deploy job requires a repository secret `DOCS_DEPLOY_TOKEN`: a fine-grained personal access token limited to this repository with Contents: read and write. The job fails with a clear error when the secret is missing, so a stale live site cannot go unnoticed. The token also creates the `gh-pages` branch on the first run, so no separate bootstrap is needed. After a second deploy, check that the footer build stamp on the live site changed.
+```mermaid
+flowchart LR
+    build["Build, stamp and validate _site"] --> docs["Upload docs-site"]
+    docs -->|Trusted main run| branch["Fast-forward gh-pages"]
+    build -->|Trusted main run| artifact["Upload github-pages artifact"]
+    branch --> deploy["Deploy to GitHub Pages"]
+    artifact --> deploy
+```
+
+The branch job uses the built-in workflow token with Contents write permission. It creates `gh-pages` on the first run and adds ordinary commits to its existing history on later publishes. GitHub skips branch-source Pages builds for commits pushed with the workflow token. The deployment job uses Pages write permission and GitHub's OIDC token to deploy the same validated files via the official Pages artifact. Both jobs use the credentials GitHub Actions supplies automatically. [GitHub publishing source documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+
+### One-time setup and verification
+
+1. A repository maintainer opens [Settings → Pages](https://github.com/MacsDickinson/topics/settings/pages). Under **Build and deployment**, set **Source** to **GitHub Actions** to enable Pages. The repository already contains the workflow, so skip the suggested templates. If the `github-pages` environment has a deployment branch policy, ensure it allows `main`.
+2. Once the workflow is on `main`, open **Actions → Docs → Run workflow** and select **main**, or use the run from a qualifying push to `main`.
+3. Verify the build and relative-link check pass, `gh-pages` contains the generated files stamped with the run's short SHA and UTC build date, and the **deploy** job succeeds. Open the deployment URL shown by the job, confirm the footer stamp matches `gh-pages`, and check that the Appearance page and its images load from the project subpath.

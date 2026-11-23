@@ -48,10 +48,20 @@ jobs:
           name: docs-site
           path: _site
           retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: error
 
-  deploy:
+      - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+          retention-days: 7
+          include-hidden-files: true
+
+  publish-branch:
     needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -60,23 +70,45 @@ jobs:
         with:
           name: docs-site
           path: _site
-      - name: Require DOCS_DEPLOY_TOKEN
+      - name: Publish generated files to gh-pages
+        shell: bash
         env:
-          DOCS_DEPLOY_TOKEN: ${{ secrets.DOCS_DEPLOY_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$DOCS_DEPLOY_TOKEN" ]; then
-            echo "::error::Repository secret DOCS_DEPLOY_TOKEN is missing. Pushes made with GITHUB_TOKEN do not trigger a branch Pages build, so the live site would go stale. See docs/site/README.md#deployment."
-            exit 1
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.${GITHUB_SERVER_URL}/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $auth"
+
+          cd _site
+          git init --initial-branch=gh-pages
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          # An empty result is valid on the first publish. A failed lookup stops the job.
+          branch="$(git ls-remote --heads origin refs/heads/gh-pages)"
+          if [ -n "$branch" ]; then
+            git fetch --depth=1 origin refs/heads/gh-pages
+            git reset --soft FETCH_HEAD
           fi
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          # Required (checked above): a fine-grained PAT with Contents: write on this repository only.
-          # GITHUB_TOKEN pushes don't trigger the branch Pages build.
-          github_token: ${{ secrets.DOCS_DEPLOY_TOKEN }}
-          publish_dir: _site
-          publish_branch: gh-pages
-          force_orphan: true
-          user_name: github-actions[bot]
-          user_email: 41898282+github-actions[bot]@users.noreply.github.com
-          commit_message: "Deploy docs from ${{ github.sha }}"
+          git add --all --force
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m "Deploy docs from $GITHUB_SHA"
+          fi
+          git push origin HEAD:refs/heads/gh-pages
+
+  deploy:
+    needs: [build, publish-branch]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

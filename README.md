@@ -13,7 +13,7 @@ Topics is a local-first macOS app for ongoing people, projects and threads in Ma
 
 Folder setup builds a starting topic map from the notes you select for analysis. The pilot runs in one workspace and preserves dated briefings and feedback as app-owned Markdown. Automatic action extraction is a later milestone. [Friday pilot and work-Mac rehearsal](features/multi-source-library/PILOT.md) · [Folder setup scenarios](features/folder-setup/PLAN.md)
 
-Documentation: [How Topics works](https://macsdickinson.github.io/topics/) is the architecture, user guide and feature breakdown, published to GitHub Pages from `docs/site/` ([how to edit and preview it](docs/site/README.md)). Every change must keep it current; see [AGENTS.md](AGENTS.md).
+Documentation: [How Topics works](https://macsdickinson.github.io/topics/) is the architecture, user guide and feature breakdown. GitHub Actions publishes the validated site from `main` and keeps the generated files on `gh-pages`. See the [docs site guide](docs/site/README.md) for editing, preview and Pages setup. Every change must keep the docs current under [AGENTS.md](AGENTS.md).
 
 UI contributors: follow the [design system](docs/design-system.md) for tokens, components, patterns and review requirements.
 
