@@ -92,7 +92,6 @@ export function Search() {
             spellCheck={false}
           />
         </Field>
-        <Icon name="search" />
       </div>
       <section
         aria-label="Search results"

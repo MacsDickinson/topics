@@ -16,7 +16,7 @@ The shell groups Topics/Sources under Library and Inbox/History under Review, wi
 
 ## Read and inspect
 
-**Topics:** list names and supporting metadata on the left; selected topic detail on the right. Put current understanding first, with each claim's uncertainty and evidence adjacent, followed by connections and unresolved mentions. Clearly label source excerpts and paths. Ask or correct follows the reading context; a generated response is not an accepted change. Long excerpts and paths wrap and remain available in full.
+**Topics:** list names and supporting metadata on the left; selected topic detail on the right. Each current claim appears once, with its review state, uncertainty, evidence disclosure and quiet correction/context controls together, followed by connections and unresolved mentions. Clearly label source excerpts and paths. Ask or correct follows the reading context; a generated response is not an accepted change. Long excerpts and paths wrap and remain available in full.
 
 **Sources:** list notes and show selected source path, sensitivity and full note in a reading pane. Distinguish loading, missing selection and failure. Preserve whitespace and a readable measure; sensitivity labels should explain their consequence without implying consent.
 

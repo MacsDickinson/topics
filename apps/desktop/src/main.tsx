@@ -1,3 +1,4 @@
+import { Appearance } from "./Appearance";
 import { Pilot } from "./Pilot";
 import { ContextReview } from "./ContextReview";
 import { FolderSetup } from "./FolderSetup";
@@ -844,6 +845,7 @@ function App() {
           </Button>
         </div>
         <div className="sidebar-bottom">
+          <Appearance />
           <div className="folder-context">
             <Icon name="folder" />
             <div>
@@ -1138,20 +1140,21 @@ function App() {
                             topics={topics}
                             busy={busy}
                             sensitivity={(s) => void sensitivity(s)}
-                          />
-                          <ContextReview
-                            key={`${root.root_id}-${topic.topic.id}`}
-                            rootId={root.root_id}
-                            topicId={topic.topic.id}
-                            topics={topics}
-                            onHistory={() => navigate("history")}
-                            initialCorrection={pilotCorrection?.topicId === topic.topic.id ? pilotCorrection : null}
-                            onSaved={() => {
-                              setPilotCorrection(null);
-                              void refresh(root);
-                              void openTopic(topic.topic.id);
-                            }}
-                          />
+                          >
+                            <ContextReview
+                              key={`${root.root_id}-${topic.topic.id}`}
+                              rootId={root.root_id}
+                              view={topic}
+                              topics={topics}
+                              onHistory={() => navigate("history")}
+                              initialCorrection={pilotCorrection?.topicId === topic.topic.id ? pilotCorrection : null}
+                              onSaved={() => {
+                                setPilotCorrection(null);
+                                void refresh(root);
+                                void openTopic(topic.topic.id);
+                              }}
+                            />
+                          </TopicDetail>
                           <Section
                             title="Ask or correct"
                             description="Explain what should change. Generated changes return to Inbox for your review."

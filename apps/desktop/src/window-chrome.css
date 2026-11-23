@@ -18,7 +18,7 @@
 }
 .sidebar {
   top: 28px;
-  height: calc(100vh - 40px);
+  height: calc(100vh - 28px);
 }
 @media (max-width: 760px) {
   .workspace { padding-top: 28px; }

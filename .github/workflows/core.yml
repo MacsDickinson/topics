@@ -5,6 +5,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Report focused checks
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$BASE" || true
+          fi
+          python3 scripts/suggest-checks.py --base "$BASE"
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.98.1
