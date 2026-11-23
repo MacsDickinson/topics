@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Topics: how the app works</title>
+<link rel="stylesheet" href="style.css">
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", flowchart: { curve: "basis" }, fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif" });
+</script>
+<script>
+  // If the Mermaid CDN can't be reached, say so instead of leaving raw diagram source.
+  addEventListener("load", function () {
+    setTimeout(function () {
+      if (document.querySelector("pre.mermaid:not([data-processed])")) document.documentElement.classList.add("no-diagrams");
+    }, 4000);
+  });
+</script>
+<noscript><style>.diagram-note{display:block}</style></noscript>
+</head>
+<body>
+<div class="shell">
+<nav class="toc">
+  <div class="brand"><span class="logo">▦</span> Topics</div>
+  <p class="meta">How the app works · build {{BUILD_SHA}}</p>
+  <p class="nav-label">Overview</p>
+  <a href="#at-a-glance">At a glance</a>
+  <a href="#principles">Core principles</a>
+  <p class="nav-label">Architecture</p>
+  <a href="#system">System map</a>
+  <a href="#crates">Crates &amp; layers</a>
+  <a href="#data">Data model &amp; storage</a>
+  <a href="#cloud">The cloud boundary</a>
+  <a href="#writes">Recoverable writes</a>
+  <p class="nav-label">User guide</p>
+  <a href="#guide-start">1 · Connect a folder</a>
+  <a href="#guide-setup">2 · Build a starting map</a>
+  <a href="#guide-review">3 · Review in Inbox</a>
+  <a href="#guide-topics">4 · Read &amp; correct topics</a>
+  <a href="#guide-today">5 · Today &amp; the Friday pilot</a>
+  <a href="#guide-more">6 · Sources, search, history</a>
+  <p class="nav-label">Product</p>
+  <a href="#features">Feature breakdown</a>
+  <a href="#milestones">Milestones</a>
+  <a href="#limits">Known limits</a>
+</nav>
+
+<main>
+
+<p class="diagram-note" role="note">Diagrams on this page are drawn with Mermaid, loaded from the jsDelivr CDN. If they show as plain text, enable JavaScript and allow <code>cdn.jsdelivr.net</code>; the surrounding text describes each flow.</p>
+
+<header class="hero" id="at-a-glance">
+  <p class="eyebrow">How the app currently works</p>
+  <h1>Topics</h1>
+  <p class="lede">A local-first macOS app that turns a folder of Markdown notes into a living map of the <b>people</b>, <b>projects</b> and <b>threads</b> you follow, with every fact cited back to a note. A model proposes; <b>you approve</b>. Your notes are never rewritten.</p>
+  <div class="stats">
+    <div class="stat"><b>Tauri 2</b><span>Rust core + React/TS UI</span></div>
+    <div class="stat"><b>7</b><span>Cargo workspace members</span></div>
+    <div class="stat"><b>48</b><span>IPC commands</span></div>
+    <div class="stat"><b>2</b><span>model tools, no write power</span></div>
+    <div class="stat"><b>Markdown</b><span>is the source of truth</span></div>
+  </div>
+</header>
+
+<section id="principles">
+  <h2>Core principles</h2>
+  <p class="sub">These rules shape nearly every module. Most of the code's complexity is there to enforce them.</p>
+  <div class="cards four">
+    <div class="card"><span class="ico">🗂</span><h3>Markdown is authoritative</h3><p>Accepted knowledge lives as small Markdown files in <code>&lt;notes&gt;/topics/</code>. SQLite/FTS is a disposable index you can delete without losing anything.</p></div>
+    <div class="card"><span class="ico">✋</span><h3>Humans approve every write</h3><p>Model output only ever becomes a <em>pending proposal</em>. Accepting, editing, rejecting and undoing are human-only actions.</p></div>
+    <div class="card"><span class="ico">🔒</span><h3>Privacy at the boundary</h3><p>Sources are <span class="pill ok">Cloud allowed</span> <span class="pill warn">Unknown</span> <span class="pill bad">Local only</span>. Local-only bytes, and topics derived from them, never reach the model.</p></div>
+    <div class="card"><span class="ico">🔗</span><h3>Everything is cited</h3><p>Claims carry path, document hash, byte range, passage hash and the exact excerpt. A changed source goes <em>stale</em>. It is never quietly re-anchored.</p></div>
+  </div>
+</section>
+
+<!-- ========================= ARCHITECTURE ========================= -->
+<section id="system">
+  <p class="eyebrow">Architecture</p>
+  <h2>System map</h2>
+  <p class="sub">One desktop process hosts the UI, the store and the runtime. Codex runs as a sandboxed child that can reach your notes only through Topics' own MCP server.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+  subgraph Mac["Your Mac"]
+    direction LR
+    subgraph App["Topics.app (Tauri 2)"]
+      UI["React / TS UI<br/>main.tsx · Pilot · FolderSetup<br/>TopicDetail · ProposalEditor"]
+      IPC["Tauri commands<br/>src-tauri main.rs + workspace.rs<br/>48 registered handlers"]
+      SETUP["topics-setup<br/>batched setup jobs"]
+      RT["topics-runtime<br/>Codex app-server client<br/>scoped MCP server"]
+      STORE["topics-store<br/>TopicsService · WorkspaceService"]
+      CORE["topics-core<br/>wire types · validation"]
+      UI -- "invoke(request)" --> IPC
+      IPC --> STORE
+      IPC --> SETUP
+      IPC --> RT
+      SETUP --> RT
+      SETUP --> STORE
+      RT -. "HostTools adapter" .-> STORE
+      STORE --> CORE
+      RT --> CORE
+    end
+    CODEX["Codex CLI 0.166.0<br/>(signed in, sandboxed:<br/>denied read of notes root)"]
+    NOTES[("Notes folder<br/>*.md (read-only)<br/>topics/ (app records)")]
+    APPDATA[("App data<br/>config · store.lock<br/>SQLite/FTS · journals<br/>snapshots · pending")]
+    RT <== "NDJSON stdio" ==> CODEX
+    CODEX -- "MCP via --topics-mcp-proxy:<br/>scope_sources · propose_changes" --> RT
+    STORE --> NOTES
+    STORE --> APPDATA
+  end
+  CODEX <-. "HTTPS" .-> CLOUD(("Model provider"))
+  CLI["topics-cli<br/>JSON recovery/test adapter"] --> STORE
+  </pre></div>
+</section>
+
+<section id="crates">
+  <h2>Crates &amp; layers</h2>
+  <p class="sub">Dependencies point inwards. Core knows nothing about files, SQL, UI or the network, and the store knows nothing about the runtime, Tauri or React.</p>
+  <div class="layers">
+    <div class="layer l-outer"><span class="tag">Adapters</span>
+      <div class="chip"><b>apps/desktop</b> Tauri 2 shell + React UI. Real IPC calls store services and never duplicates parsing or persistence.</div>
+      <div class="chip"><b>topics-cli</b> <code>topics workspace &lt;cmd&gt; 'JSON'</code>, used for recovery and tests.</div>
+      <div class="chip"><b>topics-bdd</b> Cucumber runners (Phase 0, workspace, setup) with <code>fail_on_skipped</code>.</div>
+    </div>
+    <div class="layer l-mid"><span class="tag">Orchestration</span>
+      <div class="chip"><b>topics-setup</b> Folder-setup jobs: bounded batches, retries, checkpoints, reconsent.</div>
+      <div class="chip"><b>topics-runtime</b> Pinned Codex app-server, MCP bridge, macOS sandbox profile, commit permits, diagnostics.</div>
+    </div>
+    <div class="layer l-store"><span class="tag">Domain services</span>
+      <div class="chip wide"><b>topics-store</b> <code>TopicsService</code> (scan · SQLite FTS5 · watcher · search) and <code>WorkspaceService</code> (scopes, proposals, decisions, Markdown records, journals, undo, pilot briefings and reviews, setup inventory, drafts and graph).</div>
+    </div>
+    <div class="layer l-core"><span class="tag">Core</span>
+      <div class="chip wide"><b>topics-core</b> Canonical serde wire values (Topic, Claim, Connection, Rule, Candidate, Proposal, Operation, Setup*, Pilot*), plus UUID, date and candidate validation. TS types are generated into <code>src/generated</code>.</div>
+    </div>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>Where</th><th>Biggest files</th><th>What lives there</th></tr></thead>
+    <tbody>
+      <tr><td><code>topics-store/src/workspace</code></td><td>proposals.rs · persistence.rs · scopes.rs · pilot_review.rs</td><td>Dedupe and identity, journalled writes, consent and sensitivity, weekly review</td></tr>
+      <tr><td><code>topics-store/src/workspace/setup</code></td><td>review.rs · graph.rs · jobs.rs · decisions.rs</td><td>Inventory, draft map, graph, topic-centred decisions</td></tr>
+      <tr><td><code>topics-runtime/src</code></td><td>bridge.rs · lib.rs · isolation.rs</td><td>MCP tools, run lifecycle, sandbox preflight</td></tr>
+      <tr><td><code>apps/desktop/src</code></td><td>main.tsx · Pilot.tsx · FolderSetup.tsx</td><td>Shell and nav, Today/Weekly review, setup wizard</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="data">
+  <h2>Data model &amp; storage</h2>
+  <div class="split">
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  TOPIC ||--o{ CLAIM : "subject of"
+  TOPIC ||--o{ CONNECTION : "from / to"
+  CLAIM ||--o{ EVIDENCE : "cites"
+  EVIDENCE }o--|| SOURCE : "passage in"
+  CLAIM ||--o{ CLAIM : "supersedes"
+  RULE }o--|| TOPIC : "scoped to"
+  CLAIM ||--o| STATEMENT : "user correction"
+  OPERATION ||--o{ CLAIM : "commits"
+  PROPOSAL ||--o{ CANDIDATE : "contains"
+  TOPIC { uuid id  enum kind  string name  list aliases  enum sensitivity }
+  CLAIM { uuid id  uuid revision_id  string predicate  string value  string uncertainty }
+  RULE { string predicate  string match_value  string replacement  scope paths }
+    </pre></div>
+    <div>
+      <h3>Topic kinds</h3>
+      <p><span class="pill">Person</span> <span class="pill">Project</span> <span class="pill">Thread</span></p>
+      <h3>Candidate kinds (what a proposal holds)</h3>
+      <p><code>topic</code> · <code>claim</code> · <code>connection</code> · <code>correction</code> (claim + rule) · <code>unresolved_identity</code></p>
+      <h3>Proposal origins &amp; status</h3>
+      <p><code>analysis</code> · <code>chat</code> · <code>manual</code> → <span class="pill warn">Pending</span> <span class="pill ok">Accepted</span> <span class="pill">Rejected</span> <span class="pill bad">Conflict</span></p>
+      <h3>Where things live</h3>
+      <div class="tree">
+<b>&lt;notes root&gt;/</b>
+├─ your notes/*.md            <i>never rewritten</i>
+└─ topics/                    <i>app-owned, authoritative</i>
+   ├─ topics/  claims/  connections/  rules/
+   ├─ sources/  statements/  unresolved/
+   └─ operations/&lt;uuid&gt;.md    <i>commit markers</i>
+
+<b>~/Library/Application Support/com.macsdickinson.topics/</b>
+├─ config · store.lock        <i>one lock for every process</i>
+├─ index.sqlite (FTS5)        <i>disposable, rebuilt on demand</i>
+└─ roots/&lt;root-id&gt;/          <i>scopes, run capabilities, pending
+                               proposals, journals, snapshots</i></div>
+      <p class="note">Each record starts with frontmatter <code>schema: topics/v1</code>, <code>record_kind</code>, <code>id</code>, <code>operation_id</code>, <code>data: {typed JSON}</code>, followed by a readable Markdown body.</p>
+    </div>
+  </div>
+</section>
+
+<section id="cloud">
+  <h2>The cloud boundary: one analysis run</h2>
+  <p class="sub">Each run gets a single-use capability bound to its root, scope and run IDs. The model can read only the confirmed snapshot and propose candidates. It has no tools to approve, write or browse your inventory.</p>
+  <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor You
+  participant UI as React UI
+  participant WS as WorkspaceService
+  participant RT as Runtime + MCP
+  participant CX as Codex (sandboxed)
+  You->>UI: Analyse notes: pick files, folders, dates
+  UI->>WS: scope_preview
+  WS-->>UI: included / excluded / unknown, hashes
+  You->>UI: Confirm the preview (consent)
+  UI->>WS: analysis_start → run capability
+  UI->>RT: start run
+  RT->>CX: thread + turn (pinned config, 2 tools)
+  CX->>RT: scope_sources(scope_id)
+  RT->>WS: scope_read (eligible snapshot only)
+  CX->>RT: propose_changes(candidates)
+  RT->>WS: validate_proposal (buffer, publish nothing)
+  CX-->>RT: turn completed
+  RT->>WS: stage_proposal under a CommitPermit
+  WS-->>UI: Pending proposal → Inbox
+  Note over CX,WS: Error or cancel → run_cancel. A consumed capability can't read or publish late.
+  You->>UI: Accept / edit / reject
+  UI->>WS: proposal_decide (human-only)
+  WS->>WS: journal → write Markdown → operation marker
+  </pre></div>
+  <div class="cards three">
+    <div class="card"><h3>Process isolation</h3><p>On macOS Codex runs under a Seatbelt profile that denies read and write of the notes root. Preflight checks the binary, version and profile before every run.</p></div>
+    <div class="card"><h3>Consent is exact</h3><p>Consent is bound to path, content hash and operation sequence. "Unknown" consent covers one run only and can never lift Local only.</p></div>
+    <div class="card"><h3>Taint spreads</h3><p>A topic derived from local-only evidence becomes private too. Releasing it takes an explicit human declassification.</p></div>
+  </div>
+</section>
+
+<section id="writes">
+  <h2>Recoverable writes &amp; undo</h2>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+  A["Approve"] --> B["Journal in app data:<br/>old bytes or absence<br/>+ staged bytes"]
+  B --> C["Check every target's<br/>expected hash"]
+  C -->|match| D["Temp file → flush →<br/>rename → dir flush"]
+  C -->|mismatch| X["Conflict: keep old,<br/>staged and current bytes"]
+  D --> E["Write operation marker<br/>LAST = committed"]
+  E --> F["Projection rebuilt<br/>from Markdown"]
+  F --> U["Undo = a new compensating<br/>operation (tombstone / restore),<br/>with dependency checks"]
+  </pre></div>
+  <p class="note">On restart, a commit resumes only if current hashes match the expected or already-written bytes. Otherwise Topics preserves everything and reports a conflict. Projections ignore anything without a commit marker.</p>
+</section>
+
+<!-- ========================= USER GUIDE ========================= -->
+<section id="guide-start">
+  <p class="eyebrow">User guide</p>
+  <h2>1 · Connect a notes folder</h2>
+  <div class="split">
+    <div>
+      <ol class="steps">
+        <li>Launch <code>Topics.app</code>, or run <code>npm run tauri dev</code> in <code>apps/desktop</code>.</li>
+        <li>Choose an existing notes folder, or create an empty one. Manual path entry also works.</li>
+        <li>Select <b>Use notes folder</b>. Topics indexes the folder locally and starts a watcher (it polls about every 200 ms).</li>
+        <li>For chat and analysis, sign in to <b>Codex CLI 0.166.0</b> yourself. Topics never reads your tokens. Without Codex, browsing, search and manual capture still work.</li>
+      </ol>
+      <p class="note">Until a folder is connected, connecting is the only thing on screen. Each time you pick a folder it gets a new root ID: accepted knowledge stays, while pending approvals and scopes are invalidated.</p>
+    </div>
+    <figure><img src="img/native-first-run-dark.png" alt="Topics first-run screen in dark appearance, asking the user to choose or create a notes folder"><figcaption>First run (dark appearance)</figcaption></figure>
+  </div>
+  <div class="shellmap">
+    <div class="side">
+      <b>Sidebar</b>
+      <span class="g">Search notes ⌘K</span>
+      <span class="h">Library</span><span>Topics</span><span>Sources</span>
+      <span class="h">Review</span><span>Today</span><span>Inbox <i>n</i></span><span>History</span>
+      <span class="h">Workspace</span><span>Set up folder</span><span>Analyse notes</span><span>New topic</span>
+      <span class="h">Notes folder · runtime status</span>
+    </div>
+    <p>The app shell: <b>Library</b> is for reading, <b>Review</b> is for deciding, and <b>Workspace</b> starts work. On narrow windows the sidebar becomes a labelled top bar.</p>
+  </div>
+</section>
+
+<section id="guide-setup">
+  <h2>2 · Build a starting map (Set up folder)</h2>
+  <div class="flow">
+    <div class="fstep"><b>Inventory</b><span>Local only, no model. Folders grouped by likely role (people, projects, meetings, logs, other), with counts, date ranges and exclusions.</span></div>
+    <div class="fstep"><b>Manifest</b><span>Whole eligible folder pre-selected. Adjust folders, dates and roles, then review the exact manifest.</span></div>
+    <div class="fstep"><b>Build starting map</b><span>One consent for this manifest. The job runs in bounded batches, each with its own run capability.</span></div>
+    <div class="fstep"><b>Draft map</b><span>Browse draft topics and the graph as batches finish. Failures and gaps stay visible.</span></div>
+    <div class="fstep"><b>Receipt → Save</b><span>Shows the eligible set and dependencies, then one explicit save.</span></div>
+  </div>
+  <div class="gallery">
+    <figure><img src="img/scope-review.png" alt="Scope review screen listing included, excluded and unknown notes before the user confirms consent"><figcaption>Scope preview and consent</figcaption></figure>
+    <figure><img src="img/scripted-draft.png" alt="Draft map screen showing draft topics produced during folder setup"><figcaption>Draft topics during setup</figcaption></figure>
+  </div>
+  <p class="note">If files change before they are sent, Topics shows the old and new manifests side by side and asks for fresh consent. Batches already completed are kept. Saving a sourced import is <em>not</em> the same as verifying that each statement is true.</p>
+</section>
+
+<section id="guide-review">
+  <h2>3 · Review proposals in Inbox</h2>
+  <div class="split">
+    <div>
+      <p>Every model run, chat correction and manual topic lands here as a <b>proposal</b>. The Inbox badge counts pending proposals.</p>
+      <ul class="ticks">
+        <li>Candidates are grouped by type, each with its evidence, uncertainty and an include toggle.</li>
+        <li>Edit a value before accepting. Topics records your edit as a <em>user-edit statement</em> in the same operation.</li>
+        <li>Corrections show the old and new values plus the <b>rule</b> you're approving.</li>
+        <li><b>Accept</b> or <b>Reject</b>. If the knowledge changed underneath, the proposal becomes <span class="pill bad">Conflict</span> and needs a fresh analysis.</li>
+        <li>Duplicate people are never merged by name alone. Ambiguity is shown as an unresolved identity for you to decide.</li>
+      </ul>
+    </div>
+    <figure><img src="img/workspace-correction.png" alt="Inbox proposal showing a corrected claim, its old and new values and the scoped rule to approve"><figcaption>Reviewing a correction and its rule</figcaption></figure>
+  </div>
+</section>
+
+<section id="guide-topics">
+  <h2>4 · Read and correct a topic</h2>
+  <div class="split">
+    <figure class="tall"><img src="img/workspace-topic.png" alt="Topic detail screen with current understanding, revision history and an Ask or correct box"><figcaption>Topic detail: current understanding, your correction, revision history and Ask or correct</figcaption></figure>
+    <div>
+      <ol class="steps">
+        <li>Open <b>Topics</b>. The list is on the left and the selected topic's detail on the right.</li>
+        <li><b>Current understanding</b> comes first: each claim with its uncertainty and collapsible sources.</li>
+        <li><b>Revision history</b> keeps earlier values. Nothing is deleted.</li>
+        <li><b>Review this understanding</b>: <i>That's wrong</i> · <i>Add context</i> · <i>Not now</i> · <i>Confirm</i>.</li>
+        <li><b>Ask or correct</b>: write a message, select <b>Preview chat sources</b>, then send. The topic must be marked Cloud allowed.</li>
+        <li>The reply comes back as a proposal in Inbox. A correction supersedes the old revision and adds a scoped <b>rule</b>, such as "for Ledger support handovers, Sam means Sam Patel".</li>
+      </ol>
+      <p class="note">You can set a topic's sensitivity here. Topics created by the model always start as <span class="pill warn">Unknown</span>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="guide-today">
+  <h2>5 · Today and the Friday sync pilot</h2>
+  <p class="sub">This is the newest feature (PR #1, <code>friday-sync-pilot</code>). It tests whether a dated briefing cuts the work of preparing for and correcting a weekly meeting.</p>
+  <div class="mock">
+    <div class="mock-head"><b>Today</b><span class="pill">Last analysed · Thu 14:02 · 12 sources</span><span class="pill warn">2 pending</span></div>
+    <div class="mock-body">
+      <div class="mock-col">
+        <p class="h">Changes since the last kept meeting</p>
+        <div class="item"><b>Ledger · launch</b> Tuesday <span class="cite">meeting-11-19.md</span><span class="acts">Correct</span></div>
+        <div class="item"><b>Sam Patel · owns</b> support handover <span class="cite">ledger.md</span><span class="acts">Correct</span></div>
+        <div class="btnrow"><span class="btn">Keep briefing for meeting</span><span class="btn ghost">Topics missed something</span><span class="btn ghost">Saved briefings</span><span class="btn ghost">Weekly review</span></div>
+      </div>
+      <div class="mock-col narrow">
+        <p class="h">Source status</p>
+        <p>⚠ 1 unavailable<br>◔ 2 changed, not analysed<br>✓ 9 analysed</p>
+        <p class="h">Route</p><p>Set up folder → authorise the changed batch</p>
+      </div>
+    </div>
+    <p class="mock-cap">Illustrative mock of the Today layout, drawn from <code>Pilot.tsx</code> and <code>docs/design/screens.md</code> (no screenshot is committed yet).</p>
+  </div>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+  T["Open Today<br/>local version check<br/>+ freshness / gaps"] --> K["Keep briefing<br/>for meeting<br/>(dated snapshot)"]
+  T --> FB["Correct an item, or<br/>Topics missed something<br/>(one sentence)"]
+  FB --> FV["Saved feedback view<br/>(not a cutoff)"]
+  K --> M["Meeting"]
+  M --> FB2["Feedback on the kept briefing<br/>Saved briefings → Open"]
+  FB2 --> W["Weekly review<br/>Baseline vs Pilot:<br/>prep min, correction min,<br/>material changes, misses"]
+  FV --> W
+  W --> SC["Scoped correction<br/>→ preview → approve<br/>→ check the next occurrence"]
+  SC -.-> T
+  </pre></div>
+  <table class="tbl">
+    <thead><tr><th>Signal measured each week</th><th>How it's read</th></tr></thead>
+    <tbody>
+      <tr><td>Correction effort</td><td>Prep and correction minutes, plus distinct wrong items</td></tr>
+      <tr><td>Known in-scope misses</td><td>Misses with evidence analysed before the meeting, as numerator/denominator. Pending, new and unknown are reported separately</td></tr>
+      <tr><td>Action quality</td><td>Marked unavailable until draft action capture ships</td></tr>
+      <tr><td>Learning</td><td>For each approved rule: later eligible occurrences and recurrences, or "no later example"</td></tr>
+    </tbody>
+  </table>
+  <p class="note"><b>Decision rule:</b> one baseline plus two pilot syncs. Proceed to the two-folder milestone if both pilot weeks need less prep plus correction time than baseline, at least one useful change surfaced before a meeting, and misses per eligible change didn't rise.</p>
+</section>
+
+<section id="guide-more">
+  <h2>6 · Sources, search, manual capture and history</h2>
+  <div class="gallery">
+    <figure><img src="img/sources.png" alt="Sources screen showing a note and its sensitivity label control"><figcaption><b>Sources</b>: read any note and set its sensitivity label</figcaption></figure>
+    <figure><img src="img/workspace-history.png" alt="History screen listing operations with undo controls and dependency explanations"><figcaption><b>History</b>: each operation, with undo and its dependencies explained</figcaption></figure>
+  </div>
+  <div class="cards three">
+    <div class="card"><h3>Search ⌘K</h3><p>Local FTS over your notes, including private ones; app records are excluded. Highlights render as text nodes, never as raw HTML.</p></div>
+    <div class="card"><h3>New topic</h3><p>Manual capture with no model needed. It goes through the same Inbox approval.</p></div>
+    <div class="card"><h3>Undo</h3><p>Undo is a compensating operation. An update can be undone before its creation, but an undo can't itself be undone: re-propose instead.</p></div>
+  </div>
+</section>
+
+<!-- ========================= PRODUCT ========================= -->
+<section id="features">
+  <p class="eyebrow">Product</p>
+  <h2>Feature breakdown</h2>
+  <table class="tbl feat">
+    <thead><tr><th>Area</th><th>Feature</th><th>Status</th><th>Key code</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">Foundation</td><td>Notes root: choose, create, switch</td><td><span class="pill ok">Shipped</span></td><td>store/lib.rs, scan.rs</td></tr>
+      <tr><td>Full-text search with safe highlights</td><td><span class="pill ok">Shipped</span></td><td>Search.tsx, FTS5</td></tr>
+      <tr><td>Live watcher and cross-process lock</td><td><span class="pill ok">Shipped</span></td><td>store.lock, WatchHandle</td></tr>
+      <tr><td rowspan="5">Knowledge</td><td>Topics (person, project, thread) with cited claims and connections</td><td><span class="pill ok">Shipped</span></td><td>TopicDetail.tsx, Evidence.tsx</td></tr>
+      <tr><td>Analyse notes: scoped preview, consent, run</td><td><span class="pill ok">Shipped</span></td><td>Scope.tsx, runtime</td></tr>
+      <tr><td>Inbox: edit, accept or reject proposals</td><td><span class="pill ok">Shipped</span></td><td>ProposalEditor.tsx, proposals.rs</td></tr>
+      <tr><td>Topic chat corrections with scoped rules</td><td><span class="pill ok">Shipped</span></td><td>workspace_chat_start</td></tr>
+      <tr><td>History and compensating undo</td><td><span class="pill ok">Shipped</span></td><td>persistence.rs</td></tr>
+      <tr><td rowspan="2">Privacy</td><td>Sensitivity labels, taint, exact consent</td><td><span class="pill ok">Shipped</span></td><td>scopes.rs, Sources.tsx</td></tr>
+      <tr><td>Source identity repair (rename/edit)</td><td><span class="pill ok">Shipped</span> <small>CLI</small></td><td>source_identity_repair</td></tr>
+      <tr><td rowspan="3">Folder setup</td><td>Local inventory with suggested roles</td><td><span class="pill ok">Shipped</span></td><td>setup/inventory.rs</td></tr>
+      <tr><td>Batched, resumable draft map with reconsent</td><td><span class="pill ok">Shipped</span></td><td>topics-setup, setup/jobs.rs</td></tr>
+      <tr><td>Draft graph, receipt, topic-centred decisions</td><td><span class="pill ok">Shipped</span></td><td>FolderSetup.tsx, ContextReview.tsx</td></tr>
+      <tr><td rowspan="4">Friday pilot</td><td>Today briefing with source freshness</td><td><span class="pill info">Pilot</span></td><td>Pilot.tsx, pilot_briefing.rs</td></tr>
+      <tr><td>Kept meeting briefings and feedback views</td><td><span class="pill info">Pilot</span></td><td>pilot_views.rs</td></tr>
+      <tr><td>Weekly review scorecard (baseline vs pilot)</td><td><span class="pill info">Pilot</span></td><td>pilot_review.rs</td></tr>
+      <tr><td>Cross-note scoped corrections and learning check</td><td><span class="pill info">Pilot</span></td><td>pilot_review.rs</td></tr>
+      <tr><td rowspan="4">Later</td><td>Automatic action/commitment extraction</td><td><span class="pill">Planned</span></td><td>n/a</td></tr>
+      <tr><td>Task management, bullet-journal migration</td><td><span class="pill">Planned</span></td><td>n/a</td></tr>
+      <tr><td>Two-folder / multi-source library</td><td><span class="pill">Gated on pilot</span></td><td>features/multi-source-library</td></tr>
+      <tr><td>Large notes handling</td><td><span class="pill">Planned</span></td><td>features/large-notes</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="milestones">
+  <h2>Milestones so far</h2>
+  <div class="timeline">
+    <div class="ms"><b>Phase 0</b><span>Root, index, search, watcher, cross-process lock</span></div>
+    <div class="ms"><b>Topic workspace</b><span>Claims, reviewed discovery, MCP runtime, correction chat, undo</span></div>
+    <div class="ms"><b>Workspace controls</b><span>Native folder chooser, window chrome, fresh session</span></div>
+    <div class="ms"><b>Folder setup</b><span>Inventory → batched draft map → topic-centred review</span></div>
+    <div class="ms now"><b>Friday sync pilot</b><span>Today, kept briefings, feedback, weekly review · merged in PR #1</span></div>
+    <div class="ms next"><b>Next?</b><span>Two-folder library or action capture, decided by the pilot</span></div>
+  </div>
+</section>
+
+<section id="limits">
+  <h2>Known limits (from the repo's own docs)</h2>
+  <ul class="ticks warnlist">
+    <li>macOS only (Apple silicon, ad-hoc signed). No updater, notarisation or install channel yet.</li>
+    <li>Chat and analysis need the exact Codex CLI 0.166.0, already signed in. Other runtimes fail with guidance.</li>
+    <li>Full scans hold the store lock with no timeout. The 2-second target is tested only on synthetic fixtures.</li>
+    <li>Cooperative locking assumes a single app-data directory per notes root.</li>
+    <li>Writes are recoverable per file, not atomic across files. No real power-loss campaign has been run.</li>
+    <li>A moved file edited before inventory can lose its hash lineage. Unicode NFC/NFD name variants aren't unified.</li>
+    <li>Repeated assertions with the same topic, predicate and value are suppressed in Today, so a decision that reverts to an earlier value may need to be reported as a miss.</li>
+  </ul>
+</section>
+
+<footer>This site is maintained in <code>docs/site/</code> in the repository and is updated with every change or feature. Build <code>{{BUILD_SHA}}</code> · {{BUILD_DATE}}. See <code>docs/site/README.md</code> for how to edit and preview it.</footer>
+</main>
+</div>
+</body>
+</html>

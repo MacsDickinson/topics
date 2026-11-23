@@ -1,0 +1,68 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-${{ github.event_name == 'pull_request' && github.ref || 'pages-deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build site
+        run: |
+          rm -rf _site
+          cp -R docs/site _site
+          rm -f _site/check-links.sh
+          touch _site/.nojekyll
+          sha="$(git rev-parse --short HEAD)"
+          date="$(date -u +'%Y-%m-%d')"
+          find _site -name '*.html' -exec sed -i "s/{{BUILD_SHA}}/${sha}/g; s/{{BUILD_DATE}}/${date}/g" {} +
+          if grep -rq '{{BUILD_' _site --include='*.html'; then echo 'unreplaced build placeholder'; exit 1; fi
+
+      - name: Validate relative links
+        run: bash docs/site/check-links.sh _site
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-site
+          path: _site
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-site
+          path: _site
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: _site
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_message: "Deploy docs from ${{ github.sha }}"
