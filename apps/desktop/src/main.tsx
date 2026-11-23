@@ -1,3 +1,4 @@
+import { WindowStatus } from "./WindowStatus";
 import { Appearance } from "./Appearance";
 import { Pilot } from "./Pilot";
 import { ContextReview } from "./ContextReview";
@@ -17,7 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Search } from "./Search";
 import { Sources } from "./Sources";
-import { ipc, apiError, errorHelp } from "./ipc";
+import { ipc, apiError } from "./ipc";
 import { ProposalEditor } from "./ProposalEditor";
 import { TopicDetail } from "./TopicDetail";
 import {
@@ -723,12 +724,20 @@ function App() {
   };
   return (
     <div className="workspace">
-      <div className="window-chrome" aria-hidden="true">
-        <div className="window-chrome-drag" data-tauri-drag-region />
-      </div>
       <a className="skip-link" href="#workspace-content">
         Skip to content
       </a>
+      <WindowStatus
+        runtime={runtime}
+        error={error}
+        notice={notice}
+        bootError={bootError}
+        opening={root === undefined}
+        running={!!run}
+        checkRuntime={checkRuntime}
+        dismissError={() => setError(null)}
+        dismissNotice={() => setNotice("")}
+      />
       <aside className="sidebar" aria-label="Topics workspace">
         <div className="brand">
           <span className="brand-mark">
@@ -868,29 +877,9 @@ function App() {
           >
             Change notes folder
           </Button>
-          {runtime && !bootError && (
-            <div className={`runtime ${runtime.available ? "ready" : ""}`}>
-              <p>
-                <Icon name={runtime.available ? "check" : "info"} />
-                <span>
-                  {runtime.available
-                    ? `Codex ${runtime.version || ""} installed`
-                    : runtime.message}
-                </span>
-              </p>
-              {!runtime.available && (
-                <Button variant="quiet" onClick={() => void checkRuntime()}>
-                  Check runtime again
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       </aside>
       <main className="workspace-main" id="workspace-content" tabIndex={-1}>
-        {root === undefined && !bootError && (
-          <p role="status">Opening your workspace…</p>
-        )}
         {!appDataBootError && (settings || root === null) && (
           <section className="setup focused-form">
             <span className="form-icon">
@@ -970,26 +959,6 @@ function App() {
                 : "Choose an available notes folder above to recover this workspace."}
             </p>
           </section>
-        )}
-        {error && (
-          <div role="alert" className="error">
-            <p>{error.message}</p>
-            {errorHelp(error) && <p>{errorHelp(error)}</p>}
-            {error.details != null && (
-              <details>
-                <summary>Related changes</summary>
-                <pre>{JSON.stringify(error.details, null, 2)}</pre>
-              </details>
-            )}
-            <Button variant="quiet" onClick={() => setError(null)}>
-              Dismiss error
-            </Button>
-          </div>
-        )}
-        {notice && (
-          <p aria-live="polite" className="notice">
-            {notice}
-          </p>
         )}
         {root &&
           !settings &&
@@ -1304,7 +1273,7 @@ function App() {
                   </div>
                   {!runtime?.available && (
                     <p className="notice">
-                      Check the runtime status in the sidebar before starting.
+                      Check the runtime status in the title bar before starting.
                       Selection previews remain available.
                     </p>
                   )}

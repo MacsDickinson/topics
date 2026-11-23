@@ -72,3 +72,30 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+test("title bar follows the navigation palette and keeps status outside the drag region", async ({ page }) => {
+  await page.setViewportSize({ width: 560, height: 420 });
+  await workspaceFixture(page, { unavailable: true });
+  const bar = page.getByRole("banner", { name: "Workspace status" });
+  const status = bar.getByRole("button", { name: "Workspace status details" });
+  for (const scheme of ["light", "dark"]) {
+    await page.getByLabel("Appearance").selectOption(scheme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", scheme);
+    const surface = await page.locator(".sidebar").evaluate(el => getComputedStyle(el).backgroundColor);
+    await expect(bar).toHaveCSS("background-color", surface);
+  }
+  const drag = await bar.locator("[data-tauri-drag-region]").boundingBox();
+  const trigger = await status.boundingBox();
+  expect(drag!.x + drag!.width).toBeLessThanOrEqual(trigger!.x);
+  await status.focus();
+  await page.keyboard.press("Enter");
+  const retry = bar.getByRole("button", { name: "Check runtime again" });
+  await retry.click();
+  await expect.poll(() => page.evaluate(() => (window as any).calls.filter((c: any) => c.command === "workspace_runtime_status").length)).toBeGreaterThan(1);
+  await page.keyboard.press("Escape");
+  await expect(status).toBeFocused();
+  await expect(retry).toHaveCount(0);
+  await status.click();
+  await page.getByRole("heading").first().click();
+  await expect(retry).toHaveCount(0);
+});

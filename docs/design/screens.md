@@ -14,6 +14,8 @@ Desktop shell                         Narrow window
 
 The shell groups Topics/Sources under Library and Inbox/History under Review, with a real quick search, Set up folder, Analyse notes and New topic actions plus full root/runtime context. Distinguish active navigation from focus. At constrained widths, preserve labels and stack inner panes before reading becomes cramped; permit document scrolling without clipping controls. Initial connection is the only content task until a root exists; Search is not rendered underneath it. See [redesign](redesign.md) for the React primitive and parallel-feature integration contract.
 
+The window title bar shares the sidebar colour across screens. Open its status at the right edge for runtime availability, run progress and workspace notifications. Review receipts and field errors remain beside their controls.
+
 ## Read and inspect
 
 **Topics:** list names and supporting metadata on the left; selected topic detail on the right. Each current claim appears once, with its review state, uncertainty, evidence disclosure and quiet correction/context controls together, followed by connections and unresolved mentions. Clearly label source excerpts and paths. Ask or correct follows the reading context; a generated response is not an accepted change. Long excerpts and paths wrap and remain available in full.

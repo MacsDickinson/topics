@@ -80,13 +80,7 @@ Definition of done / review checklist:
 
 ## Integrated window header
 
-The macOS shell uses a decorated overlay with the native traffic lights and a fixed 28px app-surface header. Reserve the first 80px for those controls, and keep the focused skip link below the header. Only empty header space is a drag region; interactive controls and selectable text remain outside it. The desktop sidebar sticks below the header and fits the remaining viewport; narrow navigation flows beneath it. See [window chrome](design/window-chrome.md) for configuration, examples and native evidence limits.
-
-```tsx
-<div className="window-chrome" aria-hidden="true">
-  <div className="window-chrome-drag" data-tauri-drag-region />
-</div>
-```
+The 36px title bar uses the sidebar surface token. The native macOS traffic lights occupy the first 80px. Leave the middle clear for dragging and align workspace status at the trailing edge. The status disclosure shows complete messages and recovery actions. Keep field errors, scope and approval receipts beside their controls. The first keyboard stop is the skip link below the bar. See [window chrome](design/window-chrome.md) for the component example and native verification history.
 
 ## Folder chooser
 

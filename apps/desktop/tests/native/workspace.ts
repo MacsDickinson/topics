@@ -32,7 +32,12 @@ describe('Topic workspace native service journey', () => {
     );
     await expect($('button=Start analysis')).toBeDisabled();
     // A real unavailable binary is configured only in the native-test build.
-    await expect($('.runtime')).toHaveText(expect.stringContaining('Codex'));
+    await expect($('.window-status-summary')).toHaveText(expect.stringContaining('Codex'));
+    const statusDetails = await $('button[aria-label="Workspace status details"]');
+    await statusDetails.click();
+    await expect($('button=Check runtime again')).toBeDisplayed();
+    await statusDetails.click();
+    await expect($('button=Check runtime again')).not.toExist();
     await $('button=Sources').click();
     await $('button[aria-label="memory/projects/ledger-migration.md"]').click();
     await expect($('.note-content')).toHaveText(original.trim());

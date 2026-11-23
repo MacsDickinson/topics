@@ -359,28 +359,9 @@ kbd {
 .sidebar-bottom > .ui-button {
   margin-left: -8px;
 }
-.runtime {
-  border-top: 1px solid var(--color-border-default);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  color: var(--color-text-warning);
-  font: var(--type-meta);
-}
-.runtime p {
-  display: flex;
-  gap: var(--space-2);
-  align-items: start;
-  margin: 0;
-}
-.runtime.ready {
-  color: var(--color-text-success);
-}
-.runtime .ui-button {
-  padding-left: 0;
-}
 .workspace-main {
   min-width: 0;
-  min-height: calc(100vh - 28px);
+  min-height: calc(100vh - var(--window-header-height));
   padding: var(--space-6);
   background: var(--color-background-panel);
 }
@@ -1135,13 +1116,6 @@ kbd {
     margin-left: 0;
     padding-left: 0;
   }
-  .runtime {
-    grid-column: 2;
-    grid-row: 1 / 3;
-    border: 0;
-    padding: 0;
-    margin: 0;
-  }
   .workspace-main {
     min-height: 500px;
     padding: var(--space-5);
@@ -1183,10 +1157,6 @@ kbd {
   }
   .sidebar-bottom {
     grid-template-columns: 1fr;
-  }
-  .runtime {
-    grid-column: 1;
-    grid-row: auto;
   }
   .focused-form {
     padding: var(--space-4);

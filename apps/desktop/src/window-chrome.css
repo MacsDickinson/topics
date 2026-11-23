@@ -1,28 +1,61 @@
-/* Keep the native control clearance visible above scrolling app content. */
+:root { --window-header-height: 36px; }
+
 .window-chrome {
   position: fixed;
   z-index: 5;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 28px;
-  padding-left: 80px;
-  background: var(--color-background-app);
+  inset: 0 0 auto;
+  height: var(--window-header-height);
+  padding: 0 var(--space-3) 0 80px;
+  display: flex;
+  align-items: center;
+  background: var(--color-background-sidebar);
 }
-.window-chrome-drag {
-  width: 100%;
-  height: 100%;
+.window-chrome-drag { flex: 1; min-width: var(--space-5); height: 100%; }
+.window-status { min-width: 0; max-width: 52ch; position: relative; }
+.window-status-line {
+  position: relative;
+  border-radius: var(--radius-control);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: var(--type-meta);
 }
-.workspace {
-  padding-top: 28px;
+.window-status-trigger {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
 }
-.sidebar {
-  top: 28px;
-  height: calc(100vh - 28px);
+.window-status-trigger::after { content: ""; position: absolute; inset: 0; }
+.window-status-line:hover { background: var(--color-background-hover); }
+.window-status-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.window-status-line .icon { width: 14px; height: 14px; flex-basis: 14px; }
+.window-status-line.ready > .icon { color: var(--color-text-success); }
+.window-status-line.danger { color: var(--color-text-danger); }
+.window-status-trigger .icon { transform: rotate(90deg); }
+.window-status-trigger[aria-expanded="true"] .icon { transform: rotate(-90deg); }
+.window-status-details {
+  position: absolute;
+  inset: calc(100% + var(--space-1)) 0 auto auto;
+  width: min(360px, calc(100vw - 2 * var(--space-3)));
+  max-height: calc(100vh - var(--window-header-height) - var(--space-5));
+  overflow: auto;
+  padding: var(--space-4);
+  color: var(--color-text-primary);
+  background: var(--color-background-panel);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  box-shadow: var(--elevation-panel);
 }
-@media (max-width: 760px) {
-  .workspace { padding-top: 28px; }
-  .sidebar { height: auto; }
-}
-/* The first keyboard focus must clear the native traffic lights. */
-.skip-link { top: calc(28px + var(--space-3)); }
+.window-status-details p, .window-status-details pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.workspace { padding-top: var(--window-header-height); }
+.sidebar { top: var(--window-header-height); height: calc(100vh - var(--window-header-height)); }
+@media (max-width: 760px) { .sidebar { height: auto; } }
+.skip-link { top: calc(var(--window-header-height) + var(--space-3)); }
