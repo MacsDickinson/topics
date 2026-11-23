@@ -332,6 +332,8 @@ test("changed scope requires a new manifest and explicit consent before resuming
   page,
 }) => {
   await workspaceFixture(page);
+  // Hold the original start reply until the watch has reported changed scope.
+  await page.evaluate(() => { (window as any).defer.setup_job_start = true; });
   await setupJob(page);
   await expect
     .poll(() =>
@@ -357,6 +359,12 @@ test("changed scope requires a new manifest and explicit consent before resuming
       batches: [],
       excluded: [{ path: "Meetings/one.md", reason: "No longer eligible" }],
     };
+  });
+  await expect(page.getByRole("heading", { name: "Review changed scope" })).toBeVisible();
+  await page.evaluate(() => {
+    const w = window as any;
+    w.defer.setup_job_start.resolve({ ...structuredClone(w.setupJob), status: "running" });
+    delete w.defer.setup_job_start;
   });
   await page.getByRole("button", { name: "Preview updated manifest" }).click();
   await expect(

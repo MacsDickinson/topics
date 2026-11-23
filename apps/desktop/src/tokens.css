@@ -1,25 +1,25 @@
-/* Topics design foundations: semantic roles adapt to the system appearance. */
+/* Topics design foundations: semantic roles inherit the palette on the document root. */
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   font-synthesis: none;
-  color-scheme: light dark;
-  --color-text-primary: #202c3a;
-  --color-text-secondary: #48596b;
-  --color-text-muted: #596b7e;
-  --color-text-placeholder: #596b7e;
+  color-scheme: light;
+  --color-text-primary: #272824;
+  --color-text-secondary: #50544e;
+  --color-text-muted: #5f655e;
+  --color-text-placeholder: #5f655e;
   --color-text-accent: #184f91;
   --color-text-on-action: #ffffff;
   --color-text-info: #355a7d;
   --color-text-warning: #76580c;
   --color-text-success: #266144;
   --color-text-danger: #922f2a;
-  --color-background-app: #e9edf2;
-  --color-background-sidebar: #f5f7fa;
-  --color-background-panel: #ffffff;
-  --color-background-subtle: #f5f7fa;
-  --color-background-hover: #eaf0f7;
-  --color-background-selected: #dceafb;
+  --color-background-app: #fbfaf7;
+  --color-background-sidebar: #f1f1eb;
+  --color-background-panel: #fbfaf7;
+  --color-background-subtle: #f1f1eb;
+  --color-background-hover: #e9ebe4;
+  --color-background-selected: #dfe9e8;
   --color-background-action: #2768ae;
   --color-background-action-hover: #19558f;
   --color-background-info: #edf4fa;
@@ -27,8 +27,8 @@
   --color-background-success: #e7f3ec;
   --color-background-danger: #fff0ee;
   --color-background-highlight: #ffedb4;
-  --color-border-subtle: #e6ebf0;
-  --color-border-default: #d8e0e8;
+  --color-border-subtle: #e6e7e0;
+  --color-border-default: #d8dad2;
   --color-border-strong: #718398;
   --color-border-focus: #2773c6;
   --color-border-info: #a6bfd7;
@@ -58,38 +58,37 @@
   color: var(--color-text-primary);
   background: var(--color-background-app);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-text-primary: #e4ebf3;
-    --color-text-secondary: #bbc9d8;
-    --color-text-muted: #a9bbce;
-    --color-text-placeholder: #a9bbce;
-    --color-text-accent: #a9d0ff;
-    --color-text-on-action: #ffffff;
-    --color-text-info: #bad5ef;
-    --color-text-warning: #f1d38b;
-    --color-text-success: #a2dbb8;
-    --color-text-danger: #ffb6ae;
-    --color-background-app: #161d27;
-    --color-background-sidebar: #202a36;
-    --color-background-panel: #252f3c;
-    --color-background-subtle: #2c3745;
-    --color-background-hover: #37495c;
-    --color-background-selected: #294d72;
-    --color-background-action: #286bb3;
-    --color-background-action-hover: #3074b8;
-    --color-background-info: #293e50;
-    --color-background-warning: #4a3e28;
-    --color-background-success: #29483a;
-    --color-background-danger: #4c3032;
-    --color-background-highlight: #6a5528;
-    --color-border-subtle: #394655;
-    --color-border-default: #425061;
-    --color-border-strong: #718398;
-    --color-border-focus: #92c4ff;
-    --color-border-info: #6185a6;
-    --color-border-warning: #a08851;
-    --color-border-danger: #b97570;
-    --elevation-panel: 0 2px 8px rgb(0 0 0 / 16%);
-  }
+:root[data-scheme="dark"] {
+  color-scheme: dark;
+  --color-text-primary: #eeefe8;
+  --color-text-secondary: #c5c9bf;
+  --color-text-muted: #afbaac;
+  --color-text-placeholder: #afbaac;
+  --color-text-accent: #a9d0ff;
+  --color-text-on-action: #ffffff;
+  --color-text-info: #bad5ef;
+  --color-text-warning: #f1d38b;
+  --color-text-success: #a2dbb8;
+  --color-text-danger: #ffb6ae;
+  --color-background-app: #20221f;
+  --color-background-sidebar: #262923;
+  --color-background-panel: #20221f;
+  --color-background-subtle: #2b2e28;
+  --color-background-hover: #363b34;
+  --color-background-selected: #294d72;
+  --color-background-action: #286bb3;
+  --color-background-action-hover: #3074b8;
+  --color-background-info: #293e50;
+  --color-background-warning: #4a3e28;
+  --color-background-success: #29483a;
+  --color-background-danger: #4c3032;
+  --color-background-highlight: #6a5528;
+  --color-border-subtle: #363a33;
+  --color-border-default: #43483e;
+  --color-border-strong: #718398;
+  --color-border-focus: #92c4ff;
+  --color-border-info: #6185a6;
+  --color-border-warning: #a08851;
+  --color-border-danger: #b97570;
+  --elevation-panel: 0 2px 8px rgb(0 0 0 / 16%);
 }

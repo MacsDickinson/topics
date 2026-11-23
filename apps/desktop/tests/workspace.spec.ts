@@ -198,7 +198,7 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
 
 test('approval errors preserve edited candidates and rejected proposals never become topics', async ({
   page,
-}) => {
+}, testInfo) => {
   await workspaceFixture(page);
   await start(page);
   await finish(page);
@@ -212,6 +212,14 @@ test('approval errors preserve edited candidates and rejected proposals never be
   });
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
   await expect(page.getByRole('alert')).toContainText('This passage changed.');
+  const bar = page.getByRole('banner', { name: 'Workspace status' });
+  const details = bar.getByRole('button', { name: 'Workspace status details' });
+  await details.click();
+  await expect(bar.getByRole('region', { name: 'Status details' })).toContainText('Your edits are kept here.');
+  await page.screenshot({ path: testInfo.outputPath('workspace-alert.png'), scale: 'css' });
+  await bar.getByRole('button', { name: 'Dismiss error' }).click();
+  await expect(details).toBeFocused();
+  await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByLabel('Claim value')).toHaveValue('Monday');
   await page.evaluate(() => {
     delete (window as any).failures.workspace_proposal_decide;
@@ -596,6 +604,13 @@ test('accepted empty analysis outcome says no new changes without an approval ca
       { exact: true },
     ),
   ).toBeVisible();
+  const statusBar = page.getByRole('banner', { name: 'Workspace status' });
+  const statusDetails = statusBar.getByRole('button', { name: 'Workspace status details' });
+  await expect(statusDetails).toHaveAccessibleDescription(/No new changes/);
+  await statusDetails.click();
+  await statusBar.getByRole('button', { name: 'Dismiss notification' }).click();
+  await expect(statusDetails).toBeFocused();
+  await expect(statusDetails).toHaveAccessibleDescription(/Codex .* installed/);
   await page.getByRole('button', { name: /Inbox/ }).click();
   await expect(
     page.getByRole('heading', { name: 'No new changes' }),

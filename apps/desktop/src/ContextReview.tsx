@@ -1,9 +1,9 @@
-import { Badge, Button, Field, Section } from "./ui";
+import { Badge, Button, EmptyState, Field, Icon, Section } from "./ui";
 import { useEffect, useRef, useState } from "react";
 import { ipc, apiError } from "./ipc";
-import { Evidence } from "./Evidence";
+import { Evidence, SourceEvidence } from "./Evidence";
 import { endpointLabel } from "./ProposalEditor";
-import type { Topic } from "./workspace-types";
+import type { Topic, TopicView } from "./workspace-types";
 import type { SetupTopicReview } from "./generated/SetupTopicReview";
 import type { SetupReceipt } from "./generated/SetupReceipt";
 import type { SetupCorrectionPreview } from "./generated/SetupCorrectionPreview";
@@ -23,19 +23,20 @@ const labels = {
 };
 export function ContextReview({
   rootId,
-  topicId,
+  view,
   topics,
   onSaved,
   initialCorrection,
   onHistory,
 }: {
   rootId: string;
-  topicId: string;
+  view: TopicView;
   topics: Topic[];
   onSaved: () => void;
   onHistory?: () => void;
   initialCorrection?: { revisionId: string; statement: string } | null;
 }) {
+  const topicId = view.topic.id;
   const [review, setReview] = useState<SetupTopicReview | null>(null),
     [error, setError] = useState("");
   const [approval, setApproval] = useState<Approval | null>(null);
@@ -213,11 +214,11 @@ export function ContextReview({
         },
       );
   }
+  const reading = review?.topic ?? view;
   return (
     <Section
-      className="context-review"
-      title="Review this understanding"
-      description="Confirm what you know, correct a statement, or add your own context."
+      className="context-review understanding"
+      title="Current understanding"
     >
       {error && (
         <p role="alert" className="error">
@@ -242,6 +243,131 @@ export function ContextReview({
           {saving ? "Saving your change…" : "Preparing review…"}
         </p>
       )}
+      {reading.current_claims.length === 0 && (
+        <EmptyState title="No accepted claims yet" icon="thread">
+          <p>
+            Analyse notes or ask about this topic to propose new understanding.
+          </p>
+        </EmptyState>
+      )}
+      {reading.current_claims.map((c) => {
+        const state = review?.reviews.find((r) => r.record_id === c.revision_id)
+          ?.state;
+        return (
+          <article className="accepted-claim" key={c.revision_id}>
+            <h3 className="claim-property">{c.predicate}</h3>
+            <p className="claim-value">{c.value}</p>
+            {c.uncertainty && (
+              <p className="uncertainty">
+                <Icon name="info" />
+                <strong>Uncertainty</strong> <span>{c.uncertainty}</span>
+              </p>
+            )}
+            {review && (
+              <Badge
+                tone={
+                  state === "confirmed_by_you"
+                    ? "success"
+                    : state === "needs_input"
+                    ? "warning"
+                    : "neutral"
+                }
+              >
+                {state ? labels[state] : "Accepted, not personally verified"}
+              </Badge>
+            )}
+            {(c.valid_from || c.valid_to) && (
+              <p>
+                Reported period: {c.valid_from || "unspecified start"} to{" "}
+                {c.valid_to || "unspecified end"}
+              </p>
+            )}
+            <details className="claim-provenance">
+              <summary>Sources ({c.sources.length})</summary>
+              <Evidence sources={c.sources} rootId={rootId} />
+            </details>
+            {review && (
+              <div className="actions">
+                <Button
+                  variant="quiet"
+                  disabled={busy}
+                  onClick={() => {
+                    invalidateApproval();
+                    setAdding(false);
+                    setTarget(c.revision_id);
+                  }}
+                >
+                  That’s wrong
+                </Button>
+                <Button
+                  variant="quiet"
+                  disabled={busy}
+                  onClick={() => {
+                    invalidateApproval();
+                    setAdding(true);
+                    setTarget(null);
+                  }}
+                >
+                  Add context
+                </Button>
+                <Button
+                  variant="quiet"
+                  disabled={saving}
+                  onClick={() => {
+                    invalidateApproval();
+                    setTarget(null);
+                    setAdding(false);
+                  }}
+                >
+                  Not now
+                </Button>
+              </div>
+            )}
+          </article>
+        );
+      })}
+      {reading.connections.length > 0 && (
+        <section>
+          <h3>Connections</h3>
+          {reading.connections.map((connection) => (
+            <article key={connection.id}>
+              <p>
+                {endpointLabel(connection.from, topics)} — {connection.relation}{" "}
+                — {endpointLabel(connection.to, topics)}
+              </p>
+              {connection.uncertainty && (
+                <p className="uncertainty">{connection.uncertainty}</p>
+              )}
+              <details>
+                <summary>Sources ({connection.sources.length})</summary>
+                {connection.sources.map((source, i) => (
+                  <SourceEvidence key={i} source={source} />
+                ))}
+              </details>
+              {review && (
+                <Button
+                  variant="quiet"
+                  disabled={busy}
+                  onClick={() => {
+                    setTarget(null);
+                    setAdding(false);
+                    previewApproval(
+                      () =>
+                        ipc<SetupReceipt>("setup_connection_confirm_preview", {
+                          root_id: rootId,
+                          connection_ids: [connection.id],
+                        }),
+                      (receipt) => ({ kind: "connection", receipt }),
+                    );
+                  }}
+                >
+                  Confirm this connection
+                </Button>
+              )}
+            </article>
+          ))}
+        </section>
+      )}
       {review && (
         <>
           {review.context.length > 0 && (
@@ -252,116 +378,6 @@ export function ContextReview({
               ))}
             </section>
           )}
-          {review.topic.connections.length > 0 && (
-            <section>
-              <h3>Connections</h3>
-              {review.topic.connections.map((connection) => (
-                <article key={connection.id}>
-                  <p>
-                    {endpointLabel(connection.from, topics)} —{" "}
-                    {connection.relation} —{" "}
-                    {endpointLabel(connection.to, topics)}
-                  </p>
-                  <details>
-                    <summary>Sources ({connection.sources.length})</summary>
-                    {connection.sources.map((source, i) => (
-                      <blockquote key={i}>
-                        <strong>{source.path}</strong>
-                        <p>{source.excerpt}</p>
-                      </blockquote>
-                    ))}
-                  </details>
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      setTarget(null);
-                      setAdding(false);
-                      previewApproval(
-                        () =>
-                          ipc<SetupReceipt>(
-                            "setup_connection_confirm_preview",
-                            {
-                              root_id: rootId,
-                              connection_ids: [connection.id],
-                            },
-                          ),
-                        (receipt) => ({ kind: "connection", receipt }),
-                      );
-                    }}
-                  >
-                    Confirm this connection
-                  </Button>
-                </article>
-              ))}
-            </section>
-          )}
-          {review.topic.current_claims.map((c) => {
-            const state = review.reviews.find(
-              (r) => r.record_id === c.revision_id,
-            )?.state;
-            return (
-              <article key={c.revision_id}>
-                <p>
-                  {c.predicate}: {c.value}{" "}
-                  <Badge
-                    tone={
-                      state === "confirmed_by_you"
-                        ? "success"
-                        : state === "needs_input"
-                          ? "warning"
-                          : "neutral"
-                    }
-                  >
-                    {state
-                      ? labels[state]
-                      : "Accepted, not personally verified"}
-                  </Badge>
-                </p>
-                {(c.valid_from || c.valid_to) && (
-                  <p>
-                    Reported period: {c.valid_from || "unspecified start"} to{" "}
-                    {c.valid_to || "unspecified end"}
-                  </p>
-                )}
-                <details>
-                  <summary>Sources ({c.sources.length})</summary>
-                  <Evidence sources={c.sources} rootId={rootId} />
-                </details>
-                <div className="actions">
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      invalidateApproval();
-                      setAdding(false);
-                      setTarget(c.revision_id);
-                    }}
-                  >
-                    That’s wrong
-                  </Button>
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      invalidateApproval();
-                      setAdding(true);
-                      setTarget(null);
-                    }}
-                  >
-                    Add context
-                  </Button>
-                  <Button
-                    disabled={saving}
-                    onClick={() => {
-                      invalidateApproval();
-                      setTarget(null);
-                      setAdding(false);
-                    }}
-                  >
-                    Not now
-                  </Button>
-                </div>
-              </article>
-            );
-          })}
           {review.topic.current_claims.length > 0 && (
             <Button disabled={busy} onClick={confirm}>
               Confirm these {review.topic.current_claims.length} statements
@@ -521,8 +537,8 @@ export function ContextReview({
                 {correction
                   ? "Review correction"
                   : approval?.kind === "connection"
-                    ? "Confirm displayed connections"
-                    : "Confirm displayed statements"}
+                  ? "Confirm displayed connections"
+                  : "Confirm displayed statements"}
               </h3>
               {correction && (
                 <>
@@ -595,8 +611,8 @@ export function ContextReview({
                 {correction
                   ? "Approve correction"
                   : approval?.kind === "connection"
-                    ? "Confirm connection"
-                    : "Confirm statements"}
+                  ? "Confirm connection"
+                  : "Confirm statements"}
               </Button>
               <Button disabled={saving} onClick={invalidateApproval}>
                 Cancel

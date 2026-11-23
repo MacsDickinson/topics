@@ -1,6 +1,6 @@
-import { Evidence, SourceEvidence } from "./Evidence";
-import { endpointLabel } from "./ProposalEditor";
-import { Badge, EmptyState, Field, Icon, PrivacyBadge, Section } from "./ui";
+import type { ReactNode } from "react";
+import { Evidence } from "./Evidence";
+import { Badge, Field, Icon, PrivacyBadge, Section } from "./ui";
 import type { Sensitivity, Topic, TopicView } from "./workspace-types";
 
 export function TopicDetail({
@@ -9,7 +9,9 @@ export function TopicDetail({
   topics,
   busy,
   sensitivity,
+  children,
 }: {
+  children: ReactNode;
   view: TopicView;
   rootId: string;
   topics: Topic[];
@@ -59,57 +61,7 @@ export function TopicDetail({
           {w}
         </p>
       ))}
-      <Section
-        title="Current understanding"
-        className="understanding"
-        description="Accepted statements, with their evidence and remaining uncertainty."
-      >
-        {view.current_claims.length === 0 && (
-          <EmptyState title="No accepted claims yet" icon="thread">
-            <p>
-              Analyse notes or ask about this topic to propose new
-              understanding.
-            </p>
-          </EmptyState>
-        )}
-        {view.current_claims.map((c) => (
-          <article className="accepted-claim" key={c.revision_id}>
-            <h3 className="claim-property">{c.predicate}</h3>
-            <p className="claim-value">{c.value}</p>
-            {c.uncertainty && (
-              <p className="uncertainty">
-                <Icon name="info" />
-                <span>
-                  <strong>Uncertainty</strong> <span>{c.uncertainty}</span>
-                </span>
-              </p>
-            )}
-            <details className="claim-provenance">
-              <summary>Sources ({c.sources.length})</summary>
-              <Evidence sources={c.sources} rootId={rootId} />
-            </details>
-          </article>
-        ))}
-      </Section>
-      {view.connections.length > 0 && (
-        <Section title="Connections">
-          {view.connections.map((c) => (
-            <article className="relationship" key={c.id}>
-              <p>
-                {endpointLabel(c.from, topics)} <strong>{c.relation}</strong>{" "}
-                {endpointLabel(c.to, topics)}
-              </p>
-              {c.uncertainty && <p className="uncertainty">{c.uncertainty}</p>}
-              <details>
-                <summary>Sources ({c.sources.length})</summary>
-                {c.sources.map((s, i) => (
-                  <SourceEvidence source={s} key={i} />
-                ))}
-              </details>
-            </article>
-          ))}
-        </Section>
-      )}
+      {children}
       {view.unresolved.length > 0 && (
         <Section title="Unresolved mentions">
           {view.unresolved.map(

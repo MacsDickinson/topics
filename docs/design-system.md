@@ -4,11 +4,11 @@ Status: structurally redesigned on 2026-11-09. The implementation uses [`tokens.
 
 ## Principles
 
-Topics is a local-first reading and review workspace. Give notes and evidence room to breathe; make provenance, uncertainty, privacy and the human decision visible. Use calm neutral layers, thin boundaries, restrained elevation, compact navigation and blue for actions or selection. Preserve native/offline operation, system fonts and existing behavior; presentation must not imply cloud consent, acceptance or capabilities that do not exist.
+Topics is a local-first reading and review workspace. Give notes and evidence room to breathe; make provenance, uncertainty, privacy and the human decision visible. Use one continuous reading surface, a slightly tinted navigation area, compact navigation and blue for actions or selection. Reserve elevation for overlays. Preserve native/offline operation, system fonts and existing behavior; presentation must not imply cloud consent, acceptance or capabilities that do not exist.
 
 ## Implemented foundations
 
-`tokens.css` maps semantic roles directly to colors for light and, under `prefers-color-scheme: dark`, dark system appearance. There is no user theme override. The legacy aliases `--line`, `--muted` and `--blue` point to semantic roles. Prefer semantic roles in new work; the full values and both mappings live in the CSS.
+`tokens.css` maps semantic roles to Light and Dark palettes. The Appearance control defaults to Follow system and remembers an explicit selection in local window storage. See [theme configuration and reader composition](design/appearance.md) and the [illustrated appearance guide](site/appearance.html). The legacy aliases `--line`, `--muted` and `--blue` point to semantic roles. Prefer semantic roles in new work; the full values and both mappings live in the CSS.
 
 | Family | Implemented roles (prefix shown once) |
 | --- | --- |
@@ -46,14 +46,14 @@ Shared components in `ui.tsx` are used across the shell and screens. They contai
 <Button variant="primary" disabled={!confirmed} onClick={onSave}>Save starting map</Button>
 ```
 
-Global native controls provide default, hover, pressed, focus-visible and disabled states. Fields use the contrast-checked strong boundary and full-opacity placeholder role; primary controls use on-action text in both themes. Navigation uses `aria-current` and an inset selection bar; topic/source buttons use `aria-pressed`, a boundary and the same selection cue. The shell's actual Cmd/Ctrl+K handler opens Search and focuses/selects its input, while disconnected setup remains visible.
+Global native controls provide default, hover, pressed, focus-visible and disabled states. Fields use the contrast-checked strong boundary and full-opacity placeholder role; primary controls use on-action text in both themes. Navigation uses `aria-current` with a heavier label and a selected fill. Topic/source buttons use `aria-pressed` and a selected-row chevron. The shell's actual Cmd/Ctrl+K handler opens Search and focuses/selects its input, while disconnected setup remains visible.
 
 The stylesheet defines `.focused-form`, `.form-grid`, `.form-section`, `.review-footer`, `.source-row`, `.candidate`, `.run-panel` and `.source-evidence` for shared screen patterns. A review footer sits after scope, consent and exact before/after context, never implying automatic approval. Native `details/summary` disclosures retain complete evidence and revision identities. Opening a disclosure grants no permission. Source passages use semantic figures/captions; original note text stays whitespace-preserving, selectable React text.
 
 ## Component and state guidance
 
 - **Navigation:** named controls, current page announced with `aria-current`; selected styling has a shape or other cue as well as color. Counts supplement labels and are not the only status signal.
-- **Buttons:** primary for the next main action, secondary for alternatives, quiet for low emphasis, danger for destructive actions. Use actual buttons, descriptive labels and accessible names for icon-only controls. Provide default, hover, pressed, focus-visible, disabled and busy states. Disabled controls need nearby explanation when the reason is not obvious.
+- **Buttons:** primary for the next main action, secondary for alternatives (use the strong border on subtle panel fills), quiet for low emphasis, danger for destructive actions. Use actual buttons, descriptive labels and accessible names for icon-only controls. Provide default, hover, pressed, focus-visible, disabled and busy states. Disabled controls need nearby explanation when the reason is not obvious.
 - **Fields:** persistent associated label, optional hint and connected inline error; show required and invalid states in text. Preserve entered values on errors. Use native controls where suitable.
 - **Badges:** short text for status, privacy or uncertainty; informational badges are not buttons. Interactive filters must use button semantics and expose selected state.
 - **Panels, lists and notices:** consistent padding, borders and headings; selected rows remain identifiable. Empty, loading, no-results, error and recovery states explain what happened and a useful next step. Use polite status announcements for asynchronous updates and an appropriate alert for urgent errors without repeatedly interrupting reading.
@@ -63,7 +63,7 @@ The stylesheet defines `.focused-form`, `.form-grid`, `.form-section`, `.review-
 
 All controls must be reachable and operable by keyboard in a logical order. Provide a visible focus indicator distinct from selection, preserve focus after updates or restore it to a sensible trigger, and do not trap it except in a correctly managed modal. Associate labels, descriptions and errors; give icon-only actions names. Use semantic headings, lists and landmarks; announce meaningful progress without flooding live regions. Check text contrast at least 4.5:1 (3:1 for large text), and essential control boundaries, icons and focus indicators at least 3:1 against adjacent colors. Do not depend on color, hover or animation to convey state. Respect `prefers-reduced-motion` and test keyboard, zoom and screen reader behavior.
 
-At comfortable desktop widths use a 232px floating sidebar and a flexible content area; Topics and Sources add a 252px list beside the reader. At 1180px these tighten to 208/210px; at 980px list/detail stack. At 760px the sidebar becomes a labelled top navigation strip and form columns stack; 480px further simplifies navigation grouping. These are implementation breakpoints, not universal device targets. Test long paths and unbroken content without horizontal page overflow. Reading areas use roughly 72ch, preserve note whitespace and offer complete evidence. Keep long reviews navigable without losing decision context. The skip link targets the main landmark, and cancelling manual capture or folder settings restores focus to the actual trigger.
+At comfortable desktop widths use a 232px flush sidebar and a flexible content area; Topics and Sources add a 252px list beside the reader. At 1180px these tighten to 208/210px; at 980px list/detail stack. At 760px the sidebar becomes a labelled top navigation strip and form columns stack; 480px further simplifies navigation grouping. These are implementation breakpoints, not universal device targets. Test long paths and unbroken content without horizontal page overflow. Reading areas use roughly 72ch, preserve note whitespace and offer complete evidence. Keep long reviews navigable without losing decision context. The skip link targets the main landmark, and cancelling manual capture or folder settings restores focus to the actual trigger.
 
 ## Change discipline
 
@@ -80,13 +80,7 @@ Definition of done / review checklist:
 
 ## Integrated window header
 
-The macOS shell uses a decorated overlay with the native traffic lights and a fixed 28px app-surface header. Reserve the first 80px for those controls, and keep the focused skip link below the header. Only empty header space is a drag region; interactive controls and selectable text remain outside it. The desktop sidebar sticks below the header and fits the remaining viewport; narrow navigation flows beneath it. See [window chrome](design/window-chrome.md) for configuration, examples and native evidence limits.
-
-```tsx
-<div className="window-chrome" aria-hidden="true">
-  <div className="window-chrome-drag" data-tauri-drag-region />
-</div>
-```
+The 36px title bar uses the sidebar surface token. The native macOS traffic lights occupy the first 80px. Leave the middle clear for dragging and align workspace status at the trailing edge. The status disclosure shows complete messages and recovery actions. Keep field errors, scope and approval receipts beside their controls. The first keyboard stop is the skip link below the bar. See [window chrome](design/window-chrome.md) for the component example and native verification history.
 
 ## Folder chooser
 

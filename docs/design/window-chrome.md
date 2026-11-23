@@ -2,12 +2,17 @@
 
 The main window uses the native decorated macOS overlay title bar with its text title hidden. Native close, minimize and full-screen controls remain system controls. The same window geometry and chrome are configured in production and the incognito native-test override. No simulated traffic lights are drawn.
 
-The shell fixes a 28px app-surface header above scrolling sidebar and content. The desktop sidebar sticks below it and fits within the remaining viewport; the narrow sidebar flows below it. Its first 80px are reserved for native controls; only the remaining empty element has `data-tauri-drag-region`. Keep buttons, links, fields and selectable text outside that element. The focused skip link sits 12px below the header, clear of the native controls. The main-window capability adds only `core:window:allow-start-dragging`; existing core permissions remain unchanged. The app surface comes from `--color-background-app`, which follows the existing light/dark mappings. At narrow widths the header precedes the stacked navigation and content.
+The title bar and navigation share `--color-background-sidebar` in every palette. The 36px fixed bar reserves the first 80px for native controls. Its empty middle accepts dragging. A compact status disclosure sits on the right, outside the drag region. The sidebar starts directly below the bar. The skip link is the first keyboard stop and clears the bar.
+
+The disclosure summarises workspace startup, analysis progress, completion and cancellation, errors and runtime availability. Open it to read a long message, inspect related changes, dismiss a notification or recheck an unavailable runtime. Users can select and copy the full message or retry an unavailable runtime repeatedly with the panel open. Escape returns focus to the trigger. Clicking outside or tabbing away closes the disclosure. Blocking startup recovery instructions remain beside the folder settings. Form validation and consent stay with the action they concern.
+
+The main-window capability grants `core:window:allow-start-dragging`. The shell places the drag attribute on the empty element.
 
 ```tsx
-<div className="window-chrome" aria-hidden="true">
-  <div className="window-chrome-drag" data-tauri-drag-region />
-</div>
+<header className="window-chrome" aria-label="Workspace status">
+  <div className="window-chrome-drag" aria-hidden="true" data-tauri-drag-region />
+  {/* Status disclosure and its actions */}
+</header>
 ```
 
 ## Verification and limits

@@ -733,7 +733,14 @@ export function FolderSetup({
       {job && (
         <>
           <section className="run-panel">
-            <h2>Coverage</h2>
+            <div className="run-heading">
+              <h2>{job.coverage.failed.length
+                ? `${job.coverage.failed.length} selected ${job.coverage.failed.length === 1 ? "note" : "notes"} failed`
+                : "Coverage"}</h2>
+              {job.coverage.failed.length > 0 && (
+                <Button disabled={busy} onClick={() => control("retry_failed")}>Retry failed</Button>
+              )}
+            </div>
             <p role="status">
               {job.coverage.complete
                 ? "Selected notes analysed. Ready to save."
@@ -772,11 +779,6 @@ export function FolderSetup({
             {job.status === "paused" && (
               <Button disabled={busy} onClick={() => control("resume")}>
                 Resume
-              </Button>
-            )}
-            {job.coverage.failed.length > 0 && (
-              <Button disabled={busy} onClick={() => control("retry_failed")}>
-                Retry failed
               </Button>
             )}
             {job.batches.some((batch) => batch.status === "failed") && (
