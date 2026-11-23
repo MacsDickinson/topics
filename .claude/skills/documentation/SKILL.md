@@ -29,7 +29,7 @@ Verify counts against the code rather than copying them: IPC commands are the `g
 - Give every image meaningful alt text describing what it shows.
 - Keep `docs/site`, `README.md` and `docs/contributing.md` consistent; if a fact changes in one, fix it in all.
 - Keep the `{{BUILD_SHA}}` / `{{BUILD_DATE}}` placeholders in the site; the workflow fills them.
-- Preview with `python3 -m http.server -d docs/site` and run `bash docs/site/check-links.sh docs/site` before finishing.
+- Preview with `python3 -m http.server -d docs/site` and run `python3 docs/site/check-links.py docs/site` before finishing.
 
 ## Definition of done
 
@@ -43,5 +43,5 @@ A change is not done until the docs reflect it in the same PR. The PR descriptio
 - [ ] Text is present tense and describes current behaviour; unbuilt work is marked Planned.
 - [ ] Diagrams are Mermaid and still match the code.
 - [ ] Screenshots are fresh, synthetic-only, and have alt text.
-- [ ] All links are relative and `check-links.sh` passes.
+- [ ] All links are relative and `check-links.py` passes.
 - [ ] `README.md`, `docs/contributing.md` and `docs/site` agree.

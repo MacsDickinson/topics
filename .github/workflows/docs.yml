@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: docs-${{ github.event_name == 'pull_request' && github.ref || 'pages-deploy' }}
@@ -26,12 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Build site
         run: |
           rm -rf _site
           cp -R docs/site _site
-          rm -f _site/check-links.sh
+          rm -f _site/check-links.py
           touch _site/.nojekyll
           sha="$(git rev-parse --short HEAD)"
           date="$(date -u +'%Y-%m-%d')"
@@ -39,7 +41,7 @@ jobs:
           if grep -rq '{{BUILD_' _site --include='*.html'; then echo 'unreplaced build placeholder'; exit 1; fi
 
       - name: Validate relative links
-        run: bash docs/site/check-links.sh _site
+        run: python3 docs/site/check-links.py _site
 
       - uses: actions/upload-artifact@v4
         with:
@@ -49,8 +51,10 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -59,7 +63,10 @@ jobs:
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # DOCS_DEPLOY_TOKEN: a repository-scoped credential (fine-grained PAT with Contents: write
+          # on this repository only). Pushes made with GITHUB_TOKEN don't trigger the branch Pages build,
+          # so the fallback is only good for the first publish.
+          github_token: ${{ secrets.DOCS_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
           publish_dir: _site
           publish_branch: gh-pages
           force_orphan: true

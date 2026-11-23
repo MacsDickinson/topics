@@ -103,7 +103,7 @@ flowchart LR
     end
     CODEX["Codex CLI 0.166.0<br/>(signed in, sandboxed:<br/>denied read of notes root)"]
     NOTES[("Notes folder<br/>*.md (read-only)<br/>topics/ (app records)")]
-    APPDATA[("App data<br/>config · store.lock<br/>SQLite/FTS · journals<br/>snapshots · pending")]
+    APPDATA[("App data<br/>config · store.lock<br/>SQLite/FTS · workspaces/&lt;path ID&gt;:<br/>journals · snapshots · pending")]
     RT <== "NDJSON stdio" ==> CODEX
     CODEX -- "MCP via --topics-mcp-proxy:<br/>scope_sources · propose_changes" --> RT
     STORE --> NOTES
@@ -177,12 +177,14 @@ erDiagram
 └─ topics/                    <i>app-owned, authoritative</i>
    ├─ topics/  claims/  connections/  rules/
    ├─ sources/  statements/  unresolved/
+   ├─ pilot-snapshots/  pilot-feedback/  pilot-weeks/
    └─ operations/&lt;uuid&gt;.md    <i>commit markers</i>
 
 <b>~/Library/Application Support/com.macsdickinson.topics/</b>
 ├─ config · store.lock        <i>one lock for every process</i>
-├─ index.sqlite (FTS5)        <i>disposable, rebuilt on demand</i>
-└─ roots/&lt;root-id&gt;/          <i>scopes, run capabilities, pending
+├─ index.sqlite3 (FTS5)       <i>disposable, rebuilt on demand</i>
+├─ workspace-root.json        <i>current root ID, bumped when you pick a folder</i>
+└─ workspaces/&lt;path ID&gt;/     <i>scopes, run capabilities, pending
                                proposals, journals, snapshots</i></div>
       <p class="note">Each record starts with frontmatter <code>schema: topics/v1</code>, <code>record_kind</code>, <code>id</code>, <code>operation_id</code>, <code>data: {typed JSON}</code>, followed by a readable Markdown body.</p>
     </div>
@@ -280,14 +282,15 @@ flowchart LR
     <div class="fstep"><b>Receipt → Save</b><span>Shows the eligible set and dependencies, then one explicit save.</span></div>
   </div>
   <div class="gallery">
-    <figure><img src="img/scope-review.png" alt="Scope review screen listing included, excluded and unknown notes before the user confirms consent"><figcaption>Scope preview and consent</figcaption></figure>
     <figure><img src="img/scripted-draft.png" alt="Draft map screen showing draft topics produced during folder setup"><figcaption>Draft topics during setup</figcaption></figure>
   </div>
   <p class="note">If files change before they are sent, Topics shows the old and new manifests side by side and asks for fresh consent. Batches already completed are kept. Saving a sourced import is <em>not</em> the same as verifying that each statement is true.</p>
 </section>
 
 <section id="guide-review">
-  <h2>3 · Review proposals in Inbox</h2>
+  <h2>3 · Analyse notes and review proposals in Inbox</h2>
+  <p><b>Analyse notes</b> (Workspace) is the one-off route to a proposal: choose files, folders and optional dates, inspect the scope preview of included, excluded and unknown notes, then confirm consent before the run starts.</p>
+  <figure class="wide"><img src="img/scope-review.png" alt="Scope review screen listing included, excluded and unknown notes before the user confirms consent"><figcaption>Analyse notes: scope preview and consent</figcaption></figure>
   <div class="split">
     <div>
       <p>Every model run, chat correction and manual topic lands here as a <b>proposal</b>. The Inbox badge counts pending proposals.</p>

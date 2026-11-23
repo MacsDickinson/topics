@@ -9,7 +9,7 @@ docs/site/
 ├─ index.html       one page; sections are anchored and listed in the left nav
 ├─ style.css        all styling (light and dark via prefers-color-scheme)
 ├─ img/             screenshots used by the user guide
-├─ check-links.sh   relative link validator, also used by the workflow
+├─ check-links.py   relative link validator, also used by the workflow
 └─ README.md        this file
 ```
 
@@ -53,8 +53,14 @@ Screenshots live in `img/` and are referenced as `img/<name>.png` with descripti
 
 ## Checks
 
-The workflow builds the site into `_site/` and fails if any relative `src`/`href` points at a missing file. Run the same check locally:
+The workflow builds the site into `_site/` and fails if any relative `src`/`href` (including `../` escapes) points at a missing file or outside the site. Run the same check locally:
 
 ```sh
-bash docs/site/check-links.sh docs/site
+python3 docs/site/check-links.py docs/site
 ```
+
+## Deployment
+
+`.github/workflows/docs.yml` runs the build and link check on pull requests, and deploys `_site/` to the `gh-pages` branch on pushes to `main` (or manual dispatch from `main`). Set Settings → Pages → Source: "Deploy from a branch", `gh-pages` / root once.
+
+GitHub does not start a branch Pages build for pushes made with the workflow's `GITHUB_TOKEN`, so add a repository secret `DOCS_DEPLOY_TOKEN`: a fine-grained personal access token limited to this repository with Contents: read and write. The workflow falls back to `GITHUB_TOKEN` without it, which may leave the live site stale after the first publish. After a second deploy, check that the footer build stamp on the live site changed.
