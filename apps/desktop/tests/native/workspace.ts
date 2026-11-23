@@ -1,10 +1,33 @@
 import { browser, $, $$, expect } from '@wdio/globals';
 import { chooseOption } from './interaction';
 import { resolve, join } from 'node:path';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 
 // Real WebView + Rust IPC; runner creates only synthetic roots and app data.
 describe('Topic workspace native service journey', () => {
+  it('keeps status open across two mouse retries and shows each new version check', async () => {
+    const trigger = await $('button[aria-label="Workspace status details"]');
+    const summary = await $('.window-status-summary');
+    await expect(summary).toHaveText(expect.stringContaining('Codex unavailable'));
+    await trigger.click();
+    const retry = await $('button=Check runtime again');
+    const executable = join(process.env.TOPICS_TEST_SANDBOX!, 'missing-codex');
+    // Only the isolated runner's version probe changes. Both retries use real IPC.
+    const probe = (version: string) => `#!/bin/sh\necho 'codex-cli ${version}'\n`;
+    writeFileSync(executable, probe('0.0.1'), { flag: 'wx', mode: 0o700 });
+    try {
+      await retry.click({ button: 'left' });
+      await expect(summary).toHaveText(expect.stringContaining('installed 0.0.1'));
+      await expect(trigger).toBeFocused();
+      writeFileSync(executable, probe('0.0.2'));
+      await retry.click({ button: 'left' });
+      await expect(summary).toHaveText(expect.stringContaining('installed 0.0.2'));
+      await expect(retry).toBeDisplayed();
+    } finally {
+      unlinkSync(executable);
+    }
+    await trigger.click();
+  });
   it('creates a fresh root, previews real notes, labels sources and reviews a durable manual proposal without Codex', async () => {
     const malformed = await browser.execute(async () => { try { await (window as any).__TAURI__.core.invoke('workspace_root_set', { request: { path: '/synthetic', create: false, unexpected: true } }); return null; } catch (error) { return error; } });
     expect(malformed).toEqual({ code: 'invalid_input', message: 'The request fields are invalid or missing. Check the input and retry.', details: null });
@@ -31,13 +54,6 @@ describe('Topic workspace native service journey', () => {
       'memory/projects/ledger-migration.md',
     );
     await expect($('button=Start analysis')).toBeDisabled();
-    // A real unavailable binary is configured only in the native-test build.
-    await expect($('.window-status-summary')).toHaveText(expect.stringContaining('Codex'));
-    const statusDetails = await $('button[aria-label="Workspace status details"]');
-    await statusDetails.click();
-    await expect($('button=Check runtime again')).toBeDisplayed();
-    await statusDetails.click();
-    await expect($('button=Check runtime again')).not.toExist();
     await $('button=Sources').click();
     await $('button[aria-label="memory/projects/ledger-migration.md"]').click();
     await expect($('.note-content')).toHaveText(original.trim());

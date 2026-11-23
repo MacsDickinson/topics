@@ -90,12 +90,41 @@ test("title bar follows the navigation palette and keeps status outside the drag
   await status.focus();
   await page.keyboard.press("Enter");
   const retry = bar.getByRole("button", { name: "Check runtime again" });
-  await retry.click();
-  await expect.poll(() => page.evaluate(() => (window as any).calls.filter((c: any) => c.command === "workspace_runtime_status").length)).toBeGreaterThan(1);
+  const runtimeChecks = () => page.evaluate(() =>
+    (window as any).calls.filter((call: { command: string }) => call.command === "workspace_runtime_status").length,
+  );
+  const initialChecks = await runtimeChecks();
+  for (const attempt of [1, 2]) {
+    await retry.click();
+    await expect.poll(runtimeChecks).toBe(initialChecks + attempt);
+    await expect(status).toBeFocused();
+    await expect(retry).toBeVisible();
+  }
   await page.keyboard.press("Escape");
   await expect(status).toBeFocused();
   await expect(retry).toHaveCount(0);
   await status.click();
   await page.getByRole("heading").first().click();
   await expect(retry).toHaveCount(0);
+});
+
+test("status text stays selectable and the panel closes on Escape or tabbing away", async ({ page }) => {
+  await workspaceFixture(page, { unavailable: true });
+  const trigger = page.getByRole("button", { name: "Workspace status details" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const panel = page.getByRole("region", { name: "Status details" });
+  const message = panel.getByText(/Codex is missing/);
+  const text = await message.innerText();
+  await message.click({ clickCount: 3 });
+  await expect(panel).toBeVisible();
+  expect(await page.evaluate(() => window.getSelection()?.toString().trim())).toBe(text);
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await panel.getByRole("button", { name: "Check runtime again" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(panel).toHaveCount(0);
 });

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDismissOnOutsidePress } from "./boardui/use-dismiss-on-outside-press";
 import { errorHelp } from "./ipc";
 import { Button, Icon } from "./ui";
@@ -36,6 +36,28 @@ export function WindowStatus({
     trigger.current?.focus();
   }
 
+  useEffect(() => {
+    if (!open) return;
+    // A mouse press on selectable text or a WebKit button can clear focus.
+    // Close when focus actually arrives on another control.
+    function focusChanged(event: FocusEvent) {
+      if (event.target instanceof Element && !container.current?.contains(event.target))
+        setOpen(false);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    }
+    document.addEventListener("focusin", focusChanged);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("focusin", focusChanged);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
   const runtimeLabel = runtime?.available
     ? ["Codex", runtime.version, "installed"].filter(Boolean).join(" ")
     : runtime?.message;
@@ -66,20 +88,7 @@ export function WindowStatus({
         aria-hidden="true"
         data-tauri-drag-region
       />
-      <div
-        ref={container}
-        className="window-status"
-        onKeyDown={(event) => {
-          if (open && event.key === "Escape") {
-            event.preventDefault();
-            close();
-          }
-        }}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget))
-            setOpen(false);
-        }}
-      >
+      <div ref={container} className="window-status">
         <div className={`window-status-line ${tone}`}>
           <Icon name={tone === "ready" ? "check" : "info"} />
           <span

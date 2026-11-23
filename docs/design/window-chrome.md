@@ -4,7 +4,7 @@ The main window uses the native decorated macOS overlay title bar with its text 
 
 The title bar and navigation share `--color-background-sidebar` in every palette. The 36px fixed bar reserves the first 80px for native controls. Its empty middle accepts dragging. A compact status disclosure sits on the right, outside the drag region. The sidebar starts directly below the bar. The skip link is the first keyboard stop and clears the bar.
 
-The disclosure summarises workspace startup, analysis progress, completion and cancellation, errors and runtime availability. Open it to read a long message, inspect related changes, dismiss a notification or recheck an unavailable runtime. Escape returns focus to the trigger. Clicking outside or tabbing away closes the disclosure. Blocking startup recovery instructions remain beside the folder settings. Form validation and consent stay with the action they concern.
+The disclosure summarises workspace startup, analysis progress, completion and cancellation, errors and runtime availability. Open it to read a long message, inspect related changes, dismiss a notification or recheck an unavailable runtime. Users can select and copy the full message or retry an unavailable runtime repeatedly with the panel open. Escape returns focus to the trigger. Clicking outside or tabbing away closes the disclosure. Blocking startup recovery instructions remain beside the folder settings. Form validation and consent stay with the action they concern.
 
 The main-window capability grants `core:window:allow-start-dragging`. The shell places the drag attribute on the empty element.
 

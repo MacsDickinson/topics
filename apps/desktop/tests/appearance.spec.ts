@@ -44,6 +44,31 @@ test("each current statement has one reading and review surface", async ({
   ).toBeVisible();
 });
 
+for (const theme of ["light", "dark"] as const) {
+  test(`${theme} correction composer keeps enabled and disabled actions visible`, async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme: theme });
+    await page.setViewportSize({ width: 1180, height: 800 });
+    await workspaceFixture(page, { populated: true });
+    await page.getByRole("button", { name: "Topics", exact: true }).click();
+    await page.getByRole("button", { name: "Ledger", exact: true }).click();
+    await page.getByRole("button", { name: "That’s wrong" }).first().click();
+    const composer = page.locator(".context-composer");
+    const preview = composer.getByRole("button", { name: "Preview correction" });
+    const cancel = composer.getByRole("button", { name: "Cancel correction" });
+    await expect(preview).toBeDisabled();
+    await expect(cancel).toBeEnabled();
+    const field = composer.getByRole("textbox", { name: "Your statement" });
+    const boundary = await field.evaluate(el => getComputedStyle(el).borderTopColor);
+    for (const button of [preview, cancel]) {
+      await expect(button).toHaveCSS("border-top-color", boundary);
+      await expect(button).toHaveCSS("border-top-style", "solid");
+      await expect(button).toHaveCSS("border-top-width", "1px");
+    }
+    await composer.evaluate(el => el.scrollIntoView({ block: "center" }));
+    await page.screenshot({ path: testInfo.outputPath(`composer-${theme}.png`), scale: "css" });
+  });
+}
+
 test("all registered palettes resolve semantic roles and readable status colours", async ({
   page,
 }) => {
@@ -91,6 +116,7 @@ test("all registered palettes resolve semantic roles and readable status colours
         ["text-info", "background-info", 4.5],
         ["border-focus", "background-panel", 3],
         ["border-strong", "background-panel", 3],
+        ["border-strong", "background-subtle", 3],
       ] as const;
       const result = pairs.map(([ink, surface, minimum]) => {
         const a = luminance(ink),

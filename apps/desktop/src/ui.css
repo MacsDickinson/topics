@@ -16,6 +16,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+:is(.context-composer, .topic-diff, .empty) .ui-button.secondary {
+  border-color: var(--color-border-strong);
+}
 .ui-button.danger {
   color: var(--color-text-danger);
   border-color: var(--color-border-danger);
