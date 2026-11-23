@@ -60,13 +60,20 @@ jobs:
         with:
           name: docs-site
           path: _site
+      - name: Require DOCS_DEPLOY_TOKEN
+        env:
+          DOCS_DEPLOY_TOKEN: ${{ secrets.DOCS_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$DOCS_DEPLOY_TOKEN" ]; then
+            echo "::error::Repository secret DOCS_DEPLOY_TOKEN is missing. Pushes made with GITHUB_TOKEN do not trigger a branch Pages build, so the live site would go stale. See docs/site/README.md#deployment."
+            exit 1
+          fi
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          # DOCS_DEPLOY_TOKEN: a repository-scoped credential (fine-grained PAT with Contents: write
-          # on this repository only). Pushes made with GITHUB_TOKEN don't trigger the branch Pages build,
-          # so the fallback is only good for the first publish.
-          github_token: ${{ secrets.DOCS_DEPLOY_TOKEN || secrets.GITHUB_TOKEN }}
+          # Required (checked above): a fine-grained PAT with Contents: write on this repository only.
+          # GITHUB_TOKEN pushes don't trigger the branch Pages build.
+          github_token: ${{ secrets.DOCS_DEPLOY_TOKEN }}
           publish_dir: _site
           publish_branch: gh-pages
           force_orphan: true
