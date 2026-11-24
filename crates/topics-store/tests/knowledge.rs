@@ -70,7 +70,8 @@ fn source_discovery_judgment_reopen_and_undo() {
     assert_eq!(graph.nodes.len(), 2);
     assert_eq!(graph.edges[0].status, KnowledgeStatus::Pending);
     assert_eq!(graph.pending[0].decision.id, proposal.id);
-    f.service
+    let acceptance = f
+        .service
         .proposal_decide(ProposalDecideRequest {
             root_id: f.root_id.clone(),
             proposal_id: proposal.id,
@@ -138,7 +139,6 @@ fn source_discovery_judgment_reopen_and_undo() {
                 topic_id: hit.topic.id.clone(),
                 item_id: check.id.clone(),
                 action,
-                note: String::new(),
             })
             .unwrap();
         assert!(p.statement.is_some());
@@ -178,6 +178,15 @@ fn source_discovery_judgment_reopen_and_undo() {
             view.assertions
         );
     }
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: acceptance.operation.unwrap().id,
+        })
+        .unwrap();
+    f.restart();
+    let undone = f.service.knowledge_graph(root).unwrap();
+    assert!(undone.nodes.is_empty() && undone.edges.is_empty());
     f.unchanged();
 }
 

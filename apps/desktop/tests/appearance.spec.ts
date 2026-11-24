@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture } from "./fixtures/workspace";
 
@@ -14,7 +15,7 @@ test("appearance follows the system, remembers overrides and styles BoardUI over
   await picker.selectOption("dark");
   await page.reload();
   await expect(root).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await page
     .getByRole("button", { name: "Suggested role for Meetings" })
     .click();
@@ -31,7 +32,7 @@ test("each current statement has one reading and review surface", async ({
   page,
 }) => {
   await workspaceFixture(page, { populated: true });
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   const claim = page.locator(".understanding .accepted-claim");
   await expect(claim.getByText("Friday", { exact: true })).toHaveCount(1);
@@ -49,7 +50,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.emulateMedia({ colorScheme: theme });
     await page.setViewportSize({ width: 1180, height: 800 });
     await workspaceFixture(page, { populated: true });
-    await page.getByRole("button", { name: "Topics", exact: true }).click();
+    await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
     await page.getByRole("button", { name: "Ledger", exact: true }).click();
     await page.getByRole("button", { name: "That’s wrong" }).first().click();
     const composer = page.locator(".context-composer");

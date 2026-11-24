@@ -25,7 +25,7 @@ pub(super) struct Projection {
     pub warnings: Vec<String>,
 }
 
-fn norm(text: &str) -> String {
+pub(super) fn norm(text: &str) -> String {
     text.split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
@@ -40,8 +40,13 @@ fn no_checks() -> CheckCounts {
         deferred: 0,
     }
 }
-pub(super) fn deferred(ctx: &Context) -> BTreeMap<Id, Timestamp> {
-    read_json(&ctx.partition.join(DEFERRED)).unwrap_or_default()
+fn deferred(ctx: &Context) -> WResult<BTreeMap<Id, Timestamp>> {
+    let path = ctx.partition.join(DEFERRED);
+    if path.try_exists().map_err(internal)? {
+        read_json(&path)
+    } else {
+        Ok(BTreeMap::new())
+    }
 }
 pub(super) fn save_deferred(ctx: &Context, value: &BTreeMap<Id, Timestamp>) -> WResult<()> {
     save_json(&ctx.partition.join(DEFERRED), value)
@@ -64,6 +69,19 @@ impl Citations<'_> {
         let fresh = validate_source(self.ctx, self.state, source).is_ok();
         self.fresh.borrow_mut().insert(key, fresh);
         fresh
+    }
+    fn passage(&self, source: &SourceRef, caller: Caller) -> Option<AssertionEvidence> {
+        if matches!(caller, Caller::External(_)) && !self.released(source) {
+            return None;
+        }
+        let stale = !self.fresh(source);
+        if stale && matches!(caller, Caller::External(_)) {
+            return None;
+        }
+        Some(AssertionEvidence::Passage {
+            source: source.clone(),
+            stale,
+        })
     }
     // Released means the human explicitly labelled these exact bytes Cloud allowed.
     fn released(&self, source: &SourceRef) -> bool {
@@ -161,10 +179,12 @@ fn pending(ctx: &Context, state: &State) -> WResult<Pending> {
         }
         let waiting = counts.0 + counts.1 + counts.2;
         let state = match job.status {
-            SetupJobStatus::NeedsConsent | SetupJobStatus::Paused => PendingState::NeedsAttention,
+            SetupJobStatus::NeedsConsent
+            | SetupJobStatus::Paused
+            | SetupJobStatus::FinishedWithGaps => PendingState::NeedsAttention,
             SetupJobStatus::Running => PendingState::Analysing,
             SetupJobStatus::Ready if !job.coverage.outstanding.is_empty() => {
-                PendingState::Analysing
+                PendingState::NeedsAttention
             }
             _ if waiting > 0 => PendingState::AwaitingDecision,
             _ => continue,
@@ -195,15 +215,11 @@ fn evidence(
     for source in &claim.sources {
         match source {
             Evidence::Passage { source } => {
-                let fresh = citations.fresh(source);
-                if matches!(caller, Caller::External(_)) && !(fresh && citations.released(source)) {
+                if let Some(passage) = citations.passage(source, caller) {
+                    out.push(passage)
+                } else {
                     withheld.passages += 1;
-                    continue;
                 }
-                out.push(AssertionEvidence::Passage {
-                    source: source.clone(),
-                    stale: !fresh,
-                });
             }
             // The human's own words stay with the human.
             Evidence::UserStatement { statement_id } => {
@@ -227,15 +243,11 @@ fn passages(
 ) -> Vec<AssertionEvidence> {
     let mut out = vec![];
     for source in sources {
-        let fresh = citations.fresh(source);
-        if matches!(caller, Caller::External(_)) && !(fresh && citations.released(source)) {
+        if let Some(passage) = citations.passage(source, caller) {
+            out.push(passage)
+        } else {
             withheld.passages += 1;
-            continue;
         }
-        out.push(AssertionEvidence::Passage {
-            source: source.clone(),
-            stale: !fresh,
-        });
     }
     out
 }
@@ -424,7 +436,7 @@ pub(super) fn project(ctx: &Context, state: &State, caller: Caller) -> WResult<P
         }
     };
     let deferrals = if human {
-        deferred(ctx)
+        deferred(ctx)?
     } else {
         BTreeMap::new()
     };
@@ -496,8 +508,7 @@ pub(super) fn project(ctx: &Context, state: &State, caller: Caller) -> WResult<P
             continue;
         }
         let cited = evidence(state, &citations, claim, caller, &mut topic.withheld);
-        // An external caller receives a value with released evidence, or one the
-        // human personally vouched for. Everything else is counted, not shown.
+        // Every citation must be current and released for external retrieval.
         if !human && (cited.is_empty() || cited.len() != claim.sources.len()) {
             topic.withheld.assertions += 1;
             continue;
@@ -817,7 +828,7 @@ impl WorkspaceService {
             valid_id(&request.topic_id)?;
             valid_id(&request.item_id)?;
             let state = load(ctx)?;
-            let mut deferrals = deferred(ctx);
+            let mut deferrals = deferred(ctx)?;
             if request.deferred {
                 let known = project(ctx, &state, Caller::Human)?
                     .topics

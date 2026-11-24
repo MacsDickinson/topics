@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture } from "./fixtures/workspace";
 
@@ -26,10 +27,10 @@ test("connected navigation and setup remain below the header at minimum width", 
   const headerBox = await header.boundingBox();
   const search = page.getByRole("button", { name: "Search", exact: true });
   expect((await search.boundingBox())!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(page.getByRole("main")).toBeVisible();
   await page.keyboard.press("Meta+k");
-  await expect(page.getByRole("searchbox", { name: "Search notes" })).toBeFocused();
+  await expect(page.getByRole("searchbox", { name: "Search topics" })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(560);
 });
 

@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture, topic, claim, proposal } from "./fixtures/workspace";
 
@@ -100,10 +101,10 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
       );
       await page.reload();
       await expect(
-        page.getByRole("button", { name: "Topics", exact: true }),
+        page.getByRole("button", { name: "Knowledge graph", exact: true }),
       ).toBeVisible();
       if (screen === "topics") {
-        await page.getByRole("button", { name: "Topics", exact: true }).click();
+        await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
         await page.getByRole("button", { name: "Ledger", exact: true }).click();
         await expect(
           page.getByRole("heading", { name: "Current understanding" }),
@@ -119,10 +120,7 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
           "Ledger launch planning",
         );
       } else if (screen === "search") {
-        await page
-          .getByRole("button", { name: /Search/ })
-          .first()
-          .click();
+        await openTool(page,"Search notes");
         await page
           .getByRole("searchbox", { name: "Search notes" })
           .fill("Ledger");
@@ -133,28 +131,24 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
           }),
         ).toBeVisible();
       } else if (screen === "inbox") {
-        await page.getByRole("button", { name: /Inbox/ }).click();
+        await openTool(page, /Inbox/);
         await expect(
           page.getByRole("heading", { name: "Proposed understanding" }),
         ).toBeVisible();
       } else if (screen === "history") {
-        await page
-          .getByRole("button", { name: "History", exact: true })
-          .click();
+        await openTool(page, "History");
         await expect(
           page.getByRole("heading", { name: "Accepted Ledger launch" }),
         ).toBeVisible();
       } else if (screen === "analysis") {
-        await page
-          .getByRole("button", { name: "Analyse notes", exact: true })
-          .click();
+        await openTool(page, "Analyse notes");
         await page.getByLabel("Folders", { exact: true }).fill("Meetings");
         await page.getByRole("button", { name: "Preview selection" }).click();
         await expect(
           page.getByRole("heading", { name: "Review selected notes" }),
         ).toBeVisible();
       } else if (screen === "manual") {
-        await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
+        await openTool(page, 'New topic');
         await page.getByLabel('Topic name', { exact: true }).fill('Migration questions');
         await expect(page.getByRole('button', { name: 'Create proposal', exact: true })).toBeEnabled();
       } else await expect(page.getByLabel("Notes folder path")).toBeVisible();

@@ -4,7 +4,7 @@ Feature: Search from the desktop window
 
   Scenario: Search shows results from the core
     Given the desktop app is open on a synthetic notes root
-    When I focus the search box with Cmd+K
+    When I focus the raw note search box
     And I type "ledger"
     Then I see a result titled "Ledger migration"
     And the result shows its path "memory/projects/ledger-migration.md"

@@ -1,3 +1,4 @@
+import { openTool } from "./interaction";
 import { browser, $, $$, expect } from '@wdio/globals';
 import { chooseOption } from './interaction';
 import { resolve, join } from 'node:path';
@@ -37,7 +38,7 @@ describe('Topic workspace native service journey', () => {
     await rootInput.setValue(root);
     await $('input[type="checkbox"]').click();
     await $('button=Use notes folder').click();
-    await expect($('h2=No notes yet')).toBeDisplayed();
+    await expect($('h2=Build your first graph')).toBeDisplayed();
     await browser.saveScreenshot(
       resolve('evidence/native-workspace-empty.png'),
     );
@@ -46,7 +47,7 @@ describe('Topic workspace native service journey', () => {
     const original =
       '# Ledger migration\n\nThe synthetic ledger migration is ready for review.\n';
     writeFileSync(source, original);
-    await $('button=Analyse notes').click();
+    await openTool("Analyse notes");
     await $('#scope-folders').setValue('memory/projects');
     await $('button=Preview selection').click();
     await expect($('h2=Review selected notes')).toBeDisplayed();
@@ -59,7 +60,7 @@ describe('Topic workspace native service journey', () => {
     await expect($('.note-content')).toHaveText(original.trim());
     await chooseOption('select#source-sensitivity', 'local_only');
     await expect($('.source-inspector .badge')).toHaveText('Local-only');
-    await $('button=New topic').click();
+    await openTool("New topic");
     await $('#topic-name').setValue('Synthetic Ledger');
     await $('button=Create proposal').click();
     await expect($('input[aria-label="Topic name"]')).toHaveValue(
@@ -68,7 +69,7 @@ describe('Topic workspace native service journey', () => {
     await expect($('.proposal .badge.tone-warning')).toHaveText('Needs review');
     await $('button=Approve selected changes').click();
     await expect($('.proposal .badge.tone-success')).toHaveText('Accepted');
-    await $('button[aria-label="Topics"]').click();
+    await $('button=Knowledge graph').click();
     await $('button[aria-label="Synthetic Ledger"]').click();
     await expect($('.topic-detail .topic-identity h2')).toHaveText('Synthetic Ledger');
     // Exercise the real human-only statement service without invoking a model.
@@ -85,7 +86,7 @@ describe('Topic workspace native service journey', () => {
     expect(stored.loaded.id).toEqual(stored.statement.id);
 
     await browser.saveScreenshot(resolve('evidence/native-workspace.png'));
-    await $('button=History').click();
+    await openTool("History");
     await browser.waitUntil(async () => {
       for (const operation of await $$('.operation')) if ((await operation.getText()).includes('Approve reviewed proposal')) return true;
       return false;
@@ -101,7 +102,7 @@ describe('Topic workspace native service journey', () => {
     await browser.saveScreenshot(
       resolve('evidence/native-workspace-history.png'),
     );
-    await $('button[aria-label="Topics"]').click();
+    await $('button=Knowledge graph').click();
     await expect($('button[aria-label="Synthetic Ledger"]')).toBeDisplayed();
     expect(readFileSync(source, 'utf8')).toEqual(original);
   });

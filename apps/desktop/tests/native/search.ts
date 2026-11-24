@@ -1,3 +1,4 @@
+import { openTool } from "./interaction";
 import { browser, $, $$, expect } from '@wdio/globals';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -5,11 +6,12 @@ import { hasConvergedResult } from './search-predicate.mjs';
 
 describe('Phase 0 real macOS app, real Rust store', () => {
   it('searches synthetic notes through IPC and shows No matches', async () => {
-    const search = await $('input[type="search"]');
-    await $('h1=Today').waitForDisplayed();
+    await $('h1=Knowledge graph').waitForDisplayed();
     await browser.keys(['Meta', 'k']);
+    await expect($("#topic-search")).toBeFocused();
+    await openTool("Search notes");
+    const search=await $("#search");
     await search.waitForDisplayed();
-    await expect(search).toBeFocused();
     await search.setValue('ledger');
     await expect($('h2')).toHaveText('Ledger migration');
     await expect($('.path')).toHaveText('memory/projects/ledger-migration.md');

@@ -1,3 +1,4 @@
+import { openMoreTools, openTool } from "./fixtures/workspace";
 import { test, expect, type Page } from '@playwright/test';
 import { workspaceFixture, ids, topic, claim } from './fixtures/workspace';
 
@@ -12,9 +13,7 @@ test.afterEach(async ({ page }) => {
 });
 
 async function preview(page: Page) {
-  await page
-    .getByRole('button', { name: 'Analyse notes', exact: true })
-    .click();
+  await openTool(page, 'Analyse notes');
   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
   await page.getByLabel('From date').fill('2026-11-01');
   await page.getByLabel('Through date').fill('2026-11-02');
@@ -42,7 +41,7 @@ async function finish(page: Page) {
     });
     (window as any).emitRun(2, { kind: 'completed' });
   });
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   await expect(page.getByLabel('Claim value')).toHaveValue('Friday');
 }
 
@@ -55,7 +54,7 @@ test('create a fresh root and explain an honest empty workspace', async ({
   await page.getByRole('button', { name: 'Use notes folder' }).click();
   await expect(
     page.getByText(
-      'Add Markdown notes or use New topic for manual capture.',
+      'Build your first graph',
     ),
   ).toBeVisible();
   expect(
@@ -121,7 +120,7 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
   await expect(page.getByText('Bytes 0–23', { exact: false })).toBeVisible();
   await page.getByLabel('Claim value').fill('Monday');
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await page.getByRole('button', { name: 'Ledger', exact: true }).click();
   await expect(page.getByText('Monday', { exact: true })).toBeVisible();
   await expect(
@@ -158,7 +157,7 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
     w.emitRun(1, { kind: 'proposal', proposal_id: 'correction-one' });
     w.emitRun(2, { kind: 'completed' });
   });
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   await expect(page.getByText('Monday', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Claim value')).toHaveValue('Tuesday');
   await expect(page.getByLabel('Reason and context')).toHaveValue(
@@ -169,7 +168,7 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
     fullPage: true,
   });
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await expect(page.getByText('Tuesday', { exact: true })).toBeVisible();
   await page.locator('.topic-detail').getByText('Sources (1)', { exact: true }).first().click();
   await expect(
@@ -188,7 +187,7 @@ test('discovery, cited edit and human approval, accepted understanding, chat dif
     path: 'evidence/workspace-topic.png',
     fullPage: true,
   });
-  await page.getByRole('button', { name: 'History', exact: true }).click();
+  await openTool(page, 'History');
   await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
   await expect(page.getByRole('alert')).toContainText(
     'Undo the dependent claim first.',
@@ -253,7 +252,7 @@ test('duplicate sequences, wrong roots and cancelled late streams cannot update 
     w.emitRun(5, { kind: 'completed' });
   });
   await expect(page.getByText('LATE SECRET', { exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   await expect(page.getByLabel('Claim value')).toHaveCount(0);
 });
 
@@ -292,10 +291,11 @@ test('missing runtime leaves topic browsing and manual proposal capture availabl
       'Codex is missing. Install Codex 0.166.0 and restart Topics.',
     ),
   ).toBeVisible();
+  await openMoreTools(page);
   await expect(
     page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }),
   ).toBeEnabled();
-  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
+  await openTool(page, 'New topic');
   await expect(page.getByLabel('Topic name', { exact: true })).toBeVisible();
 });
 
@@ -341,7 +341,7 @@ test('manual fallback stages a proposal and still needs explicit human approval'
   page,
 }) => {
   await workspaceFixture(page, { unavailable: true });
-  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
+  await openTool(page, 'New topic');
   await page.getByLabel('Topic name', { exact: true }).fill('Quiet project');
   await page.getByRole('button', { name: 'Create proposal' }).click();
   await expect(page.getByLabel('Topic name', { exact: true })).toHaveValue(
@@ -398,7 +398,7 @@ test('late topic detail read after a root switch cannot reveal old-root evidence
   await start(page);
   await finish(page);
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await page.evaluate(() => {
     (window as any).defer.workspace_topic_get = true;
   });
@@ -428,9 +428,9 @@ test('late topic detail read after a root switch cannot reveal old-root evidence
   await expect(page.getByText('OLD ROOT SECRET', { exact: true })).toHaveCount(
     0,
   );
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'No accepted topics yet' }),
+    page.getByRole('heading', { name: 'Build your first graph' }),
   ).toBeVisible();
 });
 
@@ -494,27 +494,27 @@ test('an older list refresh cannot overwrite newer workspace data', async ({
   await start(page);
   await page.evaluate(() => {
     const w = window as any;
-    w.defer.workspace_topics_list = true;
+    w.defer.knowledge_graph = true;
     w.showProposal();
     w.emitRun(1, { kind: 'completed' });
   });
   await expect
     .poll(() =>
       page.evaluate(
-        () => typeof (window as any).defer.workspace_topics_list.resolve,
+        () => typeof (window as any).defer.knowledge_graph.resolve,
       ),
     )
     .toBe('function');
   await page.evaluate(
     ({ topic }) => {
       const w = window as any;
-      w.oldTopicsResolve = w.defer.workspace_topics_list.resolve;
-      delete w.defer.workspace_topics_list;
+      w.oldTopicsResolve = w.defer.knowledge_graph.resolve;
+      delete w.defer.knowledge_graph;
       w.topics = [topic];
     },
     { topic },
   );
-  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
+  await openTool(page, 'New topic');
   await page
     .getByLabel('Topic name', { exact: true })
     .fill('Fresh pending topic');
@@ -522,8 +522,8 @@ test('an older list refresh cannot overwrite newer workspace data', async ({
   await expect(page.getByLabel('Topic name', { exact: true })).toHaveValue(
     'Fresh pending topic',
   );
-  await page.evaluate(() => (window as any).oldTopicsResolve({ topics: [] }));
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.evaluate(() => (window as any).oldTopicsResolve({ nodes: [], edges:[],pending:[],warnings:[],checks:{} }));
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Ledger', exact: true }),
   ).toBeVisible();
@@ -534,10 +534,10 @@ test('keyboard search works from topics and narrow screens keep controls reachab
 }) => {
   await workspaceFixture(page);
   await page.setViewportSize({ width: 600, height: 700 });
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await page.keyboard.press('Meta+k');
   await expect(
-    page.getByRole('searchbox', { name: 'Search notes' }),
+    page.getByRole('searchbox', { name: 'Search topics' }),
   ).toBeFocused();
   await preview(page);
   await expect(
@@ -611,7 +611,7 @@ test('accepted empty analysis outcome says no new changes without an approval ca
   await statusBar.getByRole('button', { name: 'Dismiss notification' }).click();
   await expect(statusDetails).toBeFocused();
   await expect(statusDetails).toHaveAccessibleDescription(/Codex .* installed/);
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   await expect(
     page.getByRole('heading', { name: 'No new changes' }),
   ).toBeVisible();
@@ -631,9 +631,7 @@ test('review F1 keyboard paths retain spaces and newlines until explicit preview
   page,
 }) => {
   await workspaceFixture(page);
-  await page
-    .getByRole('button', { name: 'Analyse notes', exact: true })
-    .click();
+  await openTool(page, 'Analyse notes');
   const files = page.getByLabel('Markdown files', { exact: true });
   await files.pressSequentially('Team Notes/one.md');
   await files.press('Enter');
@@ -670,7 +668,7 @@ test('review F1 keyboard aliases and correction paths keep literal drafts until 
         ).args.request.decision.candidates[0].topic.aliases,
     ),
   ).toEqual(['Ledger migration', 'Finance team']);
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await page.getByRole('button', { name: 'Ledger', exact: true }).click();
   await page
     .getByLabel('Message about this topic')
@@ -685,7 +683,7 @@ test('review F1 keyboard aliases and correction paths keep literal drafts until 
     w.showCorrection();
     w.emitRun(1, { kind: 'completed' });
   });
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   const paths = page.getByLabel('Apply future rule to these source paths');
   await paths.clear();
   await paths.pressSequentially('Team Notes/a.md');
@@ -735,9 +733,7 @@ test('review F3 dates only filter an explicit nonblank files or folder selection
   page,
 }) => {
   await workspaceFixture(page);
-  await page
-    .getByRole('button', { name: 'Analyse notes', exact: true })
-    .click();
+  await openTool(page, 'Analyse notes');
   await page.getByLabel('From date').fill('2026-11-01');
   await expect(
     page.getByRole('button', { name: 'Preview selection' }),
@@ -760,7 +756,7 @@ test('review F4 refresh of the same topic preserves chat draft and consent', asy
   await start(page);
   await finish(page);
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await page.getByRole('button', { name: 'Ledger', exact: true }).click();
   await page
     .getByLabel('Message about this topic')
@@ -769,11 +765,11 @@ test('review F4 refresh of the same topic preserves chat draft and consent', asy
   await page
     .getByLabel('Allow these unknown-sensitivity notes for this run')
     .check();
-  await page.getByRole('complementary', { name: 'Topics workspace' }).getByRole('button', { name: 'New topic', exact: true }).click();
+  await openTool(page, 'New topic');
   await page.getByLabel('Topic name', { exact: true }).fill('Another topic');
   await page.getByRole('button', { name: 'Create proposal' }).click();
   await page.getByRole('button', { name: 'Approve selected changes' }).click();
-  await page.getByRole('button', { name: 'Topics', exact: true }).click();
+  await page.getByRole('button', { name: 'Knowledge graph', exact: true }).click();
   await expect(page.getByLabel('Message about this topic')).toHaveValue(
     'Keep my unfinished correction.',
   );
@@ -817,7 +813,7 @@ test('review F1 keyboard correction paths independently preserve spaces and mult
     w.showCorrection();
     w.emitRun(1, { kind: 'completed' });
   });
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   const paths = page.getByLabel('Apply future rule to these source paths');
   await paths.clear();
   await paths.pressSequentially('Team Notes/a.md');
@@ -839,7 +835,7 @@ test('review F4 include labels distinguish candidates of the same kind', async (
     w.proposals[0].candidates.push(second);
     w.emitRun(1, { kind: 'completed' });
   });
-  await page.getByRole('button', { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
   await expect(
     page.getByRole('checkbox', {
       name: 'Include claim: Ledger launch: Friday (change 2)',

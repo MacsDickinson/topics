@@ -46,7 +46,7 @@ Shared components in `ui.tsx` are used across the shell and screens. They contai
 <Button variant="primary" disabled={!confirmed} onClick={onSave}>Save starting map</Button>
 ```
 
-Global native controls provide default, hover, pressed, focus-visible and disabled states. Fields use the contrast-checked strong boundary and full-opacity placeholder role; primary controls use on-action text in both themes. Navigation uses `aria-current` with a heavier label and a selected fill. Topic/source buttons use `aria-pressed` and a selected-row chevron. The shell's actual Cmd/Ctrl+K handler opens Search and focuses/selects its input, while disconnected setup remains visible.
+Global native controls provide default, hover, pressed, focus-visible and disabled states. Fields use the contrast-checked strong boundary and full-opacity placeholder role; primary controls use on-action text in both themes. Navigation uses `aria-current` with a heavier label and a selected fill. Topic/source buttons use `aria-pressed` and a selected-row chevron. The shell's actual Cmd/Ctrl+K handler opens the graph and focuses/selects topic lookup, while disconnected setup remains visible.
 
 The stylesheet defines `.focused-form`, `.form-grid`, `.form-section`, `.review-footer`, `.source-row`, `.candidate`, `.run-panel` and `.source-evidence` for shared screen patterns. A review footer sits after scope, consent and exact before/after context, never implying automatic approval. Native `details/summary` disclosures retain complete evidence and revision identities. Opening a disclosure grants no permission. Source passages use semantic figures/captions; original note text stays whitespace-preserving, selectable React text.
 
@@ -167,3 +167,10 @@ The correction composer defaults to the existing cited notes and lists their pat
 Board UI `Select` forwards the `Field` id and accessibility descriptions to its React Aria control. A `Field` can wrap the component with a visible label while the select retains its accessible name; native selects elsewhere remain native controls.
 
 Weekly review offers each saved briefing item as an explicit material-change choice, with its citation available before counting. Display meeting feedback directly and avoid duplicate links; omissions come from saved feedback and linked classifications follow that feedback. Blank workload counts and minutes mean unknown, while zero is an explicit value. Learning counts are cumulative since each correction was approved, through the saved briefing cutoff; source status recorded does not imply complete evidence. If a briefing changes while a feedback sentence is being written, preserve the draft and require a refreshed briefing to be reviewed before saving.
+
+
+## Workspace graph and validation
+
+Use the [screen specification](design/screens.md) for graph navigation. The graph canvas uses semantic borders, surfaces, type and focus tokens in both themes. Nodes are real buttons with explicit selection. Tentative edges use a dashed stroke and a text status. Text view names the endpoints in direction order. Search shares the selected identity with the graph.
+
+A validation panel presents competing values in two columns that stack on narrow screens. Keep each passage, source name, review state and effective period with its assertion. Use the shared consent panel for the returned judgment, show the exact values being confirmed or superseded, and require a separate approval action. Deferral changes triage only.

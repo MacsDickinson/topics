@@ -6,12 +6,12 @@ describe("Synthetic setup restart", () => {
       ? "recovers the saved map from app-owned data"
       : "recovers the saved map and correction from app-owned data",
     async () => {
-      await $('button[aria-label="Topics"]').waitForDisplayed();
-      await $('button[aria-label="Topics"]').click();
+      await $('button=Knowledge graph').waitForDisplayed();
+      await $('button=Knowledge graph').click();
       await $('button[aria-label="Synthetic Alex A42"]').waitForDisplayed();
       await $('button[aria-label="Synthetic Alex A42"]').click();
       if (process.env.TOPICS_TEST_GRAPH_ONLY === "1") {
-        await expect($(".topic-detail h1")).toHaveText("Synthetic Alex A42");
+        await expect($(".topic-detail h2")).toHaveText("Synthetic Alex A42");
         return;
       }
       await browser.waitUntil(

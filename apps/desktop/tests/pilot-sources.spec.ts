@@ -1,8 +1,10 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture } from "./fixtures/workspace";
 
 test("Friday feedback stays reachable when the briefing covers many notes", async ({ page }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Topics missed something" }).waitFor();
   await page.evaluate(() => {
     const briefing = (window as any).pilotBriefing;

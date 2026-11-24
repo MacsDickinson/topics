@@ -2,14 +2,8 @@
 //! same exact receipts as the rest of review; `setup_decide` applies them.
 use super::review::{blank, current, finalize, pin, pin_candidate};
 use super::*;
-use crate::workspace::knowledge::{Caller, project};
+use crate::workspace::knowledge::{Caller, norm, project};
 
-fn norm(text: &str) -> String {
-    text.split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .to_lowercase()
-}
 fn fresh_passages(ctx: &Context, state: &State, claim: &Claim) -> (Vec<Evidence>, bool) {
     let mut stale = false;
     let fresh = claim
@@ -30,9 +24,6 @@ fn fresh_passages(ctx: &Context, state: &State, claim: &Claim) -> (Vec<Evidence>
 fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<ValidationPreview> {
     valid_id(&request.topic_id)?;
     valid_id(&request.item_id)?;
-    if request.note.len() > 32768 {
-        return Err(error("invalid_input", "Note must be at most 32768 bytes"));
-    }
     let mut state = load(ctx)?;
     let changed = || {
         error(
@@ -89,7 +80,6 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
             before: vec![],
             after: vec![],
             confirmed: vec![],
-            rules: vec![],
         });
     }
     // Pending assertions keep their own decision; a judgment covers accepted revisions.
@@ -125,7 +115,7 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
         if norm(&claim.value) == norm(&resolved) {
             agreeing.push((claim.clone(), fresh, stale));
         } else {
-            differing.push((claim.clone(), fresh));
+            differing.push(claim);
         }
     }
     if differing.is_empty() && agreeing.iter().all(|(_, _, stale)| !stale) {
@@ -154,14 +144,10 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
             before: vec![],
             after: vec![],
             confirmed: agreeing.into_iter().map(|(c, ..)| c).collect(),
-            rules: vec![],
         });
     }
-    let text = if request.note.trim().is_empty() {
-        let rejected: Vec<_> = differing
-            .iter()
-            .map(|(c, _)| format!("“{}”", c.value))
-            .collect();
+    let text = {
+        let rejected: Vec<_> = differing.iter().map(|c| format!("“{}”", c.value)).collect();
         if rejected.is_empty() {
             format!(
                 "I confirm {} {} is “{resolved}”.",
@@ -175,8 +161,6 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
                 rejected.join(" or ")
             )
         }
-    } else {
-        request.note.clone()
     };
     let statement = UserStatement {
         id: new_id(),
@@ -193,7 +177,7 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
     let mut candidates = vec![];
     // Each rejected source assertion keeps its history and gains a superseding
     // revision that cites the human's judgment.
-    for (old, _) in &differing {
+    for old in differing {
         let mut claim = old.clone();
         claim.revision_id = new_id();
         claim.value = resolved.clone();
@@ -225,8 +209,11 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
         candidates.push(Candidate::Claim { claim });
     }
     let mut receipt = blank(ctx, SetupDecisionKind::Save);
-    receipt.requested_ids = before.iter().map(|c| c.revision_id.clone()).collect();
+    receipt.requested_ids = accepted.iter().map(|c| c.revision_id.clone()).collect();
     receipt.included_ids = after.iter().map(|c| c.revision_id.clone()).collect();
+    receipt
+        .included_ids
+        .extend(confirmed.iter().map(|c| c.revision_id.clone()));
     receipt.revisions = accepted.clone();
     receipt.candidates = candidates;
     for claim in &accepted {
@@ -269,7 +256,6 @@ fn preview(ctx: &Context, request: ValidationPreviewRequest) -> WResult<Validati
         before,
         after,
         confirmed,
-        rules: vec![],
     })
 }
 impl WorkspaceService {

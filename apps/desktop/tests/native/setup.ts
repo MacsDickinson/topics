@@ -1,3 +1,4 @@
+import { openTool } from "./interaction";
 import { browser, $, $$, expect } from "@wdio/globals";
 import { readFileSync } from "node:fs";
 
@@ -11,6 +12,7 @@ describe("Synthetic setup job through native services", () => {
       await $("#root-path").waitForDisplayed();
       await $("#root-path").setValue(path);
       await $("button=Use notes folder").click();
+      await $("button=Analyse sources").click();
       await $("h1=Understand this folder").waitForDisplayed();
       await browser.execute(async () => {
         const core = (window as any).__TAURI__.core;
@@ -42,8 +44,8 @@ describe("Synthetic setup job through native services", () => {
           },
         });
       });
-      await $('button[aria-label="Topics"]').click();
-      await $("button=Set up folder").click();
+      await $('button=Knowledge graph').click();
+      await openTool("Set up folder");
       await $("h2=Choose notes to analyse").waitForDisplayed();
       await $("button=Review manifest").click();
       await $("h2=Review the exact manifest").waitForDisplayed();
@@ -124,7 +126,7 @@ describe("Synthetic setup job through native services", () => {
         saved.graph.items.every((item: any) => item.disposition === "saved"),
       ).toEqual(true);
       if (process.env.TOPICS_TEST_GRAPH_ONLY === "1") return;
-      await $('button[aria-label="Topics"]').click();
+      await $('button=Knowledge graph').click();
       await $('button[aria-label="Synthetic Alex A42"]').waitForDisplayed();
       await $('button[aria-label="Synthetic Alex A42"]').click();
       await $(".context-review").waitForDisplayed();

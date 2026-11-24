@@ -1,10 +1,12 @@
+import { openTool } from "./interaction";
 import { browser, $, expect } from '@wdio/globals';
 
 // The preceding workspace journey configured this isolated root. A fresh app
-// process should open Today and support meeting feedback without a provider.
+// process opens the graph and can reach Today without a provider.
 describe('Friday pilot on a returning workspace', () => {
   it('captures an empty briefing and retrieves an omission through the native service', async () => {
-    await expect($('h1=Today')).toBeDisplayed();
+    await expect($('h1=Knowledge graph')).toBeDisplayed();
+    await openTool('Today');
     const result = await browser.execute(async () => {
       const { invoke } = (window as any).__TAURI__.core;
       const call = (name: string, request: Record<string, unknown>) => invoke(name, { request });

@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync, mkdirSync } from 'node:fs';
 
@@ -17,8 +18,8 @@ const steps: Record<string, (page: Page) => Promise<unknown>> = {
               message:
                 'Codex unavailable; search and manual proposals remain available.',
             });
-          if (command === 'workspace_topics_list')
-            return Promise.resolve({ topics: [] });
+          if (command === 'knowledge_graph')
+            return Promise.resolve({nodes:[],edges:[],pending:[],warnings:[],checks:{conflicting:0,uncertain:0,stale:0}});
           if (command === 'workspace_proposals_list')
             return Promise.resolve({ proposals: [] });
           if (command === 'workspace_history_list')
@@ -38,13 +39,13 @@ const steps: Record<string, (page: Page) => Promise<unknown>> = {
       };
     });
     await page.goto('/');
-    await page.getByRole('button', {name: 'Search', exact: true}).click();
+    await openTool(page, "Search notes");
   },
-  'I focus the search box with Cmd+K': async (page) => {
+  'I focus the raw note search box': async (page) => {
     await expect(
       page.getByRole('searchbox', { name: 'Search notes' }),
     ).toBeVisible();
-    await page.keyboard.press('Meta+k');
+    await page.getByRole('searchbox',{name:'Search notes'}).focus();
     await expect(
       page.getByRole('searchbox', { name: 'Search notes' }),
     ).toBeFocused();

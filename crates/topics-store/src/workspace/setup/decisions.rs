@@ -291,7 +291,7 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
             let selected = &receipt.candidates[start..end];
             let mut records = assertion_records(ctx, &reviewed, &edits, selected, &op)?;
             dependencies.extend(proposal::dependencies(selected));
-            if chunk_index == 0 {
+            if reviewed.judgment && chunk_index == 0 {
                 // Untouched current revisions the same judgment confirmed.
                 for id in &reviewed.confirm {
                     records.push(metadata_record(
@@ -302,6 +302,7 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
                         reviewed.statement.as_ref().map(|s| s.id.clone()),
                     )?);
                     dependencies.push(id.clone());
+                    result.saved_ids.push(id.clone());
                 }
             }
             result.saved_ids.extend(selected.iter().map(|candidate| {

@@ -1,0 +1,196 @@
+.graph-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  margin: var(--space-4) 0;
+  background: var(--color-background-panel);
+}
+.graph-search input {
+  border: none;
+  margin: 0;
+  background: transparent;
+}
+.graph-hits,
+.graph-checks,
+.graph-discoveries,
+.related-topics,
+.retrieval-access {
+  margin: var(--space-4) 0;
+}
+.graph-hits button,
+.graph-checks button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3);
+  background: transparent;
+  border-bottom: 1px solid var(--color-border-default);
+  border-radius: 0;
+}
+.graph-checks button span,
+.graph-hits button span {
+  color: var(--color-text-secondary);
+  margin-left: auto;
+}
+.knowledge-map {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+}
+.map-bar,
+.check-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.map-bar {
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-3);
+  font: var(--type-meta);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-default);
+}
+.graph-scroll {
+  overflow: auto;
+  max-height: 52vh;
+  background: radial-gradient(var(--color-border-default) 1px, transparent 1px)
+    0 0 / 20px 20px;
+}
+.graph-canvas {
+  position: relative;
+  margin: auto;
+}
+.graph-canvas svg path {
+  stroke: var(--color-border-strong);
+  fill: none;
+  stroke-width: 1.6;
+}
+.graph-canvas svg .tentative path {
+  stroke-dasharray: 5 4;
+}
+.graph-canvas text {
+  font: var(--type-meta);
+  text-anchor: middle;
+  fill: var(--color-text-secondary);
+  stroke: var(--color-background-app);
+  stroke-width: 5;
+  paint-order: stroke;
+}
+.graph-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 180px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background-panel);
+  text-align: left;
+  box-shadow: var(--elevation-panel);
+}
+.graph-node svg.icon {
+  color: var(--color-text-accent);
+  flex: none;
+}
+.graph-node svg.icon path {
+  stroke: currentColor;
+}
+.graph-node strong,
+.graph-node small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.graph-node span {
+  min-width: 0;
+}
+.graph-node small,
+.graph-text {
+  font: var(--type-meta);
+  color: var(--color-text-secondary);
+}
+.graph-node[aria-pressed="true"] {
+  outline: 2px solid var(--color-border-focus);
+  background: var(--color-background-selected);
+}
+.graph-node.pending {
+  border-style: dashed;
+}
+.graph-text {
+  padding: var(--space-3);
+}
+.graph-checks h2,
+.graph-discoveries h2 {
+  font: var(--type-section);
+}
+.graph-detail {
+  margin-top: var(--space-5);
+  border-top: 1px solid var(--color-border-default);
+  padding-top: var(--space-4);
+}
+.evidence-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-4);
+}
+.evidence-pair > div {
+  border-top: 1px solid var(--color-border-default);
+  min-width: 0;
+}
+.validation-item {
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  background: var(--color-background-subtle);
+  border-radius: var(--radius-card);
+}
+.validation-item blockquote,
+.related-topics blockquote {
+  margin: var(--space-3) 0;
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-border-strong);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.validation-item cite {
+  display: block;
+  font: var(--type-meta);
+  color: var(--color-text-secondary);
+}
+.claim-value {
+  font: var(--type-section);
+}
+.validation-item details {
+  margin: var(--space-3) 0;
+}
+.graph-discoveries > div {
+  border-top: 1px solid var(--color-border-default);
+  padding: var(--space-2) 0;
+}
+.sidebar nav details {
+  margin-top: var(--space-4);
+  font: var(--type-control);
+}
+.sidebar nav details summary {
+  padding: var(--space-2);
+}
+
+.graph-detail .topic-identity,
+.graph-detail .topic-identity h2 {
+  scroll-margin-top: 64px;
+}
+.graph-node {
+  max-width: 205px;
+}
+.graph-node .icon {
+  width: 20px;
+}
+.review-tools > summary {
+  padding: var(--space-3) 0;
+}

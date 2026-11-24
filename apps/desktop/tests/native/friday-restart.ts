@@ -1,9 +1,11 @@
+import { openTool } from "./interaction";
 import { openDatePicker } from "./interaction";
 import { $, expect } from '@wdio/globals';
 
 describe('Friday meeting history after restarting Topics', () => {
   it('opens the most recent briefing and retrieves the saved feedback', async () => {
-    await expect($('h1=Today')).toBeDisplayed();
+    await expect($('h1=Knowledge graph')).toBeDisplayed();
+    await openTool('Today');
     const latest = await $('button*=Open briefing');
     await latest.waitForDisplayed();
     await latest.click();

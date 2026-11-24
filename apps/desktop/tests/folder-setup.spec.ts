@@ -1,12 +1,14 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture, ids, source } from "./fixtures/workspace";
 
-test("connecting a new folder opens local inventory before analysis", async ({
+test("connecting a new folder opens the graph with a route to local inventory", async ({
   page,
 }) => {
   await workspaceFixture(page, { empty: true });
   await page.getByLabel("Notes folder path").fill("/synthetic/new-notes");
   await page.getByRole("button", { name: "Use notes folder" }).click();
+  await page.getByRole("button",{name:"Analyse sources"}).click();
   await expect(
     page.getByRole("heading", { name: "Understand this folder" }),
   ).toBeVisible();
@@ -23,7 +25,7 @@ test("connecting a new folder opens local inventory before analysis", async ({
 });
 
 async function setupJob(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(
     page.getByRole("heading", { name: "Choose notes to analyse" }),
   ).toBeVisible();
@@ -48,7 +50,7 @@ test("setup offers tree selection and an exact manifest before building", async 
   page,
 }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(
     page.getByRole("heading", { name: "Choose notes to analyse" }),
   ).toBeVisible();
@@ -127,9 +129,7 @@ test("topic map offers graph and list navigation", async ({ page }) => {
 });
 
 async function showDraft(page: import("@playwright/test").Page) {
-  await page
-    .getByRole("button", { name: "Analyse notes", exact: true })
-    .click();
+  await openTool(page, "Analyse notes");
   await page.getByLabel("Folders", { exact: true }).fill("Meetings");
   await page.getByRole("button", { name: "Preview selection" }).click();
   await page
@@ -143,7 +143,7 @@ async function showDraft(page: import("@playwright/test").Page) {
     w.showProposal();
     w.emitRun(1, { kind: "completed" });
   });
-  await page.getByRole("button", { name: /Inbox/ }).click();
+  await openTool(page, /Inbox/);
 }
 
 test("draft map exposes one exact starting-map receipt without record checkboxes", async ({
@@ -170,7 +170,7 @@ test("a saved topic offers contextual decisions and collapsed evidence", async (
   await workspaceFixture(page);
   await showDraft(page);
   await page.getByRole("button", { name: "Approve selected changes" }).click();
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   await expect(
     page.getByText("From your notes", { exact: false }).first(),
@@ -221,7 +221,7 @@ test("context is saved as the exact user statement without correction or confirm
   await workspaceFixture(page);
   await showDraft(page);
   await page.getByRole("button", { name: "Approve selected changes" }).click();
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   await page.getByRole("button", { name: "Add context", exact: true }).click();
   await page.getByLabel("Your context").fill("The meeting was provisional.");
@@ -244,7 +244,7 @@ test("confirmation previews only the enumerated visible revisions", async ({
   await workspaceFixture(page);
   await showDraft(page);
   await page.getByRole("button", { name: "Approve selected changes" }).click();
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   await page
     .getByRole("button", { name: "Confirm these 1 statements" })
@@ -318,7 +318,7 @@ test("tree builds missing intermediate folders from inventory paths and selects 
   page,
 }) => {
   await workspaceFixture(page, { nested: true });
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(page.getByLabel("Projects", { exact: true })).toBeChecked();
   await expect(page.getByLabel("Archive", { exact: true })).toBeChecked();
   await page.getByLabel("Projects", { exact: true }).uncheck();
@@ -412,7 +412,7 @@ test("connection confirmation previews only the selected connection", async ({
     },
     { ids, source },
   );
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   await page.getByRole("button", { name: "Confirm this connection" }).click();
   await expect(
@@ -428,14 +428,14 @@ test("connection confirmation previews only the selected connection", async ({
   ).toEqual(["connection-one"]);
 });
 
-test("a returning root opens Today and still offers setup", async ({
+test("a returning root opens the graph and still offers setup", async ({
   page,
 }) => {
   await workspaceFixture(page, { returning: true });
   await expect(
-    page.getByRole("heading", { name: "Today", exact: true }),
+    page.getByRole("heading", { name: "Knowledge graph", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(
     page.getByRole("heading", { name: "Understand this folder" }),
   ).toBeVisible();
@@ -498,7 +498,7 @@ test("an oversized selected source is named and must be excluded before preview"
   page,
 }) => {
   await workspaceFixture(page, { oversized: true });
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(
     page.getByText(/exceed the 64 KiB per-batch limit/),
   ).toBeVisible();
@@ -512,7 +512,7 @@ test("manifest request and reviewed budget reserve room for evidence and context
   page,
 }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await page.getByRole("button", { name: "Review manifest" }).click();
   const request = await page.evaluate(
     () =>
@@ -603,7 +603,7 @@ test("batch failure explanations allow only exact frozen reason pairs", async ({
 
 test("date-ineligible oversized notes do not block eligible selected notes", async ({ page }) => {
   await workspaceFixture(page, { dateExcludedLarge: true });
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await page.getByRole("button", { name: "From date: Select date" }).click();
   await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-01-01");
   await page.getByRole("button", { name: "Apply" }).click();
@@ -613,7 +613,7 @@ test("date-ineligible oversized notes do not block eligible selected notes", asy
 
 test("direct exclusion preserves the remaining selection and invalidates consent", async ({ page }) => {
   await workspaceFixture(page, { dateExcludedLarge: true });
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
   await page.getByRole("button", { name: "Exclude Meetings/old.md from this run" }).click();
   await page.getByRole("button", { name: "Exclude Meetings/undated.md from this run" }).click();
@@ -631,7 +631,7 @@ test("direct exclusion preserves the remaining selection and invalidates consent
 
 test("dates validate and BoardUI role selection sends canonical values", async ({ page }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await page.getByRole("button", { name: "Suggested role for Meetings" }).click();
   await page.getByRole("option", { name: "project" }).click();
   await page.getByRole("button", { name: "From date: Select date" }).click();
@@ -656,7 +656,7 @@ test("dates validate and BoardUI role selection sends canonical values", async (
 
 test("date picker cancels drafts, returns focus, and handles keyboard dismissal", async ({ page }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   const trigger = page.getByRole("button", { name: "From date: Select date" });
   await trigger.focus();
   await page.keyboard.press("Enter");
@@ -671,7 +671,7 @@ test("date picker cancels drafts, returns focus, and handles keyboard dismissal"
 
 test("BoardUI calendar exposes its month panel and editable date chip", async ({ page }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await page.getByRole("button", { name: "From date: Select date" }).click();
   await expect(page.locator(".board-month-panel")).toBeVisible();
   await expect(page.locator(".board-month-panel svg")).toHaveCount(2);
@@ -680,7 +680,7 @@ test("BoardUI calendar exposes its month panel and editable date chip", async ({
 
 test("empty date draft cannot apply an old value", async ({ page }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   await page.getByRole("button", { name: "From date: Select date" }).click();
   await page.getByLabel("From date date (YYYY-MM-DD)").fill("2026-01-01");
   await page.getByRole("button", { name: "Apply" }).click();
@@ -694,7 +694,7 @@ test("empty date draft cannot apply an old value", async ({ page }) => {
 
 test("BoardUI nonmodal role select navigates with keyboard and dismisses outside", async ({ page }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   const trigger = page.getByRole("button", { name: "Suggested role for Meetings" });
   await trigger.focus();
   await page.keyboard.press("Enter");
@@ -711,13 +711,16 @@ test("BoardUI nonmodal role select navigates with keyboard and dismisses outside
 test("date picker dismisses on outside press and page scroll", async ({ page }) => {
   await page.setViewportSize({ width: 480, height: 800 });
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "Set up folder" }).click();
+  await openTool(page, "Set up folder");
   const trigger = page.getByRole("button", { name: "From date: Select date" });
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
   await expect(page.getByRole("dialog", { name: "From date" })).toBeVisible();
   await page.getByRole("heading", { name: "Choose notes to analyse" }).click();
   await expect(page.getByRole("dialog", { name: "From date" })).toHaveCount(0);
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.evaluate(() => new Promise<void>(resolve =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await trigger.click();
   await expect(page.getByRole("dialog", { name: "From date" })).toBeVisible();
   await page.evaluate(() => window.scrollBy(0, 150));

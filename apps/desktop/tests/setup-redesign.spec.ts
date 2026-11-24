@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture } from "./fixtures/workspace";
 
@@ -14,9 +15,7 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
       reducedMotion: "reduce",
     });
     await workspaceFixture(page);
-    await page
-      .getByRole("button", { name: "Set up folder", exact: true })
-      .click();
+    await openTool(page, "Set up folder");
     await expect(
       page.getByRole("heading", { name: "Choose notes to analyse" }),
     ).toBeVisible();
@@ -102,7 +101,7 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
       reducedMotion: "reduce",
     });
     await workspaceFixture(page, { populated: true });
-    await page.getByRole("button", { name: "Topics", exact: true }).click();
+    await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
     await page.getByRole("button", { name: "Ledger", exact: true }).click();
     await page
       .getByRole("button", { name: "That’s wrong", exact: true })

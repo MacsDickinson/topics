@@ -58,8 +58,8 @@
   <div class="stats">
     <div class="stat"><b>Tauri 2</b><span>Rust core + React/TS UI</span></div>
     <div class="stat"><b>7</b><span>Cargo workspace members</span></div>
-    <div class="stat"><b>48</b><span>IPC commands</span></div>
-    <div class="stat"><b>2</b><span>model tools, no write power</span></div>
+    <div class="stat"><b>55</b><span>IPC commands</span></div>
+    <div class="stat"><b>2</b><span>run-scoped model tools</span></div>
     <div class="stat"><b>Markdown</b><span>is the source of truth</span></div>
   </div>
 </header>
@@ -86,7 +86,7 @@ flowchart LR
     direction LR
     subgraph App["Topics.app (Tauri 2)"]
       UI["React / TS UI<br/>main.tsx · Pilot · FolderSetup<br/>TopicDetail · ProposalEditor"]
-      IPC["Tauri commands<br/>src-tauri main.rs + workspace.rs<br/>48 registered handlers"]
+      IPC["Tauri commands<br/>src-tauri main.rs + workspace.rs<br/>55 registered handlers"]
       SETUP["topics-setup<br/>batched setup jobs"]
       RT["topics-runtime<br/>Codex app-server client<br/>scoped MCP server"]
       STORE["topics-store<br/>TopicsService · WorkspaceService"]
@@ -110,7 +110,8 @@ flowchart LR
     STORE --> APPDATA
   end
   CODEX <-. "HTTPS" .-> CLOUD(("Model provider"))
-  CLI["topics-cli<br/>JSON recovery/test adapter"] --> STORE
+  CLIENT["Configured local MCP client"] -- "stdio: topic_search, topic_detail" --> CLI["topics mcp<br/>fixed root and topic IDs"]
+  CLI --> STORE
   </pre></div>
 </section>
 
@@ -137,16 +138,17 @@ flowchart LR
   <table class="tbl">
     <thead><tr><th>Where</th><th>Biggest files</th><th>What lives there</th></tr></thead>
     <tbody>
-      <tr><td><code>topics-store/src/workspace</code></td><td>proposals.rs · persistence.rs · scopes.rs · pilot_review.rs</td><td>Dedupe and identity, journalled writes, consent and sensitivity, weekly review</td></tr>
+      <tr><td><code>topics-store/src/workspace</code></td><td>knowledge.rs · proposals.rs · persistence.rs · scopes.rs</td><td>Graph, caller-scoped topic lookup, journalled writes and sensitivity</td></tr>
       <tr><td><code>topics-store/src/workspace/setup</code></td><td>review.rs · graph.rs · jobs.rs · decisions.rs</td><td>Inventory, draft map, graph, topic-centred decisions</td></tr>
       <tr><td><code>topics-runtime/src</code></td><td>bridge.rs · lib.rs · isolation.rs</td><td>MCP tools, run lifecycle, sandbox preflight</td></tr>
-      <tr><td><code>apps/desktop/src</code></td><td>main.tsx · Pilot.tsx · FolderSetup.tsx</td><td>Shell and nav, Today/Weekly review, setup wizard</td></tr>
+      <tr><td><code>apps/desktop/src</code></td><td>KnowledgeGraph.tsx · KnowledgeDetail.tsx · FolderSetup.tsx</td><td>Graph shell, topic validation, folder analysis and secondary tools</td></tr>
     </tbody>
   </table>
 </section>
 
 <section id="data">
   <h2>Data model &amp; storage</h2>
+  <p>The graph joins committed topic and claim revisions, typed connections and review metadata with pending proposals and folder-job checkpoints. Confirmed claims keep their review receipts. A correction records a user statement and supersedes the cited revision. Validation deferrals and the retrieval switch live in the workspace’s app-data partition.</p>
   <div class="split">
     <div class="diagram"><pre class="mermaid">
 erDiagram
@@ -259,21 +261,11 @@ flowchart LR
     </div>
     <figure><img src="img/native-first-run-dark.png" alt="Topics first-run screen in dark appearance, asking the user to choose or create a notes folder"><figcaption>First run (dark appearance)</figcaption></figure>
   </div>
-  <div class="shellmap">
-    <div class="side">
-      <b>Sidebar</b>
-      <span class="g">Search notes ⌘K</span>
-      <span class="h">Library</span><span>Topics</span><span>Sources</span>
-      <span class="h">Review</span><span>Today</span><span>Inbox <i>n</i></span><span>History</span>
-      <span class="h">Workspace</span><span>Set up folder</span><span>Analyse notes</span><span>New topic</span>
-      <span class="h">Notes folder · runtime status</span>
-    </div>
-    <p>The app shell: <b>Library</b> is for reading, <b>Review</b> is for deciding, and <b>Workspace</b> starts work. On narrow windows the sidebar becomes a labelled top bar.</p>
-  </div>
+  <p>A connected folder opens on its knowledge graph. Search topics with ⌘K or Ctrl+K. Sources holds the input library. More tools opens note search, Inbox, History, Today and manual capture.</p>
 </section>
 
 <section id="guide-setup">
-  <h2>2 · Build a starting map (Set up folder)</h2>
+  <h2>2 · Build a starting map with Analyse sources</h2>
   <div class="flow">
     <div class="fstep"><b>Inventory</b><span>Local only, no model. Folders grouped by likely role (people, projects, meetings, logs, other), with counts, date ranges and exclusions.</span></div>
     <div class="fstep"><b>Manifest</b><span>Whole eligible folder pre-selected. Adjust folders, dates and roles, then review the exact manifest.</span></div>
@@ -289,7 +281,7 @@ flowchart LR
 
 <section id="guide-review">
   <h2>3 · Analyse notes and review proposals in Inbox</h2>
-  <p><b>Analyse notes</b> (Workspace) is the one-off route to a proposal: choose files, folders and optional dates, inspect the scope preview of included, excluded and unknown notes, then confirm consent before the run starts.</p>
+  <p><b>More tools → Analyse notes</b> is the one-off route to a proposal: choose files, folders and optional dates, inspect the scope preview of included, excluded and unknown notes, then confirm consent before the run starts.</p>
   <figure class="wide"><img src="img/scope-review.png" alt="Scope review screen listing included, excluded and unknown notes before the user confirms consent"><figcaption>Analyse notes: scope preview and consent</figcaption></figure>
   <div class="split">
     <div>
@@ -307,26 +299,16 @@ flowchart LR
 </section>
 
 <section id="guide-topics">
-  <h2>4 · Read and correct a topic</h2>
-  <div class="split">
-    <figure class="tall"><img src="img/workspace-topic.png" alt="Topic detail screen with current understanding, revision history and an Ask or correct box"><figcaption>Topic detail: current understanding, your correction, revision history and Ask or correct</figcaption></figure>
-    <div>
-      <ol class="steps">
-        <li>Open <b>Topics</b>. The list is on the left and the selected topic's detail on the right.</li>
-        <li><b>Current understanding</b> comes first: each claim with its uncertainty and collapsible sources.</li>
-        <li><b>Revision history</b> keeps earlier values. Nothing is deleted.</li>
-        <li><b>Review this understanding</b>: <i>That's wrong</i> · <i>Add context</i> · <i>Not now</i> · <i>Confirm</i>.</li>
-        <li><b>Ask or correct</b>: write a message, select <b>Preview chat sources</b>, then send. The topic must be marked Cloud allowed.</li>
-        <li>The reply comes back as a proposal in Inbox. A correction supersedes the old revision and adds a scoped <b>rule</b>, such as "for Ledger support handovers, Sam means Sam Patel".</li>
-      </ol>
-      <p class="note">You can set a topic's sensitivity here. Topics created by the model always start as <span class="pill warn">Unknown</span>.</p>
-    </div>
-  </div>
+  <h2>4 · Explore the graph and validate claims</h2>
+  <p>Select a node, follow a typed relationship or search for a topic by name, alias or assertion. Keyboard users can tab to nodes or open Text view for the full set of topics and directed relationships. Pending discoveries take you to their original proposal or folder decision.</p>
+  <figure class="wide"><img src="img/workspace-graph.png" alt="Synthetic Ledger migration graph with four typed relationships, a pending checklist and one open conflict"><figcaption>Workspace graph with a pending discovery and a launch date to check</figcaption></figure>
+  <p>Open Needs validation or select a topic with checks. Compare competing passages side by side. Confirm the value you trust, or enter a correction and inspect the judgment before approving it. Defer saves the check for later. Earlier revisions retain the source assertions. History offers compensating undo. Separate effective periods appear as a timeline. Simply unverified claims remain available for reading.</p>
+  <figure class="wide"><img src="img/claim-validation.png" alt="Two synthetic meeting passages report Friday and Monday launch dates with controls to confirm, correct or defer"><figcaption>Comparing two accounts of the same launch</figcaption></figure>
 </section>
 
 <section id="guide-today">
   <h2>5 · Today and the Friday sync pilot</h2>
-  <p class="sub">This is the newest feature (PR #1, <code>friday-sync-pilot</code>). It tests whether a dated briefing cuts the work of preparing for and correcting a weekly meeting.</p>
+  <p class="sub">Open Today under More tools. It tests whether a dated briefing cuts the work of preparing for and correcting a weekly meeting.</p>
   <div class="mock">
     <div class="mock-head"><b>Today</b><span class="pill">Last analysed · Thu 14:02 · 12 sources</span><span class="pill warn">2 pending</span></div>
     <div class="mock-body">
@@ -370,12 +352,15 @@ flowchart LR
 
 <section id="guide-more">
   <h2>6 · Sources, search, manual capture and history</h2>
+  <h3>Set up a local MCP client</h3>
+  <p>In Sources, open Local MCP access and enable retrieval. Build the CLI with <code>cargo build --release -p topics-cli</code>. Configure your client to launch the absolute path to that executable with <code>mcp</code>, the displayed folder ID and each allowed topic ID as separate arguments. The desktop and CLI use the same app-data directory. Call <code>topic_search</code> with a query, then <code>topic_detail</code> with a returned ID.</p>
+  <p>The caller can retrieve accepted Cloud allowed topics within its configured set. Each returned assertion or relationship requires current, explicitly released citations. Raw notes, passage text, personal judgments and pending discoveries stay local. Disable the folder switch to revoke access on the next call.</p>
   <div class="gallery">
     <figure><img src="img/sources.png" alt="Sources screen showing a note and its sensitivity label control"><figcaption><b>Sources</b>: read any note and set its sensitivity label</figcaption></figure>
     <figure><img src="img/workspace-history.png" alt="History screen listing operations with undo controls and dependency explanations"><figcaption><b>History</b>: each operation, with undo and its dependencies explained</figcaption></figure>
   </div>
   <div class="cards three">
-    <div class="card"><h3>Search ⌘K</h3><p>Local FTS over your notes, including private ones; app records are excluded. Highlights render as text nodes, never as raw HTML.</p></div>
+    <div class="card"><h3>More tools → Search notes</h3><p>Local FTS over your notes, including private ones; app records are excluded. Highlights render as text nodes, never as raw HTML.</p></div>
     <div class="card"><h3>New topic</h3><p>Manual capture with no model needed. It goes through the same Inbox approval.</p></div>
     <div class="card"><h3>Undo</h3><p>Undo is a compensating operation. An update can be undone before its creation, but an undo can't itself be undone: re-propose instead.</p></div>
   </div>
@@ -391,6 +376,9 @@ flowchart LR
       <tr><td rowspan="3">Foundation</td><td>Notes root: choose, create, switch</td><td><span class="pill ok">Shipped</span></td><td>store/lib.rs, scan.rs</td></tr>
       <tr><td>Full-text search with safe highlights</td><td><span class="pill ok">Shipped</span></td><td>Search.tsx, FTS5</td></tr>
       <tr><td>Live watcher and cross-process lock</td><td><span class="pill ok">Shipped</span></td><td>store.lock, WatchHandle</td></tr>
+      <tr><td rowspan="3">Graph workspace</td><td>Workspace graph and topic lookup</td><td>Available</td><td>knowledge.rs, KnowledgeGraph.tsx</td></tr>
+      <tr><td>Passage comparison, judgment receipts and deferral</td><td>Available</td><td>setup/validation.rs, KnowledgeDetail.tsx</td></tr>
+      <tr><td>Scoped local stdio retrieval</td><td>Opt-in</td><td>topics-cli/src/retrieval.rs</td></tr>
       <tr><td rowspan="5">Knowledge</td><td>Topics (person, project, thread) with cited claims and connections</td><td><span class="pill ok">Shipped</span></td><td>TopicDetail.tsx, Evidence.tsx</td></tr>
       <tr><td>Analyse notes: scoped preview, consent, run</td><td><span class="pill ok">Shipped</span></td><td>Scope.tsx, runtime</td></tr>
       <tr><td>Inbox: edit, accept or reject proposals</td><td><span class="pill ok">Shipped</span></td><td>ProposalEditor.tsx, proposals.rs</td></tr>
@@ -420,7 +408,8 @@ flowchart LR
     <div class="ms"><b>Topic workspace</b><span>Claims, reviewed discovery, MCP runtime, correction chat, undo</span></div>
     <div class="ms"><b>Workspace controls</b><span>Native folder chooser, window chrome, fresh session</span></div>
     <div class="ms"><b>Folder setup</b><span>Inventory → batched draft map → topic-centred review</span></div>
-    <div class="ms now"><b>Friday sync pilot</b><span>Today, kept briefings, feedback, weekly review · merged in PR #1</span></div>
+    <div class="ms"><b>Friday sync pilot</b><span>Today, kept briefings, feedback, weekly review · merged in PR #1</span></div>
+    <div class="ms now"><b>Graph workspace</b><span>Whole-folder graph, contextual validation and scoped retrieval</span></div>
     <div class="ms next"><b>Next?</b><span>Two-folder library or action capture, decided by the pilot</span></div>
   </div>
 </section>
@@ -428,6 +417,8 @@ flowchart LR
 <section id="limits">
   <h2>Known limits (from the repo's own docs)</h2>
   <ul class="ticks warnlist">
+    <li>Conflict checks compare different values of the same normalized predicate with potentially overlapping effective dates. A user decides whether the difference matters. Semantic contradictions across differently named predicates require human interpretation.</li>
+    <li>Local retrieval uses a configured stdio client and stable folder and topic IDs. There is no named-client integration.</li>
     <li>macOS only (Apple silicon, ad-hoc signed). No updater, notarisation or install channel yet.</li>
     <li>Chat and analysis need the exact Codex CLI 0.166.0, already signed in. Other runtimes fail with guidance.</li>
     <li>Full scans hold the store lock with no timeout. The 2-second target is tested only on synthetic fixtures.</li>

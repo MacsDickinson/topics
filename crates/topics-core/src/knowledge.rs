@@ -123,10 +123,9 @@ value!(ValidationPreviewRequest {
     root_id: Id,
     topic_id: Id,
     item_id: Id,
-    action: ValidationAction,
-    note: String
+    action: ValidationAction
 });
-value!(ValidationPreview { receipt: SetupReceipt, statement: Option<UserStatement>, before: Vec<Claim>, after: Vec<Claim>, confirmed: Vec<Claim>, rules: Vec<Rule> });
+value!(ValidationPreview { receipt: SetupReceipt, statement: Option<UserStatement>, before: Vec<Claim>, after: Vec<Claim>, confirmed: Vec<Claim> });
 value!(ValidationDeferRequest {
     root_id: Id,
     topic_id: Id,

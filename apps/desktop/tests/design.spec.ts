@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from '@playwright/test';
 import { workspaceFixture } from './fixtures/workspace';
 
@@ -26,7 +27,7 @@ test('synthetic sources, scope review and unavailable runtime render', async ({ 
   await page.getByRole('button', { name: 'Sources', exact: true }).click();
   await expect(page.getByText('Meetings/one.md', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'evidence/design/sources.png', fullPage: true });
-  await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+  await openTool(page, 'Analyse notes');
   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
   await page.getByRole('button', { name: 'Preview selection' }).click();
   await expect(page.getByRole('heading', { name: 'Review selected notes' })).toBeVisible();
@@ -64,7 +65,7 @@ for (const scheme of ['light', 'dark'] as const) {
   test(`${scheme} selected navigation, privacy and uncertainty remain readable`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await workspaceFixture(page, { populated: true });
-    const topics = page.getByRole('button', { name: 'Topics', exact: true });
+    const topics = page.getByRole('button', { name: 'Knowledge graph', exact: true });
     await topics.click();
     expect((await contrastPair(topics, 'text')).againstControl).toBeGreaterThanOrEqual(4.5);
     await page.getByRole('button', { name: 'Ledger', exact: true }).click();
@@ -100,7 +101,7 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(hover.againstControl).toBeGreaterThanOrEqual(4.5);
     console.log(`${scheme}: field ${border.againstControl.toFixed(2)}/${border.againstSurrounding.toFixed(2)}, placeholder ${placeholder.againstControl.toFixed(2)}, primary ${normal.againstControl.toFixed(2)}/${hover.againstControl.toFixed(2)}`);
     await workspaceFixture(page);
-    await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+    await openTool(page, 'Analyse notes');
     const textarea = page.getByLabel('Folders', { exact: true });
     expect((await contrastPair(textarea, 'placeholder')).againstControl).toBeGreaterThanOrEqual(4.5);
     await textarea.fill('Meetings');
@@ -108,7 +109,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.getByLabel('Allow these unknown-sensitivity notes for this run').check();
     await page.getByRole('button', { name: 'Start analysis', exact: true }).click();
     await page.evaluate(() => { (window as any).showProposal(); (window as any).emitRun(1, { kind: 'proposal', proposal_id: '00000000-0000-4000-8000-000000000005' }); (window as any).emitRun(2, { kind: 'completed' }); });
-    await page.getByRole('button', { name: /Inbox/ }).click();
+    await openTool(page, /Inbox/);
     const candidateField = page.getByLabel('Claim value');
     await expect(candidateField).toBeVisible();
     const candidateBorder = await contrastPair(candidateField, 'border');
@@ -147,7 +148,7 @@ test('long synthetic source and controls remain usable at a 200% zoom-equivalent
   expect((await contrastPair(sensitivity, 'border')).againstControl).toBeGreaterThanOrEqual(3);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'evidence/design/long-source-zoom-equivalent.png', fullPage: true });
-  await page.getByRole('button', { name: 'Analyse notes', exact: true }).click();
+  await openTool(page, 'Analyse notes');
   await page.getByLabel('Folders', { exact: true }).fill('Meetings');
   const preview = page.getByRole('button', { name: 'Preview selection' });
   await expect(preview).toBeEnabled();

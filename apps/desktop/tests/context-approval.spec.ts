@@ -94,7 +94,7 @@ async function openReview(page: Page, multipleTopics = false) {
     },
     { ids, source },
   );
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Confirm this connection" }),
@@ -286,7 +286,7 @@ test("changing notes root invalidates an in-flight correction without submitting
     .getByRole("button", { name: "Use notes folder", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Understand this folder" }),
+    page.getByRole("heading", { name: "Knowledge graph" }),
   ).toBeVisible();
   await page.evaluate(() => (window as any).heldPreviews.shift()());
   await expect(
