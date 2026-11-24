@@ -741,8 +741,9 @@ function App() {
       });
       if (current(generation, selected.root_id)) {
         setNotice("Undo recorded in history.");
-        clearTopic();
         await refresh(selected, generation);
+        if (current(generation, selected.root_id) && selectedTopicId.current)
+          await openTopic(selectedTopicId.current);
       }
     } catch (e) {
       if (current(generation, selected.root_id)) report(e);

@@ -44,6 +44,7 @@ describe("Synthetic setup restart", () => {
     await judgment.$("button=Undo").click();
     await $("button=Knowledge graph").click();
     await $('button[aria-label="Orchard"]').click();
+    await $(".validation-item").waitForDisplayed();
     await expect($(".validation-item")).toHaveText(
       expect.stringContaining(
         "Sam owns the Orchard project from January through June.",
