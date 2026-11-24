@@ -3,5 +3,6 @@ import type { Candidate } from "./Candidate";
 import type { Claim } from "./Claim";
 import type { Connection } from "./Connection";
 import type { SetupDecisionKind } from "./SetupDecisionKind";
+import type { SourceRef } from "./SourceRef";
 
-export type SetupReceipt = { schema: number, receipt_id: string, root_id: string, kind: SetupDecisionKind, job_id: string | null, job_revision: number | null, requested_ids: Array<string>, included_ids: Array<string>, dependency_ids: Array<string>, deferred_ids: Array<string>, candidates: Array<Candidate>, revisions: Array<Claim>, connections: Array<Connection>, expected_hashes: { [key in string]: string | null }, fingerprint: string, max_records_per_operation: number, operation_count: number, created_at: string, };
+export type SetupReceipt = { schema: number, receipt_id: string, root_id: string, kind: SetupDecisionKind, job_id: string | null, job_revision: number | null, requested_ids: Array<string>, included_ids: Array<string>, dependency_ids: Array<string>, deferred_ids: Array<string>, candidates: Array<Candidate>, revisions: Array<Claim>, connections: Array<Connection>, expected_hashes: { [key in string]: string | null }, stale_passages?: Array<SourceRef>, fingerprint: string, max_records_per_operation: number, operation_count: number, created_at: string, };

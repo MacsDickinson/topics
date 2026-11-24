@@ -334,3 +334,320 @@ fn separate_effective_periods_form_a_timeline_while_uncertainty_and_unverified_s
     assert_eq!(result.checks.uncertain, 1);
     f.unchanged();
 }
+
+fn accept_claims(f: &Fixture, topic: &Topic, claims: &[Claim]) -> TopicGetRequest {
+    let mut candidates = vec![Candidate::Topic {
+        topic: topic.clone(),
+    }];
+    candidates.extend(
+        claims
+            .iter()
+            .cloned()
+            .map(|claim| Candidate::Claim { claim }),
+    );
+    let p = f
+        .service
+        .manual_propose(ManualProposeRequest {
+            root_id: f.root_id.clone(),
+            candidates,
+        })
+        .unwrap()
+        .proposal;
+    f.service
+        .proposal_decide(ProposalDecideRequest {
+            root_id: f.root_id.clone(),
+            proposal_id: p.id,
+            expected_fingerprint: p.fingerprint,
+            decision: Decision::Approve {
+                candidates: p.candidates,
+            },
+        })
+        .unwrap();
+    TopicGetRequest {
+        root_id: f.root_id.clone(),
+        topic_id: topic.id.clone(),
+    }
+}
+
+fn preview(
+    f: &Fixture,
+    req: &TopicGetRequest,
+    action: ValidationAction,
+) -> Result<ValidationPreview, ApiError> {
+    let item_id = f.service.topic_knowledge(req.clone()).unwrap().validation[0]
+        .id
+        .clone();
+    f.service.validation_preview(ValidationPreviewRequest {
+        root_id: f.root_id.clone(),
+        topic_id: req.topic_id.clone(),
+        item_id,
+        action,
+    })
+}
+
+#[test]
+fn partial_periods_require_an_explicit_full_period_judgment() {
+    let mut f = Fixture::new();
+    f.write(
+        "owners.md",
+        "Sam owned this project January through June. Priya owned it in June.",
+    );
+    let citation = f.citation("owners.md");
+    let topic = topic("Migration", TopicKind::Project);
+    let mut sam = claim(&topic, "owner", "Sam", &citation);
+    sam.valid_from = Some("2026-01-01".into());
+    sam.valid_to = Some("2026-06-30".into());
+    let mut priya = claim(&topic, "owner", "Priya", &citation);
+    priya.valid_from = Some("2026-06-01".into());
+    priya.valid_to = sam.valid_to.clone();
+    let req = accept_claims(&f, &topic, &[sam.clone(), priya.clone()]);
+    assert_eq!(
+        preview(
+            &f,
+            &req,
+            ValidationAction::Confirm {
+                id: priya.revision_id.clone()
+            }
+        )
+        .unwrap_err()
+        .code,
+        "invalid_input"
+    );
+    let p = preview(
+        &f,
+        &req,
+        ValidationAction::ConfirmAllPeriods {
+            id: priya.revision_id.clone(),
+        },
+    )
+    .unwrap();
+    assert_eq!(p.after[0].valid_from, sam.valid_from);
+    assert_eq!(p.confirmed[0].valid_from, priya.valid_from);
+    assert_eq!(p.receipt.kind, SetupDecisionKind::SaveAllPeriods);
+    f.receipt = Some(p.receipt);
+    f.decide();
+    f.restart();
+    let owners = |f: &Fixture, date: &str| -> BTreeSet<String> {
+        f.service
+            .topic_knowledge(req.clone())
+            .unwrap()
+            .assertions
+            .into_iter()
+            .filter(|a| {
+                a.valid_from.as_deref().unwrap() <= date && date <= a.valid_to.as_deref().unwrap()
+            })
+            .map(|a| a.value)
+            .collect()
+    };
+    assert_eq!(owners(&f, "2026-05-01"), BTreeSet::from(["Priya".into()]));
+    assert_eq!(owners(&f, "2026-06-01"), BTreeSet::from(["Priya".into()]));
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: f.result.as_ref().unwrap().operations[0].id.clone(),
+        })
+        .unwrap();
+    assert_eq!(owners(&f, "2026-05-01"), BTreeSet::from(["Sam".into()]));
+    assert_eq!(
+        owners(&f, "2026-06-01"),
+        BTreeSet::from(["Sam".into(), "Priya".into()])
+    );
+}
+
+#[test]
+fn compatible_contributors_keep_their_citations_until_judgment_is_undone() {
+    let mut f = Fixture::new();
+    f.write("team.md", "Sam and Priya both contribute.");
+    let source = f.citation("team.md");
+    let topic = topic("Migration", TopicKind::Project);
+    let claims = ["Sam", "Priya"].map(|value| claim(&topic, "contributor", value, &source));
+    let req = accept_claims(&f, &topic, &claims);
+    let p = preview(&f, &req, ValidationAction::ConfirmBoth).unwrap();
+    assert_eq!(p.confirmed.len(), 2);
+    f.receipt = Some(p.receipt);
+    f.decide();
+    f.restart();
+    let detail = f.service.topic_knowledge(req.clone()).unwrap();
+    assert!(detail.validation.is_empty());
+    assert_eq!(detail.assertions.len(), 2);
+    for claim in &claims {
+        assert!(
+            detail
+                .assertions
+                .iter()
+                .any(|a| a.revision_id == claim.revision_id
+                    && a.review == ReviewState::ConfirmedByYou
+                    && a.evidence.len() == 1)
+        );
+    }
+    f.service
+        .undo(UndoRequest {
+            root_id: f.root_id.clone(),
+            operation_id: f.result.as_ref().unwrap().operations[0].id.clone(),
+        })
+        .unwrap();
+    assert_eq!(
+        f.service.topic_knowledge(req).unwrap().checks.conflicting,
+        1
+    );
+}
+
+#[test]
+fn correction_uses_literal_value_and_restored_passages_invalidate_receipt() {
+    let mut f = Fixture::new();
+    f.write("identifier.md", "The identifier may be abc.");
+    let citation = f.citation("identifier.md");
+    let topic = topic("Key", TopicKind::Project);
+    let mut c = claim(&topic, "identifier", "abc", &citation);
+    c.uncertainty = Some("Tentative".into());
+    let req = accept_claims(&f, &topic, &[c.clone()]);
+    let source = f.root.join("identifier.md");
+    let original = std::fs::read(&source).unwrap();
+    for missing in [false, true] {
+        if missing {
+            std::fs::remove_file(&source).unwrap()
+        } else {
+            std::fs::write(&source, "changed").unwrap()
+        }
+        let p = preview(
+            &f,
+            &req,
+            ValidationAction::Confirm {
+                id: c.revision_id.clone(),
+            },
+        )
+        .unwrap();
+        assert_eq!(p.receipt.stale_passages, vec![citation.clone()]);
+        std::fs::write(&source, &original).unwrap();
+        let res = f.service.setup_decide(SetupDecisionRequest {
+            root_id: f.root_id.clone(),
+            receipt_id: p.receipt.receipt_id,
+            expected_fingerprint: p.receipt.fingerprint,
+        });
+        assert_eq!(res.unwrap_err().code, "conflict");
+    }
+    let p = preview(
+        &f,
+        &req,
+        ValidationAction::Correct {
+            value: "ABC".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(p.after[0].supersedes, vec![c.revision_id]);
+    f.receipt = Some(p.receipt);
+    f.decide();
+    f.restart();
+    let detail = f.service.topic_knowledge(req).unwrap();
+    assert_eq!(detail.assertions[0].value, "ABC");
+    assert_eq!(detail.earlier[0].value, "abc");
+}
+
+#[test]
+fn browsing_is_read_only_and_a_damaged_draft_does_not_hide_accepted_knowledge() {
+    let mut f = Fixture::new();
+    let t = topic("Migration", TopicKind::Project);
+    let req = accept_claims(&f, &t, &[]);
+    let partition = std::fs::read_dir(f.app.join("workspaces"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let proposals = partition.join("proposals");
+    for reject in [false, true] {
+        let p = f
+            .service
+            .manual_propose(ManualProposeRequest {
+                root_id: f.root_id.clone(),
+                candidates: vec![Candidate::Topic {
+                    topic: topic(
+                        if reject { "Rejected" } else { "Pending" },
+                        TopicKind::Project,
+                    ),
+                }],
+            })
+            .unwrap()
+            .proposal;
+        if reject {
+            f.service
+                .proposal_decide(ProposalDecideRequest {
+                    root_id: f.root_id.clone(),
+                    proposal_id: p.id,
+                    expected_fingerprint: p.fingerprint,
+                    decision: Decision::Reject,
+                })
+                .unwrap();
+        }
+    }
+    let snapshot = || -> std::collections::BTreeMap<_, _> {
+        std::fs::read_dir(&proposals)
+            .unwrap()
+            .map(|f| {
+                let path = f.unwrap().path();
+                (
+                    path.clone(),
+                    (
+                        std::fs::metadata(&path).unwrap().modified().unwrap(),
+                        std::fs::read(path).unwrap(),
+                    ),
+                )
+            })
+            .collect()
+    };
+    let before = snapshot();
+    let jobs = partition.join("setup-v1/jobs");
+    std::fs::create_dir_all(&jobs).unwrap();
+    let broken = id();
+    std::fs::write(jobs.join(format!("{broken}.json")), "incomplete").unwrap();
+    f.restart();
+    let graph = f.service.knowledge_graph(f.root_request()).unwrap();
+    assert!(graph.warnings.iter().any(|w| w.contains(&broken)));
+    assert_eq!(graph.nodes.len(), 2);
+    assert_eq!(f.service.topic_knowledge(req).unwrap().topic, t);
+    assert_eq!(
+        f.service
+            .topic_search(TopicSearchRequest {
+                root_id: f.root_id.clone(),
+                query: t.name.clone(),
+                limit: None
+            })
+            .unwrap()
+            .total,
+        1
+    );
+    assert_eq!(before, snapshot());
+}
+
+#[test]
+fn graph_keeps_identity_only_and_interrupted_jobs_discoverable() {
+    let mut f = Fixture::new();
+    let left = topic("Sam Green", TopicKind::Person);
+    let right = topic("Sam Gray", TopicKind::Person);
+    accept_claims(&f, &left, &[]);
+    accept_claims(&f, &right, &[]);
+    f.prepare_default(1);
+    let cap = f.start();
+    let source = f.read(&cap)[0].citation.clone();
+    let job_id = f.job.as_ref().unwrap().job_id.clone();
+    // A separate process sees the interruption without taking ownership from the running fixture.
+    let reopened = topics_store::WorkspaceService::open(&f.app).unwrap();
+    let interrupted = reopened.knowledge_graph(f.root_request()).unwrap();
+    assert_eq!(interrupted.pending[0].state, PendingState::NeedsAttention);
+    assert_eq!(
+        f.service.knowledge_graph(f.root_request()).unwrap().pending[0].state,
+        PendingState::Analysing
+    );
+    f.publish(
+        cap,
+        vec![Candidate::UnresolvedIdentity {
+            name: "Sam".into(),
+            candidates: vec![left.id, right.id],
+            sources: vec![source],
+        }],
+    );
+    let graph = f.service.knowledge_graph(f.root_request()).unwrap();
+    assert_eq!(graph.pending[0].decision.id, job_id);
+    assert_eq!(graph.pending[0].needs_input, 1);
+    assert_eq!(graph.pending[0].topics, 0);
+}

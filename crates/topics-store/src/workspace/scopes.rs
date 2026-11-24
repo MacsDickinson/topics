@@ -754,7 +754,7 @@ fn human_value_supported(state: &State, claim: &Claim) -> bool {
             && state.receipts.values().any(|decision| {
                 review.receipt_id.as_ref() == Some(&decision.receipt.receipt_id)
                     && decision.saved_ids.contains(&claim.revision_id)
-                    && (decision.receipt.kind == SetupDecisionKind::Confirm
+                    && (decision.receipt.kind.confirms_existing()
                         && decision.receipt.revisions.contains(claim)
                         || decision.receipt.candidates.iter().any(|candidate| matches!(candidate,
                             Candidate::Claim{claim:confirmed} | Candidate::Correction{claim:confirmed,..} if confirmed == claim)))

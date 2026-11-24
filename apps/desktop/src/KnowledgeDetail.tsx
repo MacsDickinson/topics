@@ -36,6 +36,16 @@ function Passages({ evidence }: { evidence: AssertionEvidence[] }) {
     </>
   );
 }
+function effectivePeriod(claim: {
+  valid_from: string | null;
+  valid_to: string | null;
+}) {
+  if (claim.valid_from && claim.valid_to)
+    return `${claim.valid_from} through ${claim.valid_to}`;
+  if (claim.valid_from) return `from ${claim.valid_from}`;
+  if (claim.valid_to) return `through ${claim.valid_to}`;
+  return "no date bounds";
+}
 function ClaimCard({ claim }: { claim: Assertion }) {
   return (
     <>
@@ -48,10 +58,7 @@ function ClaimCard({ claim }: { claim: Assertion }) {
           : "Accepted · unverified"}
       </small>
       {(claim.valid_from || claim.valid_to) && (
-        <p>
-          Effective {claim.valid_from || "until"}{" "}
-          {claim.valid_to && "through " + claim.valid_to}
-        </p>
+        <p>Effective {effectivePeriod(claim)}</p>
       )}
       {claim.uncertainty && <p>{claim.uncertainty}</p>}
       <Passages evidence={claim.evidence} />
@@ -76,6 +83,7 @@ function Check({
   const [value, setValue] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [allPeriods, setAllPeriods] = useState(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -86,6 +94,12 @@ function Check({
   const claims = detail.assertions.filter((c) =>
     item.revision_ids.includes(c.revision_id),
   );
+  const differentPeriods = claims.some(
+    (c) =>
+      c.valid_from !== claims[0].valid_from ||
+      c.valid_to !== claims[0].valid_to,
+  );
+  const needsPeriodChoice = differentPeriods && !allPeriods;
   const relationship = detail.relationships.find(
     (r) => r.id === item.connection_id,
   );
@@ -126,14 +140,31 @@ function Check({
         </Badge>
         <h3>{item.predicate}</h3>
       </div>
+      {differentPeriods && !pending && !preview && (
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={allPeriods}
+            disabled={busy}
+            onChange={(e) => setAllPeriods(e.target.checked)}
+          />
+          Apply my chosen value to each full period shown, including dates
+          outside the overlap
+        </label>
+      )}
       <div className="evidence-pair">
         {claims.map((c) => (
           <div key={c.revision_id}>
             <ClaimCard claim={c} />
             {!pending && !preview && (
               <Button
-                disabled={busy}
-                onClick={() => inspect({ kind: "confirm", id: c.revision_id })}
+                disabled={busy || needsPeriodChoice}
+                onClick={() =>
+                  inspect({
+                    kind: differentPeriods ? "confirm_all_periods" : "confirm",
+                    id: c.revision_id,
+                  })
+                }
               >
                 Confirm {c.value}
               </Button>
@@ -141,6 +172,14 @@ function Check({
           </div>
         ))}
       </div>
+      {item.kind === "conflicting" && !pending && !preview && (
+        <Button
+          disabled={busy}
+          onClick={() => inspect({ kind: "confirm_both" })}
+        >
+          Both values apply
+        </Button>
+      )}
       {relationship && (
         <>
           <p>
@@ -176,8 +215,13 @@ function Check({
                 />
               </Field>
               <Button
-                disabled={!value.trim() || busy}
-                onClick={() => inspect({ kind: "correct", value })}
+                disabled={!value.trim() || busy || needsPeriodChoice}
+                onClick={() =>
+                  inspect({
+                    kind: differentPeriods ? "correct_all_periods" : "correct",
+                    value,
+                  })
+                }
               >
                 Preview correction
               </Button>
@@ -187,6 +231,21 @@ function Check({
       {preview ? (
         <section className="consent" aria-label="Judgment receipt">
           <h4>Review your judgment</h4>
+          {preview.receipt.kind === "confirm_both" && (
+            <p>Keep both assertions for their stated periods.</p>
+          )}
+          {preview.receipt.kind === "save_all_periods" && (
+            <p>
+              Your choice applies across each full period below, including dates
+              outside the overlap.
+            </p>
+          )}
+          {preview.receipt.stale_passages?.map((source, i) => (
+            <p key={i}>
+              Earlier revision retains the changed or unavailable passage from{" "}
+              {source.path}.
+            </p>
+          ))}
           {preview.statement && <p>{preview.statement.text}</p>}
           {preview.after.map((c) => (
             <p key={c.revision_id}>
@@ -195,12 +254,12 @@ function Check({
                 preview.before.find((b) => c.supersedes.includes(b.revision_id))
                   ?.value
               }{" "}
-              → <strong>{c.value}</strong>
+              → <strong>{c.value}</strong> · {effectivePeriod(c)}
             </p>
           ))}
           {preview.confirmed.map((c) => (
             <p key={c.revision_id}>
-              Confirm {c.predicate} · {c.value}
+              Confirm {c.predicate} · {c.value} · {effectivePeriod(c)}
             </p>
           ))}
           {preview.receipt.connections.map((c) => (

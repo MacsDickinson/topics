@@ -264,10 +264,10 @@ function App() {
     selectedTopicId.current = id;
     const selected = rootRef.current;
     if (!selected) return;
-    window.scrollTo(0, 0);
     const generation = epoch.current,
       sequence = ++detailSeq.current;
     if (topicChanged) {
+      window.scrollTo(0, 0);
       setTopic(null);
       setDetail(null);
       setTopicLoading(true);
@@ -1287,7 +1287,7 @@ function App() {
                   initialJobId={
                     discovery?.kind === "setup_draft" ? discovery.id : null
                   }
-                  onSaved={() => void refresh(root)}
+                  onSaved={refreshDetail}
                 />
               )}
               {screen === "analyse" && (

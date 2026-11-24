@@ -1,6 +1,7 @@
 import { openTool } from "./interaction";
 import { browser, $, $$, expect } from "@wdio/globals";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 describe("Synthetic setup job through native services", () => {
   it(
@@ -44,7 +45,7 @@ describe("Synthetic setup job through native services", () => {
           },
         });
       });
-      await $('button=Knowledge graph').click();
+      await $("button=Knowledge graph").click();
       await openTool("Set up folder");
       await $("h2=Choose notes to analyse").waitForDisplayed();
       await $("button=Review manifest").click();
@@ -104,6 +105,9 @@ describe("Synthetic setup job through native services", () => {
       );
       expect(transmitted).not.toContain("PRIVATE_SYNTHETIC_ONLY");
       expect(transmitted).not.toContain("private/private.md");
+      await $("button=Knowledge graph").click();
+      await $('button[aria-label="Synthetic Alex A42"]').click();
+      await $("button=Review discovery").click();
       await $("button=Synthetic Alex A42").click();
       await $("button=Review topic group").click();
       await $("h2=Save topic group").waitForDisplayed();
@@ -126,9 +130,14 @@ describe("Synthetic setup job through native services", () => {
         saved.graph.items.every((item: any) => item.disposition === "saved"),
       ).toEqual(true);
       if (process.env.TOPICS_TEST_GRAPH_ONLY === "1") return;
-      await $('button=Knowledge graph').click();
-      await $('button[aria-label="Synthetic Alex A42"]').waitForDisplayed();
-      await $('button[aria-label="Synthetic Alex A42"]').click();
+      await $("button=Knowledge graph").click();
+      await expect(
+        $('button[aria-label="Synthetic Alex A42"]'),
+      ).toHaveAttribute("aria-pressed", "true");
+      await expect($(".topic-detail .topic-identity h2")).toHaveText(
+        "Synthetic Alex A42",
+      );
+      await expect($("button=Review discovery")).not.toExist();
       await $(".context-review").waitForDisplayed();
       await browser.waitUntil(
         async () =>
@@ -189,4 +198,95 @@ describe("Synthetic setup job through native services", () => {
       ).toEqual(1);
     },
   );
+  it("compares two cited ownership periods, defers and approves the reviewed scope", async function () {
+    if (process.env.TOPICS_TEST_GRAPH_ONLY === "1") this.skip();
+    const root = process.env.TOPICS_TEST_WORKSPACE_ROOT!;
+    writeFileSync(
+      join(root, "ownership-plan.md"),
+      "Sam owns the Orchard project from January through June.",
+    );
+    writeFileSync(
+      join(root, "ownership-handoff.md"),
+      "Priya owns the Orchard project in June.",
+    );
+    // Seed two accepted passages through the real source and proposal services.
+    await browser.execute(async () => {
+      const core = (window as any).__TAURI__.core;
+      const { root } = await core.invoke("workspace_root_get", { request: {} });
+      const invoke = (cmd: string, fields: Record<string, unknown> = {}) =>
+        core.invoke(cmd, { request: { root_id: root.root_id, ...fields } });
+      const topic = {
+        id: crypto.randomUUID(),
+        name: "Orchard",
+        topic_kind: "project",
+        aliases: [],
+        sensitivity: "unknown",
+      };
+      const candidates: any[] = [{ kind: "topic", topic }];
+      const { sources } = await invoke("workspace_sources_list");
+      for (const [path, value, start] of [
+        ["ownership-plan.md", "Sam", "2026-01-01"],
+        ["ownership-handoff.md", "Priya", "2026-06-01"],
+      ]) {
+        const { citation } = await invoke("workspace_source_get", {
+          source_id: sources.find((s: any) => s.path === path).source_id,
+        });
+        candidates.push({
+          kind: "claim",
+          claim: {
+            id: crypto.randomUUID(),
+            revision_id: crypto.randomUUID(),
+            subject_id: topic.id,
+            predicate: "owner",
+            value,
+            valid_from: start,
+            valid_to: "2026-06-30",
+            recorded_at: "2026-06-01T00:00:00Z",
+            sources: [{ kind: "passage", source: citation }],
+            supersedes: [],
+            uncertainty: null,
+          },
+        });
+      }
+      const { proposal } = await invoke("workspace_manual_propose", {
+        candidates,
+      });
+      await invoke("workspace_proposal_decide", {
+        proposal_id: proposal.id,
+        expected_fingerprint: proposal.fingerprint,
+        decision: { kind: "approve", candidates: proposal.candidates },
+      });
+    });
+    await $("button=Knowledge graph").click();
+    await $('button[aria-label="Orchard"]').click();
+    const check = await $(".validation-item");
+    await expect(check).toHaveText(
+      expect.stringContaining(
+        "Sam owns the Orchard project from January through June.",
+      ),
+    );
+    await expect(check).toHaveText(
+      expect.stringContaining("Priya owns the Orchard project in June."),
+    );
+    await $("button=Defer").click();
+    await $("button=Bring back").click();
+    await $("button=Defer").waitForDisplayed();
+    await expect($("button=Confirm Priya")).toBeDisabled();
+    await $(".validation-item input[type=checkbox]").click();
+    await $("button=Confirm Priya").waitForEnabled();
+    await $("button=Confirm Priya").click();
+    const receipt = await $('[aria-label="Judgment receipt"]');
+    await receipt.waitForDisplayed();
+    await expect(receipt).toHaveText(
+      expect.stringContaining("2026-01-01 through 2026-06-30"),
+    );
+    await expect(receipt).toHaveText(
+      expect.stringContaining("2026-06-01 through 2026-06-30"),
+    );
+    await $("button=Approve judgment").click();
+    await expect($(".validation-item")).not.toExist();
+    await expect($(".context-review")).toHaveText(
+      expect.stringContaining("Confirmed by you"),
+    );
+  });
 });

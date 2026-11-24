@@ -111,6 +111,7 @@ pub(super) fn blank(ctx: &Context, kind: SetupDecisionKind) -> SetupReceipt {
         revisions: vec![],
         connections: vec![],
         expected_hashes: BTreeMap::new(),
+        stale_passages: vec![],
         fingerprint: String::new(),
         max_records_per_operation: MAX_RECORDS as u32,
         operation_count: 0,

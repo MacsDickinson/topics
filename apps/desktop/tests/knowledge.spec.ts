@@ -80,7 +80,7 @@ test("graph, topic lookup and a disputed launch date use the displayed judgment 
             topics: 1,
             assertions: 1,
             relationships: 1,
-            needs_input: 0,
+            needs_input: 1,
             created_at: claim.recorded_at,
           },
         ],
@@ -146,6 +146,14 @@ test("graph, topic lookup and a disputed launch date use the displayed judgment 
           return w.detailOverrides[ids.topic];
         }
         if (cmd === "validation_preview") {
+          if (r.action.kind === "confirm_both")
+            return {
+              receipt: { kind: "confirm_both", connections: [] },
+              confirmed: w.claims,
+              after: [],
+              before: [],
+              statement: null,
+            };
           const value = r.action.value || "Monday";
           return {
             receipt: {
@@ -185,7 +193,10 @@ test("graph, topic lookup and a disputed launch date use the displayed judgment 
     page.getByRole("button", { name: "Robin Shah", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("awaiting decision")).toBeVisible();
-  if (process.env.TOPICS_CAPTURE_GRAPH)
+  await expect(page.locator(".graph-discoveries")).toContainText(
+    "1 open question",
+  );
+  if (process.env.TOPICS_CAPTURE_GRAPH === "1")
     await page.screenshot({
       path: resolve("../../docs/site/img/workspace-graph.png"),
     });
@@ -217,6 +228,11 @@ test("graph, topic lookup and a disputed launch date use the displayed judgment 
       path: resolve("../../docs/site/img/claim-validation.png"),
     });
   }
+  await check.getByRole("button", { name: "Both values apply" }).click();
+  await expect(check.getByLabel("Judgment receipt")).toContainText(
+    "Keep both assertions",
+  );
+  await check.getByRole("button", { name: "Cancel" }).click();
   await check.getByRole("button", { name: "Confirm Monday" }).click();
   await expect(check.getByLabel("Judgment receipt")).toContainText("Monday");
   await check.getByRole("button", { name: "Cancel" }).click();

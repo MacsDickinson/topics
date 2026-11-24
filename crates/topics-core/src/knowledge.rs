@@ -118,6 +118,9 @@ pub enum ValidationAction {
     Confirm { id: Id },
     // None of the displayed values is right; record the human's value.
     Correct { value: String },
+    ConfirmBoth,
+    ConfirmAllPeriods { id: Id },
+    CorrectAllPeriods { value: String },
 }
 value!(ValidationPreviewRequest {
     root_id: Id,

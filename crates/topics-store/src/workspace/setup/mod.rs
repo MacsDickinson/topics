@@ -175,20 +175,37 @@ fn reconcile_accepted(job: &mut SetupJob, state: &State) -> WResult<bool> {
 }
 
 // Browse checkpoints without claiming ownership of a running batch.
-pub(super) fn projected_jobs(ctx: &Context, state: &State) -> WResult<Vec<SetupJob>> {
-    let dir = setup_dir(ctx).join("jobs");
-    if !dir.exists() {
-        return Ok(vec![]);
-    }
+pub(super) fn projected_jobs(
+    ctx: &Context,
+    state: &State,
+    warnings: &mut Vec<String>,
+) -> WResult<Vec<SetupJob>> {
     let mut out = vec![];
-    for path in json_entries(&dir)? {
-        let saved: Checkpoint = read_json(&path)?;
+    for path in json_entries(&setup_dir(ctx).join("jobs"))? {
+        let draft_id = path.file_stem().unwrap_or_default().to_string_lossy();
+        let Ok(saved) = read_json::<Checkpoint>(&path) else {
+            warnings.push(format!("Could not read draft {draft_id}."));
+            continue;
+        };
         let mut job = saved.job;
-        if job.schema == SCHEMA && job.root_id == ctx.root_id && job.manifest.root_id == ctx.root_id
-        {
-            reconcile_accepted(&mut job, state)?;
-            out.push(job);
+        if job.root_id != ctx.root_id || job.manifest.root_id != ctx.root_id {
+            continue;
         }
+        if job.schema != SCHEMA || reconcile_accepted(&mut job, state).is_err() {
+            warnings.push(format!(
+                "Could not load draft {draft_id} with this version of Topics."
+            ));
+            continue;
+        }
+        if saved.owner != ctx.instance_id
+            && job
+                .batches
+                .iter()
+                .any(|b| b.status == SetupBatchStatus::Running)
+        {
+            job.status = SetupJobStatus::Paused;
+        }
+        out.push(job);
     }
     Ok(out)
 }

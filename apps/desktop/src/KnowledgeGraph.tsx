@@ -386,7 +386,9 @@ export function GraphHome({
                   <Badge tone="info">{d.state.replaceAll("_", " ")}</Badge>{" "}
                   {count(d.topics, "topic")} ·{" "}
                   {count(d.assertions, "assertion")} ·{" "}
-                  {count(d.relationships, "relationship")}{" "}
+                  {count(d.relationships, "relationship")}
+                  {d.needs_input > 0 &&
+                    ` · ${count(d.needs_input, "open question")}`}{" "}
                   <Button variant="quiet" onClick={() => review(d.decision)}>
                     Open discovery
                   </Button>

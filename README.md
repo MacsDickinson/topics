@@ -4,7 +4,7 @@ Topics opens a local knowledge graph of the people, projects and threads in your
 
 **Analyse sources** opens the local folder inventory and exact manifest review. Analysis produces pending discoveries. Open a discovery to review the proposal or folder job that produced it. Accepted knowledge reopens from disk.
 
-**Needs validation** brings conflicting values, uncertainty and changed citations into the topic reader. Compare the passages, confirm a value, enter a correction or defer the question. Approval records the judgment and preserves earlier evidence. **More tools** contains note search, Inbox, History and the Friday pilot.
+**Needs validation** brings conflicting values, uncertainty and changed citations into the topic reader. Compare the passages, confirm one value, keep both, enter a correction or defer the question. When dates overlap only partly, changing a value across both full periods requires an explicit choice. Approval records the judgment and preserves earlier evidence. **More tools** contains note search, Inbox, History and the Friday pilot.
 
 An optional [local MCP retrieval server](#local-mcp-retrieval) gives a configured client read-only access to selected approved topics.
 

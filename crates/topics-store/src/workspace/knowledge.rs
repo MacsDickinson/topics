@@ -102,6 +102,7 @@ impl Citations<'_> {
 }
 
 struct Pending {
+    warnings: Vec<String>,
     topics: BTreeMap<Id, (Topic, PendingRef)>,
     claims: Vec<(Claim, PendingRef)>,
     connections: Vec<(Connection, PendingRef)>,
@@ -113,6 +114,7 @@ fn pending(ctx: &Context, state: &State) -> WResult<Pending> {
         claims: vec![],
         connections: vec![],
         discoveries: vec![],
+        warnings: vec![],
     };
     let add =
         |out: &mut Pending, candidate: &Candidate, decision: &PendingRef| -> (u32, u32, u32, u32) {
@@ -142,7 +144,7 @@ fn pending(ctx: &Context, state: &State) -> WResult<Pending> {
                 Candidate::UnresolvedIdentity { .. } => (0, 0, 0, 1),
             }
         };
-    for proposal in proposals::pending_proposals(ctx)? {
+    for proposal in proposals::pending_proposals(ctx, state)? {
         let decision = PendingRef {
             kind: PendingKind::Proposal,
             id: proposal.id.clone(),
@@ -162,22 +164,32 @@ fn pending(ctx: &Context, state: &State) -> WResult<Pending> {
             created_at: proposal.created_at,
         });
     }
-    for job in setup::projected_jobs(ctx, state)? {
+    for job in setup::projected_jobs(ctx, state, &mut out.warnings)? {
         let decision = PendingRef {
             kind: PendingKind::SetupDraft,
             id: job.job_id.clone(),
         };
         let mut counts = (0, 0, 0, 0);
+        let mut waiting_items = BTreeSet::new();
         for item in job.graph.items.iter().filter(|item| {
             matches!(
                 item.disposition,
                 DraftDisposition::Pending | DraftDisposition::Deferred
             )
         }) {
-            let (t, a, r, _) = add(&mut out, &item.candidate, &decision);
-            counts = (counts.0 + t, counts.1 + a, counts.2 + r, 0);
+            waiting_items.insert(&item.item_id);
+            let (t, a, r, n) = add(&mut out, &item.candidate, &decision);
+            counts = (counts.0 + t, counts.1 + a, counts.2 + r, counts.3 + n);
         }
-        let waiting = counts.0 + counts.1 + counts.2;
+        let needs_input = job
+            .graph
+            .issues
+            .iter()
+            .filter(|issue| {
+                !issue.deferred && issue.item_ids.iter().any(|id| waiting_items.contains(id))
+            })
+            .count() as u32;
+        let waiting = counts.0 + counts.1 + counts.2 + counts.3 + needs_input;
         let state = match job.status {
             SetupJobStatus::NeedsConsent
             | SetupJobStatus::Paused
@@ -195,7 +207,7 @@ fn pending(ctx: &Context, state: &State) -> WResult<Pending> {
             topics: counts.0,
             assertions: counts.1,
             relationships: counts.2,
-            needs_input: job.graph.issues.iter().filter(|i| !i.deferred).count() as u32,
+            needs_input,
             created_at: job.created_at,
         });
     }
@@ -301,16 +313,18 @@ pub(super) fn item_id(kind: CheckKind, topic: &str, ids: &[Id]) -> Id {
 /// predicate that could hold at the same time; non-overlapping periods are a
 /// timeline instead. Unconfirmed single assertions are stale, uncertain or
 /// simply unverified, in that order.
-fn check(topic: &mut TopicKnowledge, deferred: &BTreeMap<Id, Timestamp>) {
+fn check(
+    topic: &mut TopicKnowledge,
+    deferred: &BTreeMap<Id, Timestamp>,
+    compatible: &BTreeSet<Id>,
+) {
     let mut groups: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (index, a) in topic.assertions.iter().enumerate() {
         groups.entry(norm(&a.predicate)).or_default().push(index);
     }
     let mut conflicted = BTreeSet::new();
     for members in groups.values() {
-        let differing = |x: usize, y: usize| {
-            norm(&topic.assertions[x].value) != norm(&topic.assertions[y].value)
-        };
+        let differing = |x: usize, y: usize| topic.assertions[x].value != topic.assertions[y].value;
         let mut changed = false;
         for (i, &x) in members.iter().enumerate() {
             for &y in &members[i + 1..] {
@@ -331,8 +345,12 @@ fn check(topic: &mut TopicKnowledge, deferred: &BTreeMap<Id, Timestamp>) {
                     topic.assertions[x].revision_id.clone(),
                     topic.assertions[y].revision_id.clone(),
                 ];
+                let id = item_id(CheckKind::Conflicting, &topic.topic.id, &ids);
+                if compatible.contains(&id) {
+                    continue;
+                }
                 topic.validation.push(ValidationItem {
-                    id: item_id(CheckKind::Conflicting, &topic.topic.id, &ids),
+                    id,
                     kind: CheckKind::Conflicting,
                     predicate: topic.assertions[x].predicate.clone(),
                     revision_ids: ids,
@@ -433,6 +451,7 @@ pub(super) fn project(ctx: &Context, state: &State, caller: Caller) -> WResult<P
             claims: vec![],
             connections: vec![],
             discoveries: vec![],
+            warnings: vec![],
         }
     };
     let deferrals = if human {
@@ -536,6 +555,17 @@ pub(super) fn project(ctx: &Context, state: &State, caller: Caller) -> WResult<P
             Some(decision.clone()),
         ));
     }
+    let compatible = state
+        .receipts
+        .values()
+        .filter(|r| r.receipt.kind == SetupDecisionKind::ConfirmBoth)
+        .filter_map(|r| {
+            r.receipt
+                .revisions
+                .first()
+                .map(|c| item_id(CheckKind::Conflicting, &c.subject_id, &r.saved_ids))
+        })
+        .collect();
     for topic in topics.values_mut() {
         topic.assertions.sort_by(|a, b| {
             (norm(&a.predicate), &a.recorded_at).cmp(&(norm(&b.predicate), &b.recorded_at))
@@ -543,7 +573,7 @@ pub(super) fn project(ctx: &Context, state: &State, caller: Caller) -> WResult<P
         topic
             .earlier
             .sort_by(|a, b| b.recorded_at.cmp(&a.recorded_at));
-        check(topic, &deferrals);
+        check(topic, &deferrals, &compatible);
         if human && topic.status == KnowledgeStatus::Accepted {
             topic.context = setup::context_notes(state, &topic.topic.id);
         }
@@ -687,7 +717,12 @@ pub(super) fn project(ctx: &Context, state: &State, caller: Caller) -> WResult<P
         edges,
         discoveries: waiting.discoveries,
         warnings: if human {
-            state.warnings.clone()
+            state
+                .warnings
+                .iter()
+                .cloned()
+                .chain(waiting.warnings)
+                .collect()
         } else {
             vec![]
         },

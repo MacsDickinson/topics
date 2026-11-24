@@ -148,7 +148,7 @@ flowchart LR
 
 <section id="data">
   <h2>Data model &amp; storage</h2>
-  <p>The graph joins committed topic and claim revisions, typed connections and review metadata with pending proposals and folder-job checkpoints. Confirmed claims keep their review receipts. A correction records a user statement and supersedes the cited revision. Validation deferrals and the retrieval switch live in the workspace’s app-data partition.</p>
+  <p>The graph joins committed topic and claim revisions, typed connections and review metadata with pending proposals and folder-job checkpoints. Reading the graph reconciles draft status in memory. An unreadable draft has its own warning, and the graph keeps showing accepted topics. Confirmation receipts bind the exact revisions and citation state. A receipt can record that two values both apply. A correction records a user statement and supersedes the cited revision. Validation deferrals and the retrieval switch live in the workspace’s app-data partition.</p>
   <div class="split">
     <div class="diagram"><pre class="mermaid">
 erDiagram
@@ -302,7 +302,7 @@ flowchart LR
   <h2>4 · Explore the graph and validate claims</h2>
   <p>Select a node, follow a typed relationship or search for a topic by name, alias or assertion. Keyboard users can tab to nodes or open Text view for the full set of topics and directed relationships. Pending discoveries take you to their original proposal or folder decision.</p>
   <figure class="wide"><img src="img/workspace-graph.png" alt="Synthetic Ledger migration graph with four typed relationships, a pending checklist and one open conflict"><figcaption>Workspace graph with a pending discovery and a launch date to check</figcaption></figure>
-  <p>Open Needs validation or select a topic with checks. Compare competing passages side by side. Confirm the value you trust, or enter a correction and inspect the judgment before approving it. Defer saves the check for later. Earlier revisions retain the source assertions. History offers compensating undo. Separate effective periods appear as a timeline. Simply unverified claims remain available for reading.</p>
+  <p>Open Needs validation or select a topic with checks. Compare competing passages side by side. Choose <b>Both values apply</b> to confirm two compatible assertions, such as two contributors. To choose one value or enter a correction when their periods differ, explicitly select the full periods and check the dates on the receipt. This applies your choice even outside their overlap. Defer saves the check for later. If you restore a missing source before approving a judgment, inspect a fresh receipt. Earlier revisions retain the source assertions. History offers compensating undo. Separate effective periods appear as a timeline. Simply unverified claims remain available for reading.</p>
   <figure class="wide"><img src="img/claim-validation.png" alt="Two synthetic meeting passages report Friday and Monday launch dates with controls to confirm, correct or defer"><figcaption>Comparing two accounts of the same launch</figcaption></figure>
 </section>
 
@@ -377,7 +377,7 @@ flowchart LR
       <tr><td>Full-text search with safe highlights</td><td><span class="pill ok">Shipped</span></td><td>Search.tsx, FTS5</td></tr>
       <tr><td>Live watcher and cross-process lock</td><td><span class="pill ok">Shipped</span></td><td>store.lock, WatchHandle</td></tr>
       <tr><td rowspan="3">Graph workspace</td><td>Workspace graph and topic lookup</td><td>Available</td><td>knowledge.rs, KnowledgeGraph.tsx</td></tr>
-      <tr><td>Passage comparison, judgment receipts and deferral</td><td>Available</td><td>setup/validation.rs, KnowledgeDetail.tsx</td></tr>
+      <tr><td>Passage comparison, full-period and compatible-value judgments, deferral</td><td>Available</td><td>setup/validation.rs, KnowledgeDetail.tsx</td></tr>
       <tr><td>Scoped local stdio retrieval</td><td>Opt-in</td><td>topics-cli/src/retrieval.rs</td></tr>
       <tr><td rowspan="5">Knowledge</td><td>Topics (person, project, thread) with cited claims and connections</td><td><span class="pill ok">Shipped</span></td><td>TopicDetail.tsx, Evidence.tsx</td></tr>
       <tr><td>Analyse notes: scoped preview, consent, run</td><td><span class="pill ok">Shipped</span></td><td>Scope.tsx, runtime</td></tr>
@@ -417,7 +417,7 @@ flowchart LR
 <section id="limits">
   <h2>Known limits (from the repo's own docs)</h2>
   <ul class="ticks warnlist">
-    <li>Conflict checks compare different values of the same normalized predicate with potentially overlapping effective dates. A user decides whether the difference matters. Semantic contradictions across differently named predicates require human interpretation.</li>
+    <li>Conflict checks compare different values of the same normalized predicate with potentially overlapping effective dates. The reader can confirm both values. A single-value judgment across differing periods covers their full original ranges. To leave the historical scope open, defer the check. Semantic contradictions across differently named predicates require human interpretation.</li>
     <li>Local retrieval uses a configured stdio client and stable folder and topic IDs. There is no named-client integration.</li>
     <li>macOS only (Apple silicon, ad-hoc signed). No updater, notarisation or install channel yet.</li>
     <li>Chat and analysis need the exact Codex CLI 0.166.0, already signed in. Other runtimes fail with guidance.</li>
