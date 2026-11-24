@@ -1221,6 +1221,37 @@ fn graph_claim_fixture_stages_canonical_cited_claim_without_accepting_it() {
                     .topics
                     .is_empty()
             );
+            let service = f.service.lock().unwrap();
+            let root = RootRequest {
+                root_id: f.root.root_id.clone(),
+            };
+            let pending = service.knowledge_graph(root.clone()).unwrap();
+            assert_eq!(pending.nodes.len(), 2);
+            assert_eq!(pending.edges.len(), 1);
+            assert_eq!(pending.edges[0].status, KnowledgeStatus::Pending);
+            let receipt = service
+                .setup_save_preview(SetupSavePreviewRequest {
+                    root_id: root.root_id.clone(),
+                    job_id: done.job_id,
+                    item_ids: vec![],
+                })
+                .unwrap();
+            let result = service
+                .setup_decide(SetupDecisionRequest {
+                    root_id: root.root_id.clone(),
+                    receipt_id: receipt.receipt_id,
+                    expected_fingerprint: receipt.fingerprint,
+                })
+                .unwrap();
+            assert_eq!(result.status, SetupDecisionStatus::Completed);
+            let graph = service.knowledge_graph(root).unwrap();
+            assert!(
+                graph
+                    .nodes
+                    .iter()
+                    .all(|n| n.status == KnowledgeStatus::Accepted)
+            );
+            assert_eq!(graph.edges[0].status, KnowledgeStatus::Accepted);
         },
     );
 }

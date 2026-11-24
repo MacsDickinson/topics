@@ -8,6 +8,7 @@ use std::{
 };
 use tauri::Emitter;
 use tauri_plugin_dialog::DialogExt;
+use topics_core::knowledge::*;
 use topics_core::pilot_briefing::PilotBriefing;
 use topics_core::pilot_review::*;
 use topics_core::setup::*;
@@ -170,6 +171,48 @@ macro_rules! service_command {
         }
     };
 }
+service_command!(
+    knowledge_graph,
+    RootRequest,
+    KnowledgeGraph,
+    knowledge_graph
+);
+service_command!(
+    topic_search,
+    TopicSearchRequest,
+    TopicSearchResult,
+    topic_search
+);
+service_command!(
+    topic_knowledge,
+    TopicGetRequest,
+    TopicKnowledge,
+    topic_knowledge
+);
+service_command!(
+    validation_preview,
+    ValidationPreviewRequest,
+    ValidationPreview,
+    validation_preview
+);
+service_command!(
+    validation_defer,
+    ValidationDeferRequest,
+    TopicKnowledge,
+    validation_defer
+);
+service_command!(
+    retrieval_settings_get,
+    RootRequest,
+    RetrievalSettings,
+    retrieval_settings_get
+);
+service_command!(
+    retrieval_settings_set,
+    RetrievalSettingsSetRequest,
+    RetrievalSettings,
+    retrieval_settings_set
+);
 service_command!(workspace_root_get, RootGetRequest, RootGetResult, root_get);
 service_command!(pilot_briefing, RootRequest, PilotBriefing, pilot_briefing);
 service_command!(

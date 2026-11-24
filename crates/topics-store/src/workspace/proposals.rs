@@ -13,6 +13,14 @@ fn proposal_file(ctx: &Context, id: &str) -> WResult<PathBuf> {
     valid_id(id)?;
     Ok(ctx.partition.join("proposals").join(format!("{id}.json")))
 }
+/// Proposals that still wait for the human decision in this root selection.
+pub(super) fn pending_proposals(ctx: &Context) -> WResult<Vec<Proposal>> {
+    Ok(saved_proposals(ctx)?
+        .into_iter()
+        .map(|saved| saved.proposal)
+        .filter(|proposal| proposal.status == ProposalStatus::Pending)
+        .collect())
+}
 fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
     let dir = ctx.partition.join("proposals");
     if !dir.exists() {

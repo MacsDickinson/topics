@@ -4,6 +4,12 @@ pub(super) struct Reviewed {
     pub receipt: SetupReceipt,
     pub statement: Option<UserStatement>,
     pub rule: Option<Rule>,
+    // A validation judgment: every saved revision is the human's own call, and
+    // `confirm` names untouched current revisions the same judgment confirms.
+    #[serde(default)]
+    pub judgment: bool,
+    #[serde(default)]
+    pub confirm: Vec<Id>,
 }
 pub(super) fn receipt_path(ctx: &Context, id: &str) -> WResult<PathBuf> {
     valid_id(id)?;
@@ -34,7 +40,7 @@ pub(super) fn pin(
     hashes.insert(path.into(), bytes.as_deref().map(hash));
     Ok(())
 }
-fn pin_candidate(
+pub(super) fn pin_candidate(
     ctx: &Context,
     state: &State,
     c: &Candidate,
@@ -64,24 +70,32 @@ fn pin_candidate(
     }
     Ok(())
 }
-fn finalize(
+pub(super) fn finalize(
     ctx: &Context,
     mut r: SetupReceipt,
     statement: Option<UserStatement>,
     rule: Option<Rule>,
+    judgment: bool,
+    confirm: Vec<Id>,
 ) -> WResult<SetupReceipt> {
-    r.fingerprint = digest(&r)?;
+    r.fingerprint = if judgment {
+        digest(&(&r, &statement, &confirm))?
+    } else {
+        digest(&r)?
+    };
     save_json(
         &receipt_path(ctx, &r.receipt_id)?,
         &Reviewed {
             receipt: r.clone(),
             statement,
             rule,
+            judgment,
+            confirm,
         },
     )?;
     Ok(r)
 }
-fn blank(ctx: &Context, kind: SetupDecisionKind) -> SetupReceipt {
+pub(super) fn blank(ctx: &Context, kind: SetupDecisionKind) -> SetupReceipt {
     SetupReceipt {
         schema: SCHEMA,
         receipt_id: new_id(),
@@ -257,7 +271,7 @@ pub(super) fn save_preview(
     }
     let edits = checkpoint(ctx, r.job_id.as_ref().unwrap())?.edits;
     r.operation_count = decision_chunks(&r.candidates, &edits, false)?.len() as u32;
-    finalize(ctx, r, None, None)
+    finalize(ctx, r, None, None, false, vec![])
 }
 pub(super) fn collected(state: &State, receipt: &SetupReceipt) -> Option<SetupDecisionResult> {
     let mut parts: Vec<_> = state
@@ -286,6 +300,62 @@ pub(super) fn collected(state: &State, receipt: &SetupReceipt) -> Option<SetupDe
 }
 fn review_id(record: &str) -> Id {
     stable_id(&format!("topics-review-v1:{record}"))
+}
+/// The recorded human review of one claim revision, or the default for a
+/// revision nobody has reviewed. Shared by topic review and the knowledge projection.
+pub(in crate::workspace) fn claim_review(
+    state: &State,
+    claim: &Claim,
+    superseded: bool,
+) -> ReviewMetadata {
+    let mut review = state
+        .reviews
+        .get(&review_id(&claim.revision_id))
+        .cloned()
+        .unwrap_or_else(|| {
+            let statement = claim.sources.iter().find_map(|e| {
+                if let Evidence::UserStatement { statement_id } = e
+                    && scopes::direct_human_value_supported(state, claim)
+                {
+                    Some(statement_id.clone())
+                } else {
+                    None
+                }
+            });
+            ReviewMetadata {
+                id: review_id(&claim.revision_id),
+                record_id: claim.revision_id.clone(),
+                state: if statement.is_some() {
+                    ReviewState::ConfirmedByYou
+                } else {
+                    ReviewState::AcceptedUnverified
+                },
+                receipt_id: None,
+                statement_id: statement,
+                recorded_at: claim.recorded_at.clone(),
+            }
+        });
+    if superseded {
+        review.state = ReviewState::EarlierUnderstanding
+    }
+    review
+}
+pub(in crate::workspace) fn connection_review(
+    state: &State,
+    connection: &Connection,
+) -> ReviewMetadata {
+    state
+        .reviews
+        .get(&review_id(&connection.id))
+        .cloned()
+        .unwrap_or(ReviewMetadata {
+            id: review_id(&connection.id),
+            record_id: connection.id.clone(),
+            state: ReviewState::AcceptedUnverified,
+            receipt_id: None,
+            statement_id: None,
+            recorded_at: String::new(),
+        })
 }
 pub(super) fn metadata_record(
     op: &str,
@@ -342,7 +412,7 @@ impl WorkspaceService {
                 r.revisions.push(c);
             }
             r.operation_count = r.included_ids.len().div_ceil(30) as u32;
-            finalize(ctx, r, None, None)
+            finalize(ctx, r, None, None, false, vec![])
         })
     }
     pub fn setup_connection_confirm_preview(
@@ -383,7 +453,7 @@ impl WorkspaceService {
                 receipt.connections.push(connection);
             }
             receipt.operation_count = receipt.connections.len().div_ceil(30) as u32;
-            finalize(ctx, receipt, None, None)
+            finalize(ctx, receipt, None, None, false, vec![])
         })
     }
     pub fn setup_correction_preview(
@@ -510,7 +580,14 @@ impl WorkspaceService {
             }
             r.operation_count = 1;
             validate_candidate_shapes(&r.candidates)?;
-            let receipt = finalize(ctx, r, Some(statement.clone()), Some(rule.clone()))?;
+            let receipt = finalize(
+                ctx,
+                r,
+                Some(statement.clone()),
+                Some(rule.clone()),
+                false,
+                vec![],
+            )?;
             Ok(SetupCorrectionPreview {
                 receipt,
                 statement,
@@ -531,49 +608,10 @@ impl WorkspaceService {
                 .collect();
             let mut reviews = vec![];
             for c in &topic.history {
-                let mut review = state
-                    .reviews
-                    .get(&review_id(&c.revision_id))
-                    .cloned()
-                    .unwrap_or_else(|| {
-                        let statement = c.sources.iter().find_map(|e| {
-                            if let Evidence::UserStatement { statement_id } = e
-                                && scopes::direct_human_value_supported(&state, c)
-                            {
-                                Some(statement_id.clone())
-                            } else {
-                                None
-                            }
-                        });
-                        ReviewMetadata {
-                            id: review_id(&c.revision_id),
-                            record_id: c.revision_id.clone(),
-                            state: if statement.is_some() {
-                                ReviewState::ConfirmedByYou
-                            } else {
-                                ReviewState::AcceptedUnverified
-                            },
-                            receipt_id: None,
-                            statement_id: statement,
-                            recorded_at: c.recorded_at.clone(),
-                        }
-                    });
-                if superseded.contains(&c.revision_id) {
-                    review.state = ReviewState::EarlierUnderstanding
-                }
-                reviews.push(review);
+                reviews.push(claim_review(&state, c, superseded.contains(&c.revision_id)));
             }
             for c in &topic.connections {
-                reviews.push(state.reviews.get(&review_id(&c.id)).cloned().unwrap_or(
-                    ReviewMetadata {
-                        id: review_id(&c.id),
-                        record_id: c.id.clone(),
-                        state: ReviewState::AcceptedUnverified,
-                        receipt_id: None,
-                        statement_id: None,
-                        recorded_at: String::new(),
-                    },
-                ));
+                reviews.push(connection_review(&state, c));
             }
             Ok(SetupTopicReview {
                 topic,

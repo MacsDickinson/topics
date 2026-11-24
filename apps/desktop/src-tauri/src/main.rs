@@ -95,6 +95,13 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             search_notes,
+            knowledge_graph,
+            topic_search,
+            topic_knowledge,
+            validation_preview,
+            validation_defer,
+            retrieval_settings_get,
+            retrieval_settings_set,
             workspace_root_get,
             workspace_root_set,
             workspace_choose_root,

@@ -123,7 +123,10 @@ fn assertion_records(
         if let Some(edit) = assertion_edit {
             statement = Some(edit.statement.id.clone());
         }
-        let confirmed = corrected_by_user || assertion_edit.is_some();
+        // A validation judgment is the human's explicit call on every revision it saves.
+        let confirmed = corrected_by_user
+            || assertion_edit.is_some()
+            || (reviewed.judgment && !matches!(candidate, Candidate::Connection { .. }));
         if !matches!(candidate, Candidate::Topic { .. }) {
             records.push(metadata_record(
                 op,
@@ -153,7 +156,11 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
     check.fingerprint.clear();
     if receipt.root_id != ctx.root_id
         || receipt.fingerprint != request.expected_fingerprint
-        || digest(&check)? != receipt.fingerprint
+        || (if reviewed.judgment {
+            digest(&(&check, &reviewed.statement, &reviewed.confirm))?
+        } else {
+            digest(&check)?
+        }) != receipt.fingerprint
     {
         return Err(error(
             "conflict",
@@ -282,8 +289,21 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
             records
         } else {
             let selected = &receipt.candidates[start..end];
-            let records = assertion_records(ctx, &reviewed, &edits, selected, &op)?;
+            let mut records = assertion_records(ctx, &reviewed, &edits, selected, &op)?;
             dependencies.extend(proposal::dependencies(selected));
+            if chunk_index == 0 {
+                // Untouched current revisions the same judgment confirmed.
+                for id in &reviewed.confirm {
+                    records.push(metadata_record(
+                        &op,
+                        id,
+                        ReviewState::ConfirmedByYou,
+                        receipt,
+                        reviewed.statement.as_ref().map(|s| s.id.clone()),
+                    )?);
+                    dependencies.push(id.clone());
+                }
+            }
             result.saved_ids.extend(selected.iter().map(|candidate| {
                 proposal::candidate_ids(std::slice::from_ref(candidate))[0].clone()
             }));

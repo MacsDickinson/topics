@@ -1,7 +1,7 @@
 //! Supplemental human notes have an explicit durable purpose, separate from claim evidence.
 use super::*;
 const PURPOSE: &str = "Record supplemental topic context";
-pub(super) fn notes(state: &State, topic: &str) -> Vec<UserStatement> {
+pub(in crate::workspace) fn notes(state: &State, topic: &str) -> Vec<UserStatement> {
     state
         .statements
         .values()

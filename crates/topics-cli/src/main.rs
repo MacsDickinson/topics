@@ -1,7 +1,7 @@
+mod retrieval;
 use topics_store::{TopicsService, WorkspaceService, application_data_dir};
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let mut service = TopicsService::open(application_data_dir()?)?;
     let mut args = std::env::args().skip(1);
     let command = args
         .next()
@@ -9,6 +9,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     if command == "workspace" {
         return workspace(args);
     }
+    if command == "mcp" {
+        return retrieval::serve(args);
+    }
+    let mut service = TopicsService::open(application_data_dir()?)?;
     let output = match command.as_str() {
         "init" | "use" => {
             let path = args.next().ok_or("A notes path is required")?;

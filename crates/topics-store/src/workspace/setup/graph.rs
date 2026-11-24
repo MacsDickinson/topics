@@ -382,6 +382,12 @@ pub(super) fn issues(ctx: &Context, job: &mut SetupJob) -> WResult<()> {
                     o.subject_id == claim.subject_id
                         && o.predicate == claim.predicate
                         && o.value != claim.value
+                        && !crate::workspace::knowledge::periods_disjoint(
+                            o.valid_from.as_deref(),
+                            o.valid_to.as_deref(),
+                            claim.valid_from.as_deref(),
+                            claim.valid_to.as_deref(),
+                        )
                 });
                 if other {
                     reasons.push((
