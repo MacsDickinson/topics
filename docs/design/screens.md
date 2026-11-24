@@ -6,19 +6,19 @@ These specifications describe existing flows and desired interaction behavior, b
 Desktop shell                         Narrow window
 ┌────────────┬─────────────────────┐  ┌─────────┬──────────────┐
 │ navigation │ page title + action │  │ labelled top navigation│
-│ current    │ list  │ detail      │  ├────────────────────────┤
-│ actions    │       │ evidence    │  │ title, list, reader    │
+│ current    │ graph / detail     │  ├────────────────────────┤
+│ actions    │       │ evidence    │  │ title, graph, reader    │
 │ root/status│       │ actions     │  │ actions in reading order│
 └────────────┴─────────────────────┘  └─────────┴──────────────┘
 ```
 
-The shell groups Topics/Sources under Library and Inbox/History under Review, with a real quick search, Set up folder, Analyse notes and New topic actions plus full root/runtime context. Distinguish active navigation from focus. At constrained widths, preserve labels and stack inner panes before reading becomes cramped; permit document scrolling without clipping controls. Initial connection is the only content task until a root exists; Search is not rendered underneath it. See [redesign](redesign.md) for the React primitive and parallel-feature integration contract.
+The shell exposes Knowledge graph, Needs validation and Sources. Topic lookup sits above navigation. More tools holds secondary workflows. Distinguish active navigation from focus. At constrained widths, preserve labels and stack inner panes before reading becomes cramped; permit document scrolling without clipping controls. Initial connection is the only content task until a root exists; Search is not rendered underneath it. See [redesign](redesign.md) for the React primitive and parallel-feature integration contract.
 
 The window title bar shares the sidebar colour across screens. Open its status at the right edge for runtime availability, run progress and workspace notifications. Review receipts and field errors remain beside their controls.
 
 ## Read and inspect
 
-**Topics:** list names and supporting metadata on the left; selected topic detail on the right. Each current claim appears once, with its review state, uncertainty, evidence disclosure and quiet correction/context controls together, followed by connections and unresolved mentions. Clearly label source excerpts and paths. Ask or correct follows the reading context; a generated response is not an accepted change. Long excerpts and paths wrap and remain available in full.
+**Knowledge graph.** Use one scrollable canvas for the workspace with labelled, directed relationships, keyboard-focusable topic buttons, a pressed selection and a text equivalent. Include status words for pending, accepted and confirmed knowledge. The search result and its graph node open the same topic reader. Show the passages for an open check together, followed by confirm, correct and defer actions. Other claim editing controls sit under a disclosure when comparison is active. Undo returns through History.
 
 **Sources:** list notes and show selected source path, sensitivity and full note in a reading pane. Distinguish loading, missing selection and failure. Preserve whitespace and a readable measure; sensitivity labels should explain their consequence without implying consent.
 
@@ -53,7 +53,7 @@ Topic         → ask/correct → scope/consent → proposal → human decision
 
 For one source, Today shows its status, path and last successful analysis together. For several sources, show counts by status, with unavailable or incomplete sources first. Each disclosure opens the paths and analysis times. Keep the meeting actions reachable without expanding the inventory.
 
-Today opens for a configured workspace and refreshes the local briefing. Source status and last-success time remain visible beside the scope, with an explicit route to folder setup and exact batch authorization. A user can keep the displayed briefing at meeting time, reopen it, report a wrong item, omission or missed commitment, and classify evidence now or later. Weekly review records baseline or pilot effort, distinct material changes and later examples, and displays unknown and unavailable measures. Saved feedback is not an approval; a correction continues through the existing scoped preview, approval and history. Source and snapshot failures are shown as failures, never as a clear briefing.
+Opening Today from More tools refreshes the local briefing. Source status and last-success time remain visible beside the scope, with an explicit route to folder setup and exact batch authorization. A user can keep the displayed briefing at meeting time, reopen it, report a wrong item, omission or missed commitment, and classify evidence now or later. Weekly review records baseline or pilot effort, distinct material changes and later examples, and displays unknown and unavailable measures. Saved feedback is not an approval; a correction continues through the existing scoped preview, approval and history. Source and snapshot failures are shown as failures, never as a clear briefing.
 
 For a recurring Friday correction, the topic review composer offers the original cited-note scope or an explicit cross-note scope matching the same topic, predicate and old value. An optional exact passage phrase narrows the latter. The receipt displays the resulting rule before approval; changes require a fresh preview. Feedback on an unsaved or superseded item remains available while the user follows folder setup or history.
 

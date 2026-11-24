@@ -220,12 +220,12 @@ function TopicDiff({
 export function FolderSetup({
   rootId,
   runtime,
-  onReturning,
+  initialJobId,
   onSaved,
 }: {
   rootId: string;
   runtime: string | null;
-  onReturning: () => void;
+  initialJobId: string | null;
   onSaved: () => void;
 }) {
   const [inventory, setInventory] = useState<SetupInventory | null>(null),
@@ -254,15 +254,23 @@ export function FolderSetup({
             .filter((d) => d.source.sensitivity !== "local_only")
             .map((d) => d.source.path),
         );
-        if (value.entry === "returning") onReturning();
       })
       .catch((e) => {
         if (generation === epoch.current) setError(apiError(e).message);
       });
+    if (initialJobId) {
+      void ipc<SetupJob>("setup_job_get", { root_id: rootId, job_id: initialJobId })
+        .then((next) => {
+          if (generation === epoch.current && next.job_id === initialJobId) acceptJob(next);
+        })
+        .catch((e) => {
+          if (generation === epoch.current) setError(apiError(e).message);
+        });
+    }
     return () => {
       epoch.current++;
     };
-  }, [rootId]);
+  }, [rootId, initialJobId]);
   useEffect(() => {
     if (!job || !runtime) return;
     const id = job.job_id,

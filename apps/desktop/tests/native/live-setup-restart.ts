@@ -7,10 +7,11 @@ describe("Synthetic setup restart", () => {
     "recovers the saved map and correction from app-owned data",
     async () => {
       const { topicName, selected, replacement, statementText, expected } = JSON.parse(readFileSync(process.env.TOPICS_TEST_EXPECTED!, "utf8"));
-      await $('button[aria-label="Topics"]').waitForDisplayed();
-      await $('button[aria-label="Topics"]').click();
+      await $('button=Knowledge graph').waitForDisplayed();
+      await $('button=Knowledge graph').click();
       await  $(`button[aria-label="${topicName}"]`).waitForDisplayed();
       await  $(`button[aria-label="${topicName}"]`).click();
+      if(await $(".review-tools summary").isExisting()) await $(".review-tools summary").click();
       await browser.waitUntil(
         async () =>
           (await $(".context-review").getText()).includes("Confirmed by you"),

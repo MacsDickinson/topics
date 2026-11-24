@@ -13,13 +13,20 @@ fn proposal_file(ctx: &Context, id: &str) -> WResult<PathBuf> {
     valid_id(id)?;
     Ok(ctx.partition.join("proposals").join(format!("{id}.json")))
 }
-fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
+/// Proposals that still wait for the human decision in this root selection.
+pub(super) fn pending_proposals(ctx: &Context, state: &State) -> WResult<Vec<Proposal>> {
+    Ok(saved_proposals(ctx, state)?
+        .into_iter()
+        .map(|saved| saved.proposal)
+        .filter(|proposal| proposal.status == ProposalStatus::Pending)
+        .collect())
+}
+fn saved_proposals(ctx: &Context, state: &State) -> WResult<Vec<SavedProposal>> {
     let dir = ctx.partition.join("proposals");
     if !dir.exists() {
         return Ok(vec![]);
     }
     let mut out = vec![];
-    let state = load(ctx)?;
     let conflicted: BTreeSet<_> = journals(ctx)?
         .0
         .into_iter()
@@ -38,7 +45,7 @@ fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
             .iter()
             .find(|c| c.operation.id == p.operation_id)
         {
-            if undone(&state, &commit.operation.id) {
+            if undone(state, &commit.operation.id) {
                 p.proposal.status = ProposalStatus::Conflict;
             } else if let Some(decision) = &commit.proposal {
                 p.proposal.status = ProposalStatus::Accepted;
@@ -56,7 +63,6 @@ fn saved_proposals(ctx: &Context) -> WResult<Vec<SavedProposal>> {
         {
             p.proposal.status = ProposalStatus::Conflict;
         }
-        save_json(&path, &p)?;
         out.push(p);
     }
     out.sort_by_key(|p| (p.proposal.created_at.clone(), p.proposal.id.clone()));
@@ -1213,7 +1219,7 @@ impl WorkspaceService {
     pub fn proposals_list(&self, request: RootRequest) -> WResult<ProposalsListResult> {
         self.with(&request.root_id, |ctx| {
             Ok(ProposalsListResult {
-                proposals: saved_proposals(ctx)?
+                proposals: saved_proposals(ctx, &load(ctx)?)?
                     .into_iter()
                     .map(|p| p.proposal)
                     .collect(),
@@ -1256,7 +1262,7 @@ impl WorkspaceService {
             } else {
                 &candidates
             })?;
-            if let Some(existing) = saved_proposals(ctx)?.into_iter().find(|p| {
+            if let Some(existing) = saved_proposals(ctx, &state)?.into_iter().find(|p| {
                 p.proposal.status != ProposalStatus::Conflict
                     && p.proposal.status == ProposalStatus::Pending
                     && p.proposal.fingerprint == fingerprint

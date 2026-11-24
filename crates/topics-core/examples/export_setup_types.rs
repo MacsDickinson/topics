@@ -1,5 +1,6 @@
 //! Export the canonical setup wire contract and all transitive workspace types.
 use std::path::PathBuf;
+use topics_core::knowledge::*;
 use topics_core::setup::*;
 use ts_rs::{Config, TS};
 
@@ -39,6 +40,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         SetupDecisionRequest,
         SetupDecisionResult,
         SetupTopicReview,
+        KnowledgeGraph,
+        TopicSearchRequest,
+        TopicSearchResult,
+        TopicKnowledge,
+        ValidationPreviewRequest,
+        ValidationPreview,
+        ValidationDeferRequest,
+        RetrievalSettings,
+        RetrievalSettingsSetRequest,
     );
     Ok(())
 }

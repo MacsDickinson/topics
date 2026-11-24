@@ -15,7 +15,13 @@ Update the [docs site](site/README.md) alongside behavior and architecture chang
 
 Dependencies point inward from CLI/desktop/BDD to store to core. Runtime also depends on core; store does not depend on runtime. Neither store nor core knows about Tauri or React. Phase 0 remains the search foundation; the topic-workspace milestone adds claims, reviewed discovery, MCP and correction chat. Task management remains a later milestone.
 
-## Search from UI to Markdown
+## Graph, topic lookup and validation
+
+The connected shell opens on `knowledge_graph`. Desktop `topic_search` and `topic_knowledge` share the store projection with the opt-in stdio CLI transport. The external projection checks its configured root and topic allowlist on each call, verifies exact source sensitivity and freshness, and omits excerpts. Keep caller filtering ahead of matching, counting and relationship expansion. See the [client configuration](../README.md#local-mcp-retrieval).
+
+Human `validation_preview` produces the receipt used by `setup_decide`. The review metadata, new revisions and any user statement are committed together. A compatible-value receipt names the exact pair, so undo restores its check and later revisions receive a fresh comparison. Judgment receipts bind stale passages as well as current source hashes. Graph reads reconcile proposals and setup checkpoints in memory. Deferred checks use stable item IDs in app data. The graph can be rebuilt from accepted Markdown and pending checkpoints. The scripted runtime integration in `topics-setup/tests/protocol.rs` exercises extraction through to graph approval.
+
+## Raw note search from UI to Markdown
 
 The desktop resolves app data with `topics_store::application_data_dir()`. A resolver error remains managed application state, so an attempted search displays the error in a usable window rather than aborting or falling back. On the first valid search it creates a service and retains a `WatchHandle`. Blocking store work runs through Tauri's `spawn_blocking`, off the WebView event loop.
 

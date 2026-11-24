@@ -1,4 +1,5 @@
 //! Authoritative Markdown knowledge service. No provider access or model approval surface.
+mod knowledge;
 mod persistence;
 mod pilot_briefing;
 mod pilot_review;

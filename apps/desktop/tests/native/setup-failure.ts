@@ -6,6 +6,7 @@ describe("Native setup failure explanation", () => {
     await $("#root-path").waitForDisplayed();
     await $("#root-path").setValue(process.env.TOPICS_TEST_WORKSPACE_ROOT!);
     await $("button=Use notes folder").click();
+    await $("button=Analyse sources").click();
     await $("h1=Understand this folder").waitForDisplayed();
     await $("button=Review manifest").click();
     await $("label*=Authorize this exact manifest").$("input").click();

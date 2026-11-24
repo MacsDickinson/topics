@@ -33,7 +33,7 @@ export function TopicDetail({
                   ? "Project"
                   : "Thread"}
             </p>
-            <h2>{view.topic.name}</h2>
+            <h2 tabIndex={-1}>{view.topic.name}</h2>
             {view.topic.aliases.length > 0 && (
               <p className="muted">
                 Also known as {view.topic.aliases.join(", ")}

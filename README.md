@@ -1,29 +1,18 @@
 # Topics
 
-Topics is a local-first macOS app for ongoing people, projects and threads in Markdown notes. The Friday pilot helps you prepare for a meeting and learn which changes your briefing caught or missed.
+Topics opens a local knowledge graph of the people, projects and threads in your Markdown notes. Select a topic or press **⌘K** to find it by name, alias or claim. Follow a typed relationship to its other topic, or switch to **Text view**.
 
-- Open Today to see changes and check when the underlying notes were last analysed.
-- Keep the briefing before your meeting. Record a wrong fact, an omitted decision or a missed commitment in a sentence.
-- Use Weekly review to compare one baseline sync with two pilot syncs, including preparation time, correction effort and known omissions.
-- Analyse selected notes and review proposed topics, claims and connections.
-- Accept, edit or reject changes before they become current knowledge.
-- Open topics to inspect facts, evidence, uncertainty and revision history.
-- Correct facts through topic chat, then approve the replacement and its scoped correction rule.
-- Browse sources, set privacy labels, capture topics manually, and undo operations through History.
+**Analyse sources** opens the local folder inventory and exact manifest review. Analysis produces pending discoveries. Open a discovery to review the proposal or folder job that produced it. Accepted knowledge reopens from disk.
 
-Folder setup builds a starting topic map from the notes you select for analysis. The pilot runs in one workspace and preserves dated briefings and feedback as app-owned Markdown. Automatic action extraction is a later milestone. [Friday pilot and work-Mac rehearsal](features/multi-source-library/PILOT.md) · [Folder setup scenarios](features/folder-setup/PLAN.md)
+**Needs validation** brings conflicting values, uncertainty and changed citations into the topic reader. Compare the passages, confirm one value, keep both, enter a correction or defer the question. When dates overlap only partly, changing a value across both full periods requires an explicit choice. Approval records the judgment and preserves earlier evidence. **More tools** contains note search, Inbox, History and the Friday pilot.
+
+An optional [local MCP retrieval server](#local-mcp-retrieval) gives a configured client read-only access to selected approved topics.
 
 Documentation: [How Topics works](https://macsdickinson.github.io/topics/) is the architecture, user guide and feature breakdown. GitHub Actions publishes the validated site from `main` and keeps the generated files on `gh-pages`. See the [docs site guide](docs/site/README.md) for editing, preview and Pages setup. Every change must keep the docs current under [AGENTS.md](AGENTS.md).
 
 UI contributors: follow the [design system](docs/design-system.md) for tokens, components, patterns and review requirements.
 
 ## Run
-
-Open the local Friday pilot build from Finder or from this checkout.
-
-```sh
-open target/prototype/friday-pilot/Topics.app
-```
 
 To run from source with the pinned Rust toolchain and project-local Node:
 
@@ -38,6 +27,25 @@ Choose or create a notes folder in the app. Use Sources to inspect notes and lab
 Review changes in Inbox, then open an accepted topic to inspect its understanding or ask for a correction. Chat requires an explicit human Cloud allowed label and confirmed source preview. Unknown-source consent applies to one run and cannot override local-only labels. Model-created topics start unknown.
 
 Chat uses the already signed-in, unmodified **Codex CLI 0.166.0**. Codex owns its credentials; Topics does not read tokens or implement a separate login. `TOPICS_CODEX_PATH` can select an absolute executable; the app also checks standard installation locations. The experimental protocol and tool catalog are pinned. Incompatible or unsupported runtime settings fail with guidance; source browsing, manual capture and accepted knowledge remain usable.
+
+## Local MCP retrieval
+
+Build the executable with `cargo build --release -p topics-cli`. In **Sources → Local MCP access**, enable retrieval for the connected folder. Choose the topic IDs for each client. Use the same application data directory as the desktop. Example stdio client configuration:
+
+```json
+{
+  "mcpServers": {
+    "topics": {
+      "command": "/absolute/path/to/target/release/topics",
+      "args": ["mcp", "FOLDER_ID", "TOPIC_ID"]
+    }
+  }
+}
+```
+
+Replace the placeholders with the IDs displayed in Sources. Append more topic IDs as separate arguments. In a client using a custom desktop data directory, set its `TOPICS_APP_DATA_DIR` environment variable to that same absolute path. The two tools are `topic_search` (query and optional limit) and `topic_detail` (topic_id). The root selection and allowlist come from the process configuration. A new root selection requires an updated folder ID.
+
+A topic must be accepted, explicitly Cloud allowed and eligible under source privacy rules. Retrieved assertions and relationships require current, explicitly Cloud allowed evidence for **every** citation, and relationships require both endpoints in scope. Passage text, paths, pending records, human statements and mutation tools stay outside this interface. The folder switch takes effect on the next call. This server is separate from the model bridge used for a single analysis.
 
 ## Data
 

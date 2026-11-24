@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+topics-core.workspace = true
 topics-store.workspace = true
 serde_json.workspace = true
 

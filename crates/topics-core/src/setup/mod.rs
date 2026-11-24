@@ -6,11 +6,11 @@ fn required<'de, D: serde::Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Resu
     T::deserialize(d)
 }
 macro_rules! value {
-    ($name:ident { $($field:ident : $ty:ty),* $(,)? }) => {
+    ($name:ident { $($(#[$attr:meta])* $field:ident : $ty:ty),* $(,)? }) => {
         #[cfg_attr(feature = "typescript", derive(ts_rs::TS))]
         #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
         #[serde(deny_unknown_fields)]
-        pub struct $name { $(#[serde(deserialize_with="required")] pub $field: $ty),* }
+        pub struct $name { $($(#[$attr])* #[serde(deserialize_with="required")] pub $field: $ty),* }
     };
 }
 macro_rules! choices {

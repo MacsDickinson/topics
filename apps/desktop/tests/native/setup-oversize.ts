@@ -1,3 +1,4 @@
+import { openTool } from "./interaction";
 import { openDatePicker } from "./interaction";
 import { browser, $, expect } from "@wdio/globals";
 import { createHash } from "node:crypto";
@@ -13,6 +14,7 @@ describe("Synthetic native setup size and date regression", () => {
     await $("#root-path").waitForDisplayed();
     await $("#root-path").setValue(rootPath);
     await $("button=Use notes folder").click();
+    await $("button=Analyse sources").click();
     await $("h1=Understand this folder").waitForDisplayed();
     const rootId = await browser.execute(async () => {
       const core = (window as any).__TAURI__.core;
@@ -23,8 +25,8 @@ describe("Synthetic native setup size and date regression", () => {
       await core.invoke("workspace_sensitivity_set", { request: {root_id: root.root_id, target: {kind: "source", source_id: source.source_id, locator: detail.citation.locator}, sensitivity: "local_only"} });
       return root.root_id;
     });
-    await $('button[aria-label="Topics"]').click();
-    await $("button=Set up folder").click();
+    await $('button=Knowledge graph').click();
+    await openTool("Set up folder");
     await openDatePicker("From date: Select date");
     await browser.keys(["Escape"]);
     await browser.waitUntil(async () => !(await $(".board-date-chip").isExisting()));

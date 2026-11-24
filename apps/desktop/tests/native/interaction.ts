@@ -44,3 +44,9 @@ export async function openDatePicker(label: string) {
   await $(`button[aria-label="${label}"]`).click();
   await $(".board-date-chip").waitForDisplayed();
 }
+
+export async function openTool(name: string) {
+  const menu = await $("nav details");
+  if (await menu.getAttribute("open") === null) await menu.$("summary").click();
+  await menu.$("button="+name).click();
+}

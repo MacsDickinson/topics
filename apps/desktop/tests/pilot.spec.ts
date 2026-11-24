@@ -1,10 +1,12 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture } from "./fixtures/workspace";
 
-test("opening a configured workspace starts a local briefing refresh and reports failures honestly", async ({
+test("opening Today starts a local briefing refresh and reports failures honestly", async ({
   page,
 }) => {
   await workspaceFixture(page, { returning: true });
+  await openTool(page, "Today");
   await expect(
     page.getByRole("heading", { name: "Today", exact: true }),
   ).toBeVisible();
@@ -29,6 +31,7 @@ test("keeps a sourced briefing, captures and reopens feedback, and records an ho
     pilot: true,
     populated: true,
   });
+  await openTool(page, "Today");
   await expect(
     page.getByText("Meetings/one.md", { exact: true }).first(),
   ).toBeVisible();
@@ -72,6 +75,7 @@ test("shows available draft measures from the synthetic fixture", async ({
   page,
 }) => {
   await workspaceFixture(page, { pilot: true, draftEnabled: true });
+  await openTool(page, "Today");
   await page.getByText("Weekly review", { exact: true }).first().click();
   await page
     .getByRole("button", { name: "Week: Select date" })
@@ -90,6 +94,7 @@ test("a reported wrong item opens the existing scoped correction with its origin
   page,
 }) => {
   await workspaceFixture(page, { pilot: true, populated: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Keep briefing for meeting" }).click();
   await page.getByRole("button", { name: "Correct Ledger" }).click();
   await page
@@ -121,6 +126,7 @@ test("names pending and unavailable sources and requires a fresh view after a st
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await expect(
     page.getByRole("button", { name: "Keep briefing for meeting" }),
   ).toBeVisible();
@@ -146,6 +152,7 @@ test("a miss can be reported directly from an empty Today briefing", async ({
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.evaluate(() => {
     (window as any).pilotBriefing.items = [];
   });
@@ -170,6 +177,7 @@ test("unsaved briefing topic explains how to continue and preserves feedback", a
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Correct Ledger" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -191,6 +199,7 @@ test("weekly phase uses the accessible Board UI selector inside Field", async ({
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByText("Weekly review", { exact: true }).first().click();
   await page.getByRole("button", { name: "Week: Select date" }).click();
   await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
@@ -212,6 +221,7 @@ test("superseded briefing item offers history without losing feedback", async ({
   page,
 }) => {
   await workspaceFixture(page, { pilot: true, populated: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Correct Ledger" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -239,6 +249,7 @@ test("reviews two material surfaced changes and a reported omission without rety
   page,
 }) => {
   await workspaceFixture(page, { pilot: true, pilotTwoItems: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Topics missed something" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -296,6 +307,7 @@ test("keeps a sentence across a stale briefing and requires a fresh review", asy
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Topics missed something" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -323,6 +335,7 @@ test("weekly measurements retain unknown and zero and reject invalid values", as
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByText("Weekly review", { exact: true }).first().click();
   await page.getByRole("button", { name: "Week: Select date" }).click();
   await page.getByLabel("Week date (YYYY-MM-DD)").fill("2026-11-06");
@@ -349,6 +362,7 @@ test("midweek feedback is a separate view until the meeting is kept", async ({
   page,
 }) => {
   await workspaceFixture(page, { pilot: true, pilotTwoItems: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Topics missed something" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -409,6 +423,7 @@ test("a meeting retains midweek correction provenance when the original item is 
   page,
 }) => {
   await workspaceFixture(page, { pilot: true, populated: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Correct Ledger" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -446,6 +461,7 @@ test("reused identical feedback view can be kept with the latest observed token"
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Topics missed something" }).click();
   await page
     .getByLabel("What was wrong or missed?")
@@ -481,6 +497,7 @@ test("an older feedback view cannot be kept over changed evidence", async ({
   page,
 }) => {
   await workspaceFixture(page, { pilot: true });
+  await openTool(page, "Today");
   await page.getByRole("button", { name: "Topics missed something" }).click();
   await page
     .getByLabel("What was wrong or missed?")

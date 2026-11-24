@@ -1,3 +1,4 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
@@ -16,8 +17,8 @@ test.beforeEach(async ({ page }) => {
             message:
               'Codex unavailable; search and manual proposals remain available.',
           });
-        if (command === 'workspace_topics_list')
-          return Promise.resolve({ topics: [] });
+        if (command === 'knowledge_graph')
+          return Promise.resolve({nodes:[],edges:[],pending:[],warnings:[],checks:{conflicting:0,uncertain:0,stale:0}});
         if (command === 'workspace_proposals_list')
           return Promise.resolve({ proposals: [] });
         if (command === 'workspace_history_list')
@@ -30,7 +31,7 @@ test.beforeEach(async ({ page }) => {
     };
   });
   await page.goto('/');
-  await page.getByRole('button', {name: 'Search', exact: true}).click();
+  await openTool(page, "Search notes");
 });
 
 test('late responses cannot replace newer results or cleared input', async ({

@@ -1,3 +1,4 @@
+import { openMoreTools, openTool } from "./fixtures/workspace";
 import { test, expect } from "@playwright/test";
 import { workspaceFixture } from "./fixtures/workspace";
 
@@ -24,11 +25,11 @@ test("both search shortcuts work across screens and select the existing query", 
   page,
 }) => {
   await workspaceFixture(page, { populated: true });
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await page.getByRole("button", { name: "Ledger", exact: true }).click();
   await page.getByLabel("Message about this topic").fill("Keep this draft");
   await page.keyboard.press("Meta+k");
-  const search = page.getByRole("searchbox", { name: "Search notes" });
+  const search = page.getByRole("searchbox", { name: "Search topics" });
   await expect(search).toBeFocused();
   await search.fill("Ledger");
   // Hold the shortcut frame so the test observes both sides of the race.
@@ -64,13 +65,13 @@ test("both search shortcuts work across screens and select the existing query", 
     )
     .toEqual([0, 6]);
   await expect(search).toBeFocused();
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   await expect(page.getByLabel("Message about this topic")).toHaveValue(
     "Keep this draft",
   );
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(
-    page.getByRole("searchbox", { name: "Search notes" }),
+    page.getByRole("searchbox", { name: "Search topics" }),
   ).toBeFocused();
 });
 
@@ -78,9 +79,10 @@ test("manual capture and folder settings restore focus to their actual triggers 
   page,
 }) => {
   await workspaceFixture(page, { populated: true });
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
+  await openMoreTools(page);
   const contextual = page
-    .getByRole("main")
+    .getByRole("navigation")
     .getByRole("button", { name: "New topic", exact: true });
   await contextual.focus();
   await page.keyboard.press("Enter");
@@ -97,7 +99,7 @@ test("creating and approving a manual proposal keeps focus on the resulting Inbo
   page,
 }) => {
   await workspaceFixture(page);
-  await page.getByRole("button", { name: "New topic", exact: true }).click();
+  await openTool(page, "New topic");
   await page
     .getByLabel("Topic name", { exact: true })
     .fill("Synthetic focus project");
@@ -119,7 +121,7 @@ test("topic selection stays visible during a delayed read and disclosures use na
   await page.evaluate(() => {
     (window as any).defer.workspace_topic_get = true;
   });
-  await page.getByRole("button", { name: "Topics", exact: true }).click();
+  await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
   const topic = page.getByRole("button", { name: "Ledger", exact: true });
   await topic.focus();
   await page.keyboard.press("Enter");
@@ -139,7 +141,7 @@ test("topic selection stays visible during a delayed read and disclosures use na
   await expect(
     page.getByRole("heading", { name: "Current understanding" }),
   ).toBeVisible();
-  await expect(topic).toBeFocused();
+  await expect(page.getByRole("heading",{name:"Ledger",exact:true})).toBeFocused();
   const disclosure = page.locator(".claim-provenance summary").first();
   await disclosure.focus();
   await page.keyboard.press("Enter");

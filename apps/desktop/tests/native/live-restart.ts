@@ -1,14 +1,15 @@
+import { openTool } from "./interaction";
 import { browser, $, expect } from '@wdio/globals';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 describe('Native accepted correction after process restart', () => {
   it('recovers the same topic, current correction and source history from real services', async () => {
     // Trigger a real disposable-index rebuild before reading authoritative records.
-    await $('h1=Today').waitForDisplayed();
-    await $('button[aria-label="Search"]').click();
+    await $('h1=Knowledge graph').waitForDisplayed();
+    await openTool("Search notes");
     await $('input[type="search"]').waitForDisplayed(); await $('input[type="search"]').setValue('Alex');
     await expect($('h2=Synthetic project meeting')).toBeDisplayed();
-    await $('button[aria-label="Topics"]').click();
+    await $('button=Knowledge graph').click();
     await $('button[aria-label="Alex"]').click();
     await expect($('.topic-detail')).toHaveText(
       expect.stringContaining('they/them'),

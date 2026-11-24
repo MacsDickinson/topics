@@ -7,9 +7,12 @@ pub(super) mod inventory;
 mod jobs;
 mod reconsent;
 mod review;
+mod validation;
 use super::proposals as proposal;
 use super::scopes::{Run, Scope};
 use super::*;
+pub(super) use context::notes as context_notes;
+pub(super) use review::{claim_review, connection_review};
 
 const SCHEMA: u32 = 1;
 const MAX_RECORDS: usize = 100;
@@ -87,14 +90,22 @@ fn get_job(ctx: &Context, id: &str) -> WResult<SetupJob> {
     // A Markdown commit can complete before the cache is updated, or undo can
     // remove a previously saved receipt. Derive only acceptance from markers.
     let state = load(ctx)?;
+    let changed = reconcile_accepted(&mut saved.job, &state)?;
+    if changed {
+        bump(&mut saved.job)?;
+        save_json(&job_path(ctx, id)?, &saved)?;
+    }
+    Ok(saved.job)
+}
+fn reconcile_accepted(job: &mut SetupJob, state: &State) -> WResult<bool> {
     let committed: BTreeSet<_> = state
         .receipts
         .values()
-        .filter(|r| r.receipt.job_id.as_deref() == Some(id))
+        .filter(|r| r.receipt.job_id.as_deref() == Some(job.job_id.as_str()))
         .flat_map(|r| r.saved_ids.iter().cloned())
         .collect();
     let mut changed = false;
-    for item in &mut saved.job.graph.items {
+    for item in &mut job.graph.items {
         let equivalent = match &item.candidate {
             Candidate::Topic { topic } => {
                 state.topics.get(&topic.id).is_some_and(|old| old == topic)
@@ -113,9 +124,9 @@ fn get_job(ctx: &Context, id: &str) -> WResult<SetupJob> {
                             .any(|next| next.supersedes.contains(&old.revision_id))
                 });
                 if let Some(old) = accepted {
-                    link(&mut saved.job.graph.canonical_ids, &claim.id, &old.id);
+                    link(&mut job.graph.canonical_ids, &claim.id, &old.id);
                     link(
-                        &mut saved.job.graph.canonical_ids,
+                        &mut job.graph.canonical_ids,
                         &claim.revision_id,
                         &old.revision_id,
                     );
@@ -136,7 +147,7 @@ fn get_job(ctx: &Context, id: &str) -> WResult<SetupJob> {
                             .all(|source| old.sources.contains(source))
                 });
                 if let Some(old) = accepted {
-                    link(&mut saved.job.graph.canonical_ids, &connection.id, &old.id);
+                    link(&mut job.graph.canonical_ids, &connection.id, &old.id);
                 }
                 accepted.is_some()
             }
@@ -152,19 +163,51 @@ fn get_job(ctx: &Context, id: &str) -> WResult<SetupJob> {
         changed |= disposition != item.disposition;
         item.disposition = disposition;
     }
-    for item in &mut saved.job.graph.items {
+    for item in &mut job.graph.items {
         let before = item.candidate.clone();
         proposal::remap(
             std::slice::from_mut(&mut item.candidate),
-            &saved.job.graph.canonical_ids,
+            &job.graph.canonical_ids,
         )?;
         changed |= before != item.candidate;
     }
-    if changed {
-        bump(&mut saved.job)?;
-        save_json(&job_path(ctx, id)?, &saved)?;
+    Ok(changed)
+}
+
+// Browse checkpoints without claiming ownership of a running batch.
+pub(super) fn projected_jobs(
+    ctx: &Context,
+    state: &State,
+    warnings: &mut Vec<String>,
+) -> WResult<Vec<SetupJob>> {
+    let mut out = vec![];
+    for path in json_entries(&setup_dir(ctx).join("jobs"))? {
+        let draft_id = path.file_stem().unwrap_or_default().to_string_lossy();
+        let Ok(saved) = read_json::<Checkpoint>(&path) else {
+            warnings.push(format!("Could not read draft {draft_id}."));
+            continue;
+        };
+        let mut job = saved.job;
+        if job.root_id != ctx.root_id || job.manifest.root_id != ctx.root_id {
+            continue;
+        }
+        if job.schema != SCHEMA || reconcile_accepted(&mut job, state).is_err() {
+            warnings.push(format!(
+                "Could not load draft {draft_id} with this version of Topics."
+            ));
+            continue;
+        }
+        if saved.owner != ctx.instance_id
+            && job
+                .batches
+                .iter()
+                .any(|b| b.status == SetupBatchStatus::Running)
+        {
+            job.status = SetupJobStatus::Paused;
+        }
+        out.push(job);
     }
-    Ok(saved.job)
+    Ok(out)
 }
 fn link(mapping: &mut BTreeMap<Id, Id>, from: &str, to: &str) {
     if from == to {

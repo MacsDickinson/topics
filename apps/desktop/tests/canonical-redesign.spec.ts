@@ -1,10 +1,9 @@
+import { openTool } from "./fixtures/workspace";
 import { test, expect, type Page } from "@playwright/test";
 import { workspaceFixture, ids, source } from "./fixtures/workspace";
 
 async function startMap(page: Page) {
-  await page
-    .getByRole("button", { name: "Set up folder", exact: true })
-    .click();
+  await openTool(page, "Set up folder");
   await page
     .getByRole("button", { name: "Review manifest", exact: true })
     .click();
@@ -138,7 +137,7 @@ for (const appearance of ["light", "dark", "narrow"] as const) {
         },
         { ids, source },
       );
-      await page.getByRole("button", { name: "Topics", exact: true }).click();
+      await page.getByRole("button", { name: "Knowledge graph", exact: true }).click();
       await page.getByRole("button", { name: "Ledger", exact: true }).click();
       await page
         .getByRole("button", { name: "Add context", exact: true })

@@ -127,7 +127,16 @@ export async function workspaceFixture(
               details: null,
             };
           const request = args?.request;
+          const checks={conflicting:0,stale:0,uncertain:0,unverified:0,deferred:0};
           switch (command) {
+            case 'retrieval_settings_get': return {enabled:false,updated_at:null};
+            case 'knowledge_graph': return w.graphOverride || {root_id:request.root_id,nodes:w.topics.map((topic:any)=>({topic,status:"accepted",checks,assertions:0,verified:false,pending:null})),edges:[],pending:[],checks,warnings:[]};
+            case 'topic_knowledge': return w.detailOverrides?.[request.topic_id] || {topic:w.topics.find((t:any)=>t.id===request.topic_id),status:"accepted",validation:[],timelines:[],assertions:[],relationships:[],checks,earlier:[],warnings:[],context:[],pending:null};
+            case 'topic_search': {
+              const hits=(w.graphOverride?.nodes.map((n:any)=>n.topic) || w.topics).filter((t:any)=>t.name.toLowerCase().includes(request.query.toLowerCase())).map((topic:any)=>({topic,status:"accepted",matched:"name",snippet:null,checks}));
+              return {hits,total:hits.length};
+            }
+
             case 'pilot_briefing': if (options.pilot) return structuredClone(w.pilotBriefing); throw new Error('Unavailable');
             case 'pilot_snapshot_list': if (options.pilot) return structuredClone(w.pilotSnapshots); throw new Error('Unavailable');
             case 'pilot_feedback_snapshot_create':
@@ -399,4 +408,14 @@ export async function workspaceFixture(
     { ids, topic, claim, proposal, hash, options },
   );
   await page.goto('/');
+}
+
+export async function openMoreTools(page: Page) {
+  const menu=page.getByRole("navigation",{name:"Workspace"}).locator("details");
+  if (await menu.getAttribute("open") === null) await menu.locator("summary").click();
+}
+
+export async function openTool(page: Page, name: string | RegExp) {
+  await openMoreTools(page);
+  await page.getByRole("navigation",{name:"Workspace"}).getByRole("button",{name,exact: typeof name === "string"}).click();
 }

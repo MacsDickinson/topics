@@ -1,3 +1,4 @@
+import { openTool } from "./interaction";
 import { browser, $, $$, expect } from '@wdio/globals';
 import { resolve, join } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -35,11 +36,10 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     await $('#root-path').waitForDisplayed();
     await $('#root-path').setValue(rootPath);
     await $('button=Use notes folder').click();
-    await expect($('h1=Understand this folder')).toBeDisplayed();
-    await $('button[aria-label="Topics"]').click();
-    await expect($('h2=No accepted topics yet')).toBeDisplayed();
-    await expect($('button=Analyse notes')).toBeEnabled();
-    await $('button=Analyse notes').click();
+    await expect($('h1=Knowledge graph')).toBeDisplayed();
+    await $('button=Knowledge graph').click();
+    await expect($('h2=Build your first graph')).toBeDisplayed();
+    await openTool("Analyse notes");
     await $('#scope-files').setValue('meeting.md');
     await $('button=Preview selection').click();
     await expect($('.scope-review .path')).toHaveText('meeting.md');
@@ -57,7 +57,7 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     await browser.saveScreenshot(resolve('evidence/native-live-discovery.png'));
     await $('button=Approve selected changes').click();
     await expect($('.proposal .badge.tone-success')).toBeDisplayed();
-    await $('button[aria-label="Topics"]').click();
+    await $('button=Knowledge graph').click();
     const { topics } = await invoke<any>('workspace_topics_list', {
       root_id: root.root_id,
     });
@@ -109,7 +109,7 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
     ).toBe(false);
     await $('button=Approve selected changes').click();
     await expect($('.proposal .badge.tone-success')).toBeDisplayed();
-    await $('button[aria-label="Topics"]').click();
+    await $('button=Knowledge graph').click();
     await $(`button[aria-label="${alex.name}"]`).click();
     await expect($('.topic-detail')).toHaveText(
       expect.stringContaining('they/them'),
@@ -135,7 +135,7 @@ describe('Genuine synthetic discovery and topic correction through real desktop 
       await chooseOption('select#topic-sensitivity', 'cloud_allowed');
       await browser.waitUntil(async () => await $('select#topic-sensitivity').getValue() === 'cloud_allowed', { timeout: 10000 });
     }
-    await $('button=Analyse notes').click(); await $('#scope-files').setValue('meeting.md'); await $('button=Preview selection').click();
+    await openTool("Analyse notes"); await $('#scope-files').setValue('meeting.md'); await $('button=Preview selection').click();
     await $('.consent input').click(); await $('button=Start analysis').click(); await finished();
     const after = await invoke<any>('workspace_topic_get', { root_id: root.root_id, topic_id: alex.id });
     expect(after.current_claims.some((c: any) => c.revision_id === current.revision_id && c.value === 'they/them')).toBe(true);

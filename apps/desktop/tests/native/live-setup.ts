@@ -1,3 +1,4 @@
+import { openTool } from "./interaction";
 import { browser, $, $$, expect } from "@wdio/globals";
 import { writeFileSync } from "node:fs";
 import { baseline, corrected, verifyStatementRule, snapshot, readRule, findClaimArticle } from "../../scripts/live-setup-lineage.mjs";
@@ -12,6 +13,7 @@ describe(process.env.TOPICS_TEST_REHEARSAL === "1" ? "Scripted synthetic setup r
       await $("#root-path").waitForDisplayed();
       await $("#root-path").setValue(path);
       await $("button=Use notes folder").click();
+      await $("button=Analyse sources").click();
       await $("h1=Understand this folder").waitForDisplayed();
       await browser.execute(async () => {
         const core = (window as any).__TAURI__.core;
@@ -43,8 +45,8 @@ describe(process.env.TOPICS_TEST_REHEARSAL === "1" ? "Scripted synthetic setup r
           },
         });
       });
-      await $('button[aria-label="Topics"]').click();
-      await $("button=Set up folder").click();
+      await $('button=Knowledge graph').click();
+      await openTool("Set up folder");
       await $("h2=Choose notes to analyse").waitForDisplayed();
       await $("button=Review manifest").click();
       await $("h2=Review the exact manifest").waitForDisplayed();
@@ -100,15 +102,24 @@ describe(process.env.TOPICS_TEST_REHEARSAL === "1" ? "Scripted synthetic setup r
         return (window as any).__TAURI__.core.invoke("workspace_statement_get", { request: { root_id: rootId, statement_id: statementId } });
       }, state.root.root_id, statementId);
       await browser.saveScreenshot(`${artifact}-draft.png`);
+      await $("button=Knowledge graph").click();
+      await $(`button[aria-label="${topicName}"]`).waitForDisplayed();
+      await expect($(`button[aria-label="${topicName}"]`)).toHaveText(expect.stringContaining("Pending"));
+      await $("button=Open discovery").click();
       await $("button=Review starting map").click();
       await $("h2=Save starting map").waitForDisplayed();
       await browser.saveScreenshot(`${artifact}-receipt.png`);
       await $("button=Save starting map").click();
       await browser.waitUntil(async () => !(await $("h2=Save starting map").isExisting()), { timeout: 30000 });
       writeFileSync(process.env.TOPICS_TEST_EXPECTED!, JSON.stringify({topicName}));
-      await $('button[aria-label="Topics"]').click();
+      await $('button=Knowledge graph').click();
       await $(`button[aria-label="${topicName}"]`).waitForDisplayed();
-      await $(`button[aria-label="${topicName}"]`).click();
+      await $("#topic-search").setValue(topicName);
+      const hit = await $(".graph-hits button");
+      await hit.waitForDisplayed();
+      await hit.click();
+      await expect($(`button[aria-label="${topicName}"]`)).toHaveAttribute("aria-pressed","true");
+      if(await $(".review-tools summary").isExisting()) await $(".review-tools summary").click();
       await $(".context-review").waitForDisplayed();
       await browser.waitUntil(
         async () =>

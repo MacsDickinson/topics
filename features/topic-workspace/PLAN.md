@@ -34,3 +34,8 @@ Delivered 2026-11-03 under the explicit overnight authority above. Core, desktop
 Codex app-server remains experimental and pinned to 0.166.0. Discovery showed that read-only sandboxing and disabled named tools alone are insufficient. The delivered route combines an exact two-tool catalog forwarded through the official MCP SDK with scope enforcement, macOS file restrictions, controlled environment and fail-closed startup. The [runtime investigation](../../docs/research/codex-effective-tools-discovery.md) and [final runtime acceptance](../../docs/reviews/topic-workspace-runtime-accepted.md) supersede the earlier pending-isolation status. No real notes were used in verification.
 
 The task backlog/daily ritual, Claude alternative, automatic import and broader original roadmap still need separate plans and user sign-off. This prototype establishes the inspect-and-correct workflow; it does not yet replace Monday actions prep.
+
+
+## Delivered graph journey
+
+The connected desktop opens the whole-workspace graph. Topic lookup and node selection share stable IDs. Pending discoveries open their existing decision. The graph links material checks to cited comparisons, exact judgment previews and deferral. A judgment can confirm two compatible values or explicitly cover each displayed effective period. Accepted discoveries refresh the open reader. Interrupted jobs and unanswered identity questions keep their review route. Approved revisions and undo are reflected on reopen. Local MCP retrieval reuses the topic projection with a fixed client scope and current eligibility checks. See the [user guide](../../docs/site/index.html#guide-topics).

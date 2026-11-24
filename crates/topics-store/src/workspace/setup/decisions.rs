@@ -123,7 +123,10 @@ fn assertion_records(
         if let Some(edit) = assertion_edit {
             statement = Some(edit.statement.id.clone());
         }
-        let confirmed = corrected_by_user || assertion_edit.is_some();
+        // A validation judgment is the human's explicit call on every revision it saves.
+        let confirmed = corrected_by_user
+            || assertion_edit.is_some()
+            || (reviewed.judgment && !matches!(candidate, Candidate::Connection { .. }));
         if !matches!(candidate, Candidate::Topic { .. }) {
             records.push(metadata_record(
                 op,
@@ -153,7 +156,11 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
     check.fingerprint.clear();
     if receipt.root_id != ctx.root_id
         || receipt.fingerprint != request.expected_fingerprint
-        || digest(&check)? != receipt.fingerprint
+        || (if reviewed.judgment {
+            digest(&(&check, &reviewed.statement, &reviewed.confirm))?
+        } else {
+            digest(&check)?
+        }) != receipt.fingerprint
     {
         return Err(error(
             "conflict",
@@ -169,6 +176,32 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
             "conflict",
             "A bounded decision was partially applied; inspect its operations and refresh the remaining selection",
         ));
+    }
+    if reviewed.judgment {
+        if validation::different_periods(&receipt.revisions)
+            && receipt.kind != SetupDecisionKind::SaveAllPeriods
+        {
+            return Err(error(
+                "conflict",
+                "Review the full effective periods before approving this judgment",
+            ));
+        }
+        for evidence in receipt.revisions.iter().flat_map(|claim| &claim.sources) {
+            if let Evidence::Passage { source } = evidence {
+                let fresh = scopes::validate_source(ctx, &state, source).is_ok();
+                let expected_stale = receipt.stale_passages.contains(source);
+                if fresh == expected_stale
+                    || (!expected_stale
+                        && receipt.expected_hashes.get(&source.path)
+                            != Some(&Some(source.document_hash.clone())))
+                {
+                    return Err(error(
+                        "conflict",
+                        "Citation availability changed; review a fresh judgment receipt",
+                    ));
+                }
+            }
+        }
     }
     if let Some(id) = &receipt.job_id {
         let job = get_job(ctx, id)?;
@@ -234,12 +267,12 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
         deferred_ids: receipt.deferred_ids.clone(),
         error: None,
     };
-    let total = if receipt.kind == SetupDecisionKind::Confirm {
+    let total = if receipt.kind.confirms_existing() {
         receipt.revisions.len() + receipt.connections.len()
     } else {
         receipt.candidates.len()
     };
-    let chunks = if receipt.kind == SetupDecisionKind::Confirm {
+    let chunks = if receipt.kind.confirms_existing() {
         (0..total)
             .step_by(30)
             .map(|start| start..(start + 30).min(total))
@@ -259,7 +292,7 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
         let op = new_id();
         let end = chunk.end;
         let mut dependencies = vec![];
-        let mut records = if receipt.kind == SetupDecisionKind::Confirm {
+        let mut records = if receipt.kind.confirms_existing() {
             let mut records = vec![];
             for index in start..end {
                 let id = if index < receipt.revisions.len() {
@@ -282,8 +315,22 @@ fn decide(ctx: &Context, request: SetupDecisionRequest) -> WResult<SetupDecision
             records
         } else {
             let selected = &receipt.candidates[start..end];
-            let records = assertion_records(ctx, &reviewed, &edits, selected, &op)?;
+            let mut records = assertion_records(ctx, &reviewed, &edits, selected, &op)?;
             dependencies.extend(proposal::dependencies(selected));
+            if reviewed.judgment && chunk_index == 0 {
+                // Untouched current revisions the same judgment confirmed.
+                for id in &reviewed.confirm {
+                    records.push(metadata_record(
+                        &op,
+                        id,
+                        ReviewState::ConfirmedByYou,
+                        receipt,
+                        reviewed.statement.as_ref().map(|s| s.id.clone()),
+                    )?);
+                    dependencies.push(id.clone());
+                    result.saved_ids.push(id.clone());
+                }
+            }
             result.saved_ids.extend(selected.iter().map(|candidate| {
                 proposal::candidate_ids(std::slice::from_ref(candidate))[0].clone()
             }));

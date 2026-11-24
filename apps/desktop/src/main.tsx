@@ -1,5 +1,10 @@
 import { WindowStatus } from "./WindowStatus";
 import { Appearance } from "./Appearance";
+import { GraphHome } from "./KnowledgeGraph";
+import { KnowledgeDetail, RetrievalAccess } from "./KnowledgeDetail";
+import type { KnowledgeGraph } from "./generated/KnowledgeGraph";
+import type { TopicKnowledge } from "./generated/TopicKnowledge";
+import type { PendingRef } from "./generated/PendingRef";
 import { Pilot } from "./Pilot";
 import { ContextReview } from "./ContextReview";
 import { FolderSetup } from "./FolderSetup";
@@ -10,7 +15,6 @@ import {
   Field,
   Icon,
   PageHeader,
-  PrivacyBadge,
   Section,
 } from "./ui";
 import { createRoot } from "react-dom/client";
@@ -48,6 +52,7 @@ import "./window-chrome.css";
 if (import.meta.env.VITE_NATIVE_TEST === "1")
   await import("@wdio/tauri-plugin");
 type Screen =
+  | "validation"
   | "today"
   | "search"
   | "topics"
@@ -87,20 +92,44 @@ function validEvent(value: unknown): value is WorkspaceRunEvent {
       return false;
   }
 }
+function ReviewControls({
+  fold,
+  children,
+}: {
+  fold: boolean;
+  children: React.ReactNode;
+}) {
+  return fold ? (
+    <details className="review-tools">
+      <summary>All claims and editing tools</summary>
+      {children}
+    </details>
+  ) : (
+    <>{children}</>
+  );
+}
 function App() {
   const [root, setRoot] = useState<RootRef | null>();
   const rootRef = useRef<RootRef | null>(null);
   const formTrigger = useRef<HTMLButtonElement | null>(null);
+  const focusAfterRead = useRef<string | null>(null);
   const selectedTopicId = useRef<string | null>(null);
-  const navigationSeq = useRef(0);
+
   const epoch = useRef(0),
     detailSeq = useRef(0),
     refreshSeq = useRef(0),
     scopeSeq = useRef(0),
     chatScopeSeq = useRef(0);
-  const [screen, setScreen] = useState<Screen>("today");
-  const [pilotCorrection, setPilotCorrection] = useState<{topicId: string; revisionId: string; statement: string} | null>(null);
-  const [autoSetup, setAutoSetup] = useState(false);
+  const [screen, setScreen] = useState<Screen>("topics");
+  const [pilotCorrection, setPilotCorrection] = useState<{
+    topicId: string;
+    revisionId: string;
+    statement: string;
+  } | null>(null);
+  const [graphFailed, setGraphFailed] = useState(false);
+  const [graph, setGraph] = useState<KnowledgeGraph | null>(null);
+  const [detail, setDetail] = useState<TopicKnowledge | null>(null);
+  const [discovery, setDiscovery] = useState<PendingRef | null>(null);
   const [settings, setSettings] = useState(false),
     [path, setPath] = useState(""),
     [create, setCreate] = useState(false);
@@ -148,10 +177,25 @@ function App() {
     invalidateAnalysisScope();
     invalidateChatScope();
   };
+  useEffect(() => {
+    if (
+      !topicLoading &&
+      detail &&
+      focusAfterRead.current === detail.topic.id &&
+      screen === "topics"
+    ) {
+      document
+        .querySelector<HTMLElement>(".graph-detail .topic-identity h2")
+        ?.focus();
+      focusAfterRead.current = null;
+    }
+  }, [topicLoading, detail, screen]);
   const clearTopic = () => {
+    focusAfterRead.current = null;
     selectedTopicId.current = null;
     ++detailSeq.current;
     setTopic(null);
+    setDetail(null);
     setTopicLoading(false);
     setMessage("");
     invalidateScope();
@@ -159,7 +203,7 @@ function App() {
   async function refresh(selected: RootRef, generation = epoch.current) {
     const sequence = ++refreshSeq.current;
     const results = await Promise.allSettled([
-      ipc<{ topics: Topic[] }>("workspace_topics_list", {
+      ipc<KnowledgeGraph>("knowledge_graph", {
         root_id: selected.root_id,
       }),
       ipc<{ proposals: Proposal[] }>("workspace_proposals_list", {
@@ -174,7 +218,22 @@ function App() {
       sequence !== refreshSeq.current
     )
       return;
-    if (results[0].status === "fulfilled") setTopics(results[0].value.topics);
+    if (results[0].status === "fulfilled") {
+      const graph = results[0].value;
+      setGraph(graph);
+      setGraphFailed(false);
+      if (
+        selectedTopicId.current &&
+        !graph.nodes.some((n) => n.topic.id === selectedTopicId.current)
+      )
+        clearTopic();
+      setTopics(
+        graph.nodes.filter((n) => n.status === "accepted").map((n) => n.topic),
+      );
+    } else {
+      setGraphFailed(true);
+      setGraph(null);
+    }
     if (results[1].status === "fulfilled")
       setProposals(
         results[1].value.proposals.filter(
@@ -189,31 +248,57 @@ function App() {
       ? { proposals: results[1].value.proposals }
       : undefined;
   }
+  useEffect(() => {
+    if (
+      !root ||
+      (screen !== "topics" && screen !== "validation") ||
+      !graph?.pending.some((d) => d.state === "analysing")
+    )
+      return;
+    // Wait for the preceding snapshot before scheduling another local read.
+    const timer = window.setTimeout(() => void refresh(root), 3000);
+    return () => window.clearTimeout(timer);
+  }, [graph, screen, root]);
   async function openTopic(id: string) {
     const topicChanged = selectedTopicId.current !== id;
     selectedTopicId.current = id;
     const selected = rootRef.current;
     if (!selected) return;
-    window.scrollTo(0, 0);
     const generation = epoch.current,
       sequence = ++detailSeq.current;
     if (topicChanged) {
+      window.scrollTo(0, 0);
       setTopic(null);
+      setDetail(null);
       setTopicLoading(true);
       setMessage("");
       invalidateChatScope();
     }
     setError(null);
     try {
-      const result = await ipc<TopicView>("workspace_topic_get", {
+      const knowledge = await ipc<TopicKnowledge>("topic_knowledge", {
         root_id: selected.root_id,
         topic_id: id,
       });
       if (
+        !current(generation, selected.root_id) ||
+        sequence !== detailSeq.current
+      )
+        return;
+      const result =
+        knowledge.status === "pending"
+          ? null
+          : await ipc<TopicView>("workspace_topic_get", {
+              root_id: selected.root_id,
+              topic_id: id,
+            });
+      if (
         current(generation, selected.root_id) &&
         sequence === detailSeq.current
-      )
+      ) {
         setTopic(result);
+        setDetail(knowledge);
+      }
     } catch (e) {
       if (
         current(generation, selected.root_id) &&
@@ -306,7 +391,6 @@ function App() {
         if (result.root) {
           const selected = result.root;
           void refresh(selected, generation);
-
         }
       })
       .catch((e) => {
@@ -326,11 +410,12 @@ function App() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         if (!rootRef.current) return;
         event.preventDefault();
-        setScreen("search");
+        setScreen("topics");
         setManual(false);
         setSettings(false);
         requestAnimationFrame(() => {
-          const input = document.querySelector<HTMLInputElement>("#search");
+          const input =
+            document.querySelector<HTMLInputElement>("#topic-search");
           input?.focus();
           input?.select();
         });
@@ -414,7 +499,10 @@ function App() {
     setNotice("");
     rootRef.current = null;
     setRoot(null);
+    setGraphFailed(false);
     setTopics([]);
+    setGraph(null);
+    setDiscovery(null);
     setSpec(emptyDraft);
     setName("");
     setKind("thread");
@@ -439,8 +527,7 @@ function App() {
       setRoot(result.root);
       setPath(result.root.path);
       setSettings(false);
-      setAutoSetup(true);
-      setScreen("setup");
+      setScreen("topics");
       setCreate(false);
       if (result.index.warnings?.length)
         setNotice(result.index.warnings.join("\n"));
@@ -654,8 +741,9 @@ function App() {
       });
       if (current(generation, selected.root_id)) {
         setNotice("Undo recorded in history.");
-        clearTopic();
         await refresh(selected, generation);
+        if (current(generation, selected.root_id) && selectedTopicId.current)
+          await openTopic(selectedTopicId.current);
       }
     } catch (e) {
       if (current(generation, selected.root_id)) report(e);
@@ -690,12 +778,28 @@ function App() {
   const appDataBootError = !!bootError?.message.includes("TOPICS_APP_DATA_DIR");
   const pendingCount = proposals.filter((p) => p.status === "pending").length;
   const navigate = (next: Screen) => {
-    navigationSeq.current++;
+    focusAfterRead.current = null;
+    setDiscovery(null);
+    if (root && (next === "topics" || next === "validation"))
+      void refresh(root);
     window.scrollTo(0, 0);
     setScreen(next);
     setManual(false);
     setSettings(false);
     setError(null);
+  };
+  const openDiscovery = (ref: PendingRef) => {
+    navigate(ref.kind === "proposal" ? "inbox" : "setup");
+    setDiscovery(ref);
+  };
+  const focusGraphTopic = (id: string) => {
+    if (screen !== "topics") navigate("topics");
+    focusAfterRead.current = id;
+    void openTopic(id);
+  };
+  const refreshDetail = () => {
+    if (root) void refresh(root);
+    if (selectedTopicId.current) void openTopic(selectedTopicId.current);
   };
   const openManual = (trigger: HTMLButtonElement) => {
     formTrigger.current = trigger;
@@ -715,9 +819,9 @@ function App() {
     });
   };
   const quickSearch = () => {
-    navigate("search");
+    navigate("topics");
     requestAnimationFrame(() => {
-      const input = document.querySelector<HTMLInputElement>("#search");
+      const input = document.querySelector<HTMLInputElement>("#topic-search");
       input?.focus();
       input?.select();
     });
@@ -748,111 +852,86 @@ function App() {
         <button
           className="quick-search"
           aria-label="Search"
-          aria-current={
-            screen === "search" && !manual && !settings && root
-              ? "page"
-              : undefined
-          }
           disabled={!root}
           onClick={quickSearch}
         >
           <Icon name="search" />
-          <span>Search notes</span>
+          <span>Search topics</span>
           <kbd>⌘K</kbd>
         </button>
         <nav aria-label="Workspace">
           <div className="nav-group">
-            <p className="nav-label">Library</p>
-            <button
-              aria-label="Topics"
-              aria-current={
-                screen === "topics" && !manual && !settings ? "page" : undefined
-              }
-              disabled={!root}
-              onClick={() => navigate("topics")}
-            >
-              <Icon name="topics" />
-              <span>Topics</span>
-              <span className="nav-count">{topics.length || ""}</span>
-            </button>
-            <button
-              aria-current={
-                screen === "sources" && !manual && !settings
-                  ? "page"
-                  : undefined
-              }
-              disabled={!root}
-              onClick={() => navigate("sources")}
-            >
-              <Icon name="file" />
-              <span>Sources</span>
-            </button>
+            {(
+              [
+                ["topics", "Knowledge graph", "topics"],
+                ["validation", "Needs validation", "check"],
+                ["sources", "Sources", "file"],
+              ] as const
+            ).map(([id, label, icon]) => (
+              <button
+                key={id}
+                aria-current={
+                  screen === id && !manual && !settings ? "page" : undefined
+                }
+                disabled={!root}
+                onClick={() => navigate(id)}
+              >
+                <Icon name={icon} />
+                <span>{label}</span>
+                {id === "validation" &&
+                  graph &&
+                  graph.checks.conflicting +
+                    graph.checks.uncertain +
+                    graph.checks.stale >
+                    0 && (
+                    <span className="nav-count">
+                      {graph.checks.conflicting +
+                        graph.checks.uncertain +
+                        graph.checks.stale}
+                    </span>
+                  )}
+              </button>
+            ))}
           </div>
-          <div className="nav-group">
-            <p className="nav-label">Review</p>
-            <button aria-current={screen === "today" && !manual && !settings ? "page" : undefined} disabled={!root} onClick={() => navigate("today")}><Icon name="inbox" /><span>Today</span></button>
-            <button
-              aria-current={
-                screen === "inbox" && !manual && !settings ? "page" : undefined
-              }
-              disabled={!root}
-              onClick={() => navigate("inbox")}
-            >
-              <Icon name="inbox" />
-              <span>Inbox</span>
-              {pendingCount > 0 && (
-                <span className="nav-count">{pendingCount}</span>
-              )}
-            </button>
-            <button
-              aria-current={
-                screen === "history" && !manual && !settings
-                  ? "page"
-                  : undefined
-              }
-              disabled={!root}
-              onClick={() => navigate("history")}
-            >
-              <Icon name="history" />
-              <span>History</span>
-            </button>
-          </div>
+          <details>
+            <summary>More tools</summary>
+            <div className="nav-group">
+              {(
+                [
+                  ["setup", "Set up folder", "folder"],
+                  ["analyse", "Analyse notes", "analyse"],
+                  ["inbox", "Inbox", "inbox"],
+                  ["history", "History", "history"],
+                  ["search", "Search notes", "search"],
+                  ["today", "Today", "inbox"],
+                ] as const
+              ).map(([id, label, icon]) => (
+                <button
+                  key={id}
+                  aria-current={
+                    screen === id && !manual && !settings ? "page" : undefined
+                  }
+                  disabled={!root}
+                  onClick={() => navigate(id)}
+                >
+                  <Icon name={icon} />
+                  <span>{label}</span>
+                  {id === "inbox" && pendingCount > 0 && (
+                    <span className="nav-count">{pendingCount}</span>
+                  )}
+                </button>
+              ))}
+              <Button
+                icon="plus"
+                id="sidebar-new-topic"
+                disabled={!root}
+                onClick={(e) => openManual(e.currentTarget)}
+              >
+                New topic
+              </Button>
+            </div>
+          </details>
         </nav>
-        <div className="sidebar-actions">
-          <p className="nav-label">Workspace</p>
-          <Button
-            icon="folder"
-            disabled={!root}
-            aria-current={
-              screen === "setup" && !manual && !settings ? "page" : undefined
-            }
-            onClick={() => {
-              setAutoSetup(false);
-              navigate("setup");
-            }}
-          >
-            Set up folder
-          </Button>
-          <Button
-            icon="analyse"
-            disabled={!root}
-            aria-current={
-              screen === "analyse" && !manual && !settings ? "page" : undefined
-            }
-            onClick={() => navigate("analyse")}
-          >
-            Analyse notes
-          </Button>
-          <Button
-            icon="plus"
-            id="sidebar-new-topic"
-            disabled={!root}
-            aria-current={manual ? "page" : undefined}
-            onClick={(e) => openManual(e.currentTarget)}
-          >
-            New topic
-          </Button>
-        </div>
         <div className="sidebar-bottom">
           <Appearance />
           <div className="folder-context">
@@ -1032,172 +1111,171 @@ function App() {
             </section>
           ) : (
             <>
-              {screen === "today" && <Pilot key={root.root_id} rootId={root.root_id} openSetup={() => {setAutoSetup(false); navigate("setup");}} openCorrection={(item, feedback) => {if (!topics.some(t => t.id === item.topic_id)) return false; setPilotCorrection({topicId: item.topic_id, revisionId: item.revision_id, statement: feedback.text}); navigate("topics"); void openTopic(item.topic_id); return true;}} />}
+              {screen === "today" && (
+                <Pilot
+                  key={root.root_id}
+                  rootId={root.root_id}
+                  openSetup={() => {
+                    navigate("setup");
+                  }}
+                  openCorrection={(item, feedback) => {
+                    if (!topics.some((t) => t.id === item.topic_id))
+                      return false;
+                    setPilotCorrection({
+                      topicId: item.topic_id,
+                      revisionId: item.revision_id,
+                      statement: feedback.text,
+                    });
+                    navigate("topics");
+                    void openTopic(item.topic_id);
+                    return true;
+                  }}
+                />
+              )}
               {screen === "search" && <Search key={root.root_id} />}
-              {screen === "topics" && (
+              {(screen === "topics" || screen === "validation") && (
                 <section className="topics-view">
-                  <PageHeader
-                    title="Topics"
-                    description="People, projects and the threads that connect your notes."
-                    actions={
-                      <Button
-                        id="new-topic-action"
-                        icon="plus"
-                        onClick={(e) => openManual(e.currentTarget)}
-                      >
-                        New topic
-                      </Button>
-                    }
+                  <GraphHome
+                    rootId={root.root_id}
+                    graph={graph}
+                    failed={graphFailed}
+                    selected={selectedTopicId.current}
+                    onSelect={focusGraphTopic}
+                    analyse={() => navigate("setup")}
+                    review={openDiscovery}
+                    validation={screen === "validation"}
+                    retry={() => void refresh(root)}
                   />
-                  <div className="topic-workspace">
-                    <section className="topic-list" aria-label="Topic library">
-                      <div className="list-heading">
-                        <h2>Your topics</h2>
-                        <span className="muted">{topics.length}</span>
-                      </div>
-                      {topics.length === 0 ? (
-                        <EmptyState title="No accepted topics yet">
-                          <p>
-                            Add Markdown notes, then analyse a selection. You
-                            can also create a topic proposal by hand.
-                          </p>
-                        </EmptyState>
-                      ) : (
-                        <div className="topic-rows">
-                          {topics.map((t) => (
-                            <button
-                              className="library-row"
-                              key={t.id}
-                              aria-label={t.name}
-                              aria-pressed={selectedTopicId.current === t.id}
-                              onClick={() => void openTopic(t.id)}
-                            >
-                              <span className="topic-row-icon">
-                                <Icon name={t.topic_kind} />
-                              </span>
-                              <span className="row-content">
-                                <strong>{t.name}</strong>
-                                <span className="row-meta">
-                                  {t.topic_kind === "person"
-                                    ? "Person"
-                                    : t.topic_kind === "project"
-                                      ? "Project"
-                                      : "Thread"}
-                                </span>
-                                <PrivacyBadge sensitivity={t.sensitivity} />
-                              </span>
-                              {selectedTopicId.current === t.id && (
-                                <Icon name="chevron" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </section>
+                  {screen === "topics" && (detail || topicLoading) && (
                     <section
-                      className="topic-detail"
+                      className="topic-detail graph-detail"
                       aria-label="Topic detail"
                       aria-busy={topicLoading}
                     >
                       {topicLoading ? (
                         <p role="status">Opening topic…</p>
-                      ) : topic ? (
+                      ) : detail ? (
                         <>
-                          <TopicDetail
-                            rootId={root.root_id}
-                            view={topic}
-                            topics={topics}
-                            busy={busy}
-                            sensitivity={(s) => void sensitivity(s)}
-                          >
-                            <ContextReview
-                              key={`${root.root_id}-${topic.topic.id}`}
+                          {detail.status === "pending" && (
+                            <KnowledgeDetail
+                              detail={detail}
                               rootId={root.root_id}
-                              view={topic}
-                              topics={topics}
-                              onHistory={() => navigate("history")}
-                              initialCorrection={pilotCorrection?.topicId === topic.topic.id ? pilotCorrection : null}
-                              onSaved={() => {
-                                setPilotCorrection(null);
-                                void refresh(root);
-                                void openTopic(topic.topic.id);
-                              }}
+                              onSaved={refreshDetail}
+                              review={openDiscovery}
+                              onSelect={focusGraphTopic}
                             />
-                          </TopicDetail>
-                          <Section
-                            title="Ask or correct"
-                            description="Explain what should change. Generated changes return to Inbox for your review."
-                            className="chat"
-                          >
-                            <Field
-                              id="topic-message"
-                              label="Message about this topic"
-                            >
-                              <textarea
-                                rows={3}
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                placeholder="What should I know about this topic?"
-                              />
-                            </Field>
-                            <Button
-                              disabled={
-                                busy ||
-                                !!run ||
-                                topic.topic.sensitivity !== "cloud_allowed"
-                              }
-                              onClick={() => void getPreview(true)}
-                            >
-                              Preview chat sources
-                            </Button>
-                            {chatPreview && (
-                              <ScopeReview
-                                preview={chatPreview}
-                                confirmed={chatConfirmed}
-                                setConfirmed={setChatConfirmed}
-                              />
-                            )}
-                            <div className="actions">
-                              <Button
-                                variant="primary"
-                                disabled={
-                                  !message.trim() ||
-                                  !canSendChat ||
-                                  busy ||
-                                  !!run ||
-                                  !runtime?.available ||
-                                  topic.topic.sensitivity !== "cloud_allowed"
-                                }
-                                onClick={() => void start(true)}
+                          )}
+                          {topic && (
+                            <>
+                              <TopicDetail
+                                rootId={root.root_id}
+                                view={topic}
+                                topics={topics}
+                                busy={busy}
+                                sensitivity={(s) => void sensitivity(s)}
                               >
-                                Send message
-                              </Button>
-                            </div>
-                            {topic.topic.sensitivity !== "cloud_allowed" && (
-                              <p className="notice">
-                                {topic.topic.sensitivity === "local_only"
-                                  ? "This topic is local-only. Its context cannot be sent to Codex."
-                                  : "Set this topic to Cloud allowed before chatting. Local-only sources remain excluded."}
-                              </p>
-                            )}
-                          </Section>
+                                <KnowledgeDetail
+                                  detail={detail}
+                                  rootId={root.root_id}
+                                  onSaved={refreshDetail}
+                                  review={openDiscovery}
+                                  onSelect={focusGraphTopic}
+                                />
+                                <ReviewControls
+                                  fold={
+                                    detail.validation.length > 0 &&
+                                    !pilotCorrection
+                                  }
+                                >
+                                  <ContextReview
+                                    key={`${root.root_id}-${
+                                      topic.topic.id
+                                    }-${detail.assertions
+                                      .map((a) => a.revision_id + a.review)
+                                      .join(",")}`}
+                                    rootId={root.root_id}
+                                    view={topic}
+                                    topics={topics}
+                                    onHistory={() => navigate("history")}
+                                    initialCorrection={
+                                      pilotCorrection?.topicId ===
+                                      topic.topic.id
+                                        ? pilotCorrection
+                                        : null
+                                    }
+                                    onSaved={() => {
+                                      setPilotCorrection(null);
+                                      void refresh(root);
+                                      void openTopic(topic.topic.id);
+                                    }}
+                                  />
+                                </ReviewControls>
+                              </TopicDetail>
+                              <Section
+                                title="Ask or correct"
+                                description="Explain what should change. Generated changes return to Inbox for your review."
+                                className="chat"
+                              >
+                                <Field
+                                  id="topic-message"
+                                  label="Message about this topic"
+                                >
+                                  <textarea
+                                    rows={3}
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    placeholder="What should I know about this topic?"
+                                  />
+                                </Field>
+                                <Button
+                                  disabled={
+                                    busy ||
+                                    !!run ||
+                                    topic.topic.sensitivity !== "cloud_allowed"
+                                  }
+                                  onClick={() => void getPreview(true)}
+                                >
+                                  Preview chat sources
+                                </Button>
+                                {chatPreview && (
+                                  <ScopeReview
+                                    preview={chatPreview}
+                                    confirmed={chatConfirmed}
+                                    setConfirmed={setChatConfirmed}
+                                  />
+                                )}
+                                <div className="actions">
+                                  <Button
+                                    variant="primary"
+                                    disabled={
+                                      !message.trim() ||
+                                      !canSendChat ||
+                                      busy ||
+                                      !!run ||
+                                      !runtime?.available ||
+                                      topic.topic.sensitivity !==
+                                        "cloud_allowed"
+                                    }
+                                    onClick={() => void start(true)}
+                                  >
+                                    Send message
+                                  </Button>
+                                </div>
+                                {topic.topic.sensitivity !==
+                                  "cloud_allowed" && (
+                                  <p className="notice">
+                                    {topic.topic.sensitivity === "local_only"
+                                      ? "This topic is local-only. Its context cannot be sent to Codex."
+                                      : "Set this topic to Cloud allowed before chatting. Local-only sources remain excluded."}
+                                  </p>
+                                )}
+                              </Section>
+                            </>
+                          )}
                         </>
-                      ) : (
-                        <EmptyState
-                          title={
-                            topics.length
-                              ? "Choose a topic"
-                              : "Your understanding starts here"
-                          }
-                        >
-                          <p>
-                            Read accepted statements, explore evidence and
-                            follow earlier revisions.
-                          </p>
-                        </EmptyState>
-                      )}
+                      ) : null}
                     </section>
-                  </div>
+                  )}
                 </section>
               )}
               {screen === "setup" && (
@@ -1207,10 +1285,10 @@ function App() {
                   runtime={
                     runtime?.available ? `Codex ${runtime.version || ""}` : null
                   }
-                  onReturning={() => {
-                    if (autoSetup) setScreen("topics");
-                  }}
-                  onSaved={() => void refresh(root)}
+                  initialJobId={
+                    discovery?.kind === "setup_draft" ? discovery.id : null
+                  }
+                  onSaved={refreshDetail}
                 />
               )}
               {screen === "analyse" && (
@@ -1297,15 +1375,20 @@ function App() {
                       </p>
                     </EmptyState>
                   )}
-                  {proposals.map((p) => (
-                    <ProposalEditor
-                      key={`${p.id}-${p.status}-${p.fingerprint}`}
-                      proposal={p}
-                      topics={topics}
-                      busy={busy}
-                      decide={(c) => decide(p, c)}
-                    />
-                  ))}
+                  {proposals
+                    .filter(
+                      (p) =>
+                        discovery?.kind !== "proposal" || discovery.id === p.id,
+                    )
+                    .map((p) => (
+                      <ProposalEditor
+                        key={`${p.id}-${p.status}-${p.fingerprint}`}
+                        proposal={p}
+                        topics={topics}
+                        busy={busy}
+                        decide={(c) => decide(p, c)}
+                      />
+                    ))}
                 </section>
               )}
               {screen === "history" && (
@@ -1339,8 +1422,8 @@ function App() {
                                 o.status === "committed"
                                   ? "success"
                                   : o.status === "conflict"
-                                    ? "danger"
-                                    : "neutral"
+                                  ? "danger"
+                                  : "neutral"
                               }
                             >
                               {o.status}
@@ -1369,13 +1452,19 @@ function App() {
                 </section>
               )}
               {screen === "sources" && (
-                <Sources
-                  key={root.root_id}
-                  root={root}
-                  disabled={busy || !!run}
-                  onError={report}
-                  onChanged={invalidateScope}
-                />
+                <>
+                  <Button icon="analyse" onClick={() => navigate("setup")}>
+                    Analyse sources
+                  </Button>
+                  <Sources
+                    key={root.root_id}
+                    root={root}
+                    disabled={busy || !!run}
+                    onError={report}
+                    onChanged={invalidateScope}
+                  />
+                  <RetrievalAccess rootId={root.root_id} topics={topics} />
+                </>
               )}
             </>
           ))}
